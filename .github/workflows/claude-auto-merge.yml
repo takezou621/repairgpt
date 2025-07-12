@@ -11,14 +11,15 @@ jobs:
   auto-pr-and-merge:
     # Claudeが作業完了を報告した場合のみ実行
     if: |
-      (github.event_name == 'issue_comment' && 
-       github.event.comment.user.login == 'claude' &&
-       (contains(github.event.comment.body, '作業が完了') || 
-        contains(github.event.comment.body, 'finished') ||
-        contains(github.event.comment.body, 'Task completed') ||
-        contains(github.event.comment.body, 'Implementation complete'))) ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success')
+      github.event_name == 'issue_comment' && 
+      github.event.comment.user.login == 'claude' &&
+      (contains(github.event.comment.body, '作業が完了') || 
+       contains(github.event.comment.body, '作業完了') ||
+       contains(github.event.comment.body, 'finished') ||
+       contains(github.event.comment.body, 'Task completed') ||
+       contains(github.event.comment.body, 'Implementation complete') ||
+       contains(github.event.comment.body, 'work is complete') ||
+       contains(github.event.comment.body, 'job is done'))
     
     runs-on: ubuntu-latest
     permissions:
@@ -26,12 +27,16 @@ jobs:
       pull-requests: write
       issues: write
       actions: read
+      metadata: read
+      checks: read
+      repository-projects: read
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Get issue and branch information
       id: issue-info
@@ -41,51 +46,37 @@ jobs:
         script: |
           let issueNumber, issueTitle, issueBody;
           
-          if (context.eventName === 'issue_comment') {
-            // コメントイベントの場合
-            issueNumber = context.issue.number;
-            const issue = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber
-            });
-            issueTitle = issue.data.title;
-            issueBody = issue.data.body;
-          } else if (context.eventName === 'workflow_run') {
-            // ワークフロー実行完了の場合、関連するissueを検索
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'claude-code.yml',
-              status: 'completed',
-              per_page: 1
-            });
-            
-            if (runs.data.workflow_runs.length === 0) {
-              console.log('No completed workflow runs found');
-              return {};
-            }
-            
-            // 最新の完了したワークフローに関連するissueを特定
-            const latestRun = runs.data.workflow_runs[0];
-            const issueMatch = latestRun.display_title.match(/#(\d+)/);
-            
-            if (!issueMatch) {
-              console.log('No issue number found in workflow title');
-              return {};
-            }
-            
-            issueNumber = parseInt(issueMatch[1]);
-            const issue = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber
-            });
-            issueTitle = issue.data.title;
-            issueBody = issue.data.body;
-          }
+          // コメントイベントの場合
+          issueNumber = context.issue.number;
+          const issue = await github.rest.issues.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber
+          });
+          issueTitle = issue.data.title;
+          issueBody = issue.data.body;
           
-          const branchName = `fix/issue-${issueNumber}`;
+          // Claudeが作成したブランチを検索
+          let candidateBranches = [
+            `claude/issue-${issueNumber}`,
+            `fix/issue-${issueNumber}`,
+            `feature/issue-${issueNumber}`,
+            `claude/issue-${issueNumber}-*`
+          ];
+          
+          // 全ブランチを取得してissue番号にマッチするものを検索
+          const branches = await github.rest.repos.listBranches({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            per_page: 100
+          });
+          
+          const matchingBranch = branches.data.find(branch => 
+            branch.name.includes(`issue-${issueNumber}`) || 
+            branch.name.includes(`${issueNumber}`)
+          );
+          
+          const branchName = matchingBranch ? matchingBranch.name : `fix/issue-${issueNumber}`;
           const prTitle = `fix: ${issueTitle} (closes #${issueNumber})`;
           
           return {
@@ -93,7 +84,8 @@ jobs:
             issueTitle,
             issueBody,
             branchName,
-            prTitle
+            prTitle,
+            branchExists: !!matchingBranch
           };
     
     - name: Check if branch exists and create PR
@@ -109,23 +101,8 @@ jobs:
             return { created: false };
           }
           
-          // ブランチが存在するかチェック
-          let branchExists = false;
-          try {
-            await github.rest.repos.getBranch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              branch: issueInfo.branchName
-            });
-            branchExists = true;
-          } catch (error) {
-            if (error.status !== 404) {
-              throw error;
-            }
-          }
-          
-          if (!branchExists) {
-            console.log(`Branch ${issueInfo.branchName} does not exist, skipping PR creation`);
+          if (!issueInfo.branchExists) {
+            console.log(`No matching branch found for issue #${issueInfo.issueNumber}, skipping PR creation`);
             return { created: false, issueNumber: issueInfo.issueNumber };
           }
           
@@ -205,7 +182,8 @@ Claudeが実装した変更内容：
           });
           
           // 少し待ってからマージ（CI/CDがある場合の時間確保）
-          await new Promise(resolve => setTimeout(resolve, 10000));
+          console.log('Waiting before merge...');
+          await new Promise(resolve => setTimeout(resolve, 15000));
           
           try {
             // PRをマージ
