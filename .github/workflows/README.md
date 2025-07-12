@@ -31,6 +31,16 @@
   2. RepairGPT固有のレビュー観点でフィードバック
   3. セキュリティ、パフォーマンス、ベストプラクティスをチェック
 
+### 4. Claude Auto PR and Merge (`claude-auto-merge.yml`)
+- **目的**: Claudeの作業完了後、自動でPR作成・レビュー・マージ・クリーンアップを実行
+- **実行タイミング**: Claudeが作業完了を報告した時
+- **動作**:
+  1. Claudeの完了コメントを検知
+  2. 自動的にPRを作成
+  3. PRを自動レビュー・マージ
+  4. 関連Issueをクローズ
+  5. 不要なブランチを削除
+
 ## セットアップ
 
 ### 前提条件
@@ -43,7 +53,10 @@
 ### ラベルの設定
 以下のラベルをリポジトリに作成してください：
 - `claude-processed`: 処理済みのissue
+- `claude-completed`: 完了したissue（自動クローズ済み）
 - `claude-review-requested`: Claudeレビュー依頼済み
+- `claude-auto-generated`: Claude生成のPR
+- `ready-for-merge`: マージ準備完了
 - `needs-review`: レビューが必要
 - `security-review-required`: セキュリティレビューが必要
 - `priority:high`: 高優先度
@@ -65,6 +78,15 @@
 ### 自動コードレビュー
 - PRを作成すると自動的に基本的なレビューが実行される
 - 大きな変更や重要なファイルの変更時は追加レビューを推奨
+
+### 完全自動化フロー
+1. Issueが作成される
+2. Claude Code Maxが自動的に作業を実行
+3. Claudeが作業完了を報告
+4. 自動的にPRが作成される
+5. PRが自動レビュー・マージされる
+6. Issueが自動クローズされる
+7. 作業ブランチが自動削除される
 
 ## 注意事項
 
