@@ -1,0 +1,121 @@
+name: Claude PR Assistant
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-review:
+    # PRコメントで@claudeがメンションされた場合のみ実行
+    if: |
+      (github.event_name == 'issue_comment' && 
+       github.event.issue.pull_request && 
+       contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request' && 
+       contains(github.event.pull_request.body, '@claude'))
+    
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get PR details
+      uses: actions/github-script@v7
+      id: pr-details
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          let pr;
+          if (context.eventName === 'issue_comment') {
+            // コメントイベントの場合、PR情報を取得
+            const { data } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            pr = data;
+          } else {
+            // PRイベントの場合
+            pr = context.payload.pull_request;
+          }
+          
+          // 変更されたファイルを取得
+          const files = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: pr.number
+          });
+          
+          return {
+            number: pr.number,
+            title: pr.title,
+            body: pr.body || '',
+            files: files.data.map(f => ({
+              filename: f.filename,
+              additions: f.additions,
+              deletions: f.deletions,
+              changes: f.changes,
+              patch: f.patch
+            }))
+          };
+    
+    - name: Add Claude review comment
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const prDetails = ${{ steps.pr-details.outputs.result }};
+          
+          // レビューコメントを作成（Claude Code Max用）
+          const comment = `@claude このPRをレビューしてください。
+
+**PR情報:**
+- タイトル: ${prDetails.title}
+- 変更ファイル数: ${prDetails.files.length}
+- 追加行数: ${prDetails.files.reduce((sum, f) => sum + f.additions, 0)}
+- 削除行数: ${prDetails.files.reduce((sum, f) => sum + f.deletions, 0)}
+
+**レビュー観点:**
+1. コード品質とベストプラクティスの遵守
+2. セキュリティ上の懸念事項
+3. パフォーマンスへの影響
+4. テストカバレッジ
+5. ドキュメントの更新必要性
+
+**変更ファイル:**
+${prDetails.files.map(f => `- ${f.filename} (+${f.additions} -${f.deletions})`).join('\n')}
+
+**Note**: Claude Code Max (Opus 4)による詳細な分析を行います。
+
+詳細なコードレビューと改善提案をお願いします。`;
+          
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: prDetails.number,
+            body: comment
+          });
+          
+          console.log(`Claude review requested for PR #${prDetails.number}`);
+    
+    - name: Add review-requested label
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const prNumber = context.issue ? context.issue.number : context.payload.pull_request.number;
+          
+          await github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: prNumber,
+            labels: ['claude-review-requested']
+          });
