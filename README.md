@@ -43,3 +43,7 @@ Feel free to fork, open issues, or contact us via GitHub Discussions!
 ## 📄 License
 
 MIT License
+
+---
+
+**完全自動化フローテスト**: この行は自動化フローの動作確認のために Claude Code Max により追加されました (2025-07-12)
