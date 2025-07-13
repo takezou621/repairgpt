@@ -1,13 +1,15 @@
-name: Claude Night Automation
+name: Claude Smart Automation
 
 on:
   schedule:
-    # 夜間のみ実行 (23:00, 02:00, 05:00 JST)
-    - cron: '0 14,17,20 * * *'  # UTC時間
+    # 平日夜間実行 (23:00, 02:00, 05:00 JST)
+    - cron: '0 14,17,20 * * 1-5'  # UTC時間 月-金
+    # 土日昼間実行 (10:00, 14:00, 18:00, 22:00 JST)
+    - cron: '0 1,5,9,13 * * 0,6'  # UTC時間 土日
   workflow_dispatch:
 
 jobs:
-  night-automation:
+  smart-automation:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,12 +25,12 @@ jobs:
         fetch-depth: 0
         ref: main
     
-    - name: Night Automation Processing
+    - name: Smart Automation Processing
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          console.log('🌙 NIGHT AUTOMATION START');
+          console.log('🚀 SMART AUTOMATION START');
           const now = new Date();
           console.log(`Execution time: ${now.toISOString()}`);
           
@@ -110,14 +112,14 @@ jobs:
                       title: `fix: ${issue.title} (closes #${issue.number})`,
                       head: claudeBranch.name,
                       base: 'main',
-                      body: `## 🌙 夜間自動化処理
+                      body: `## 🚀 スマート自動化処理
 
 ### 関連Issue
 Closes #${issue.number}
 
 ### 自動化フロー
 - [x] ✅ Claude Code実装検知
-- [x] ✅ 夜間自動PR作成
+- [x] ✅ 自動PR作成（平日夜間・土日昼間）
 - [x] ✅ 自動マージ実行
 - [x] ✅ Issue自動クローズ
 - [x] ✅ ブランチ自動削除
@@ -125,8 +127,12 @@ Closes #${issue.number}
 ### 実行時刻
 ${now.toISOString()}
 
+### スケジュール
+- 平日: 23:00, 02:00, 05:00 JST
+- 土日: 10:00, 14:00, 18:00, 22:00 JST
+
 ---
-🌙 **Night Automation** | Generated with Claude Code Max`
+🚀 **Smart Automation** | Generated with Claude Code Max`
                     });
                     
                     prNumber = pr.data.number;
@@ -167,9 +173,9 @@ ${now.toISOString()}
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
-                  body: `🌙 **夜間自動化処理完了**
+                  body: `🚀 **スマート自動化処理完了**
 
-Issue #${issue.number} の夜間自動化が完了しました。
+Issue #${issue.number} のスマート自動化が完了しました。
 
 **実行内容:**
 - 🤖 Claude Code実装検知
@@ -179,8 +185,12 @@ Issue #${issue.number} の夜間自動化が完了しました。
 
 **実行時刻:** ${now.toISOString()}
 
+**実行スケジュール:**
+- 平日: 夜間自動実行（23:00, 02:00, 05:00 JST）
+- 土日: 昼間自動実行（10:00, 14:00, 18:00, 22:00 JST）
+
 ---
-🌙 **Night Automation Success** | Generated with Claude Code Max`
+🚀 **Smart Automation Success** | Generated with Claude Code Max`
                 });
                 
                 await github.rest.issues.update({
@@ -219,7 +229,7 @@ Issue #${issue.number} の夜間自動化が完了しました。
               }
             }
             
-            console.log('\n🌙 NIGHT AUTOMATION FINISHED');
+            console.log('\n🚀 SMART AUTOMATION FINISHED');
             
           } catch (error) {
             console.log(`❌ Night automation error: ${error.message}`);
