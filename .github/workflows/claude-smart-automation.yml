@@ -463,8 +463,8 @@ def process_image_for_ai(image: Image.Image) -> str:
                         await github.rest.repos.createOrUpdateFileContents({
                           owner: context.repo.owner,
                           repo: context.repo.repo,
-                          path: \`\${dirPath}/.gitkeep\`,
-                          message: \`Create directory structure for issue #\${issue.number}\`,
+                          path: `${dirPath}/.gitkeep`,
+                          message: `Create directory structure for issue #${issue.number}`,
                           content: Buffer.from('').toString('base64'),
                           branch: branchName
                         });
@@ -477,12 +477,12 @@ def process_image_for_ai(image: Image.Image) -> str:
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     path: filePath,
-                    message: \`Implement \${issue.title} - Issue #\${issue.number}\`,
+                    message: `Implement ${issue.title} - Issue #${issue.number}`,
                     content: Buffer.from(implementationContent).toString('base64'),
                     branch: branchName
                   });
                   
-                  console.log(\`✅ Created implementation file: \${filePath}\`);
+                  console.log(`✅ Created implementation file: ${filePath}`);
                   
                   // claude-processedラベルを追加
                   await github.rest.issues.addLabels({
@@ -492,11 +492,11 @@ def process_image_for_ai(image: Image.Image) -> str:
                     labels: ['claude-processed']
                   });
                   
-                  console.log(\`🎯 Issue #\${issue.number} AUTO-IMPLEMENTATION COMPLETED!\`);
+                  console.log(`🎯 Issue #${issue.number} AUTO-IMPLEMENTATION COMPLETED!`);
                 }
                 
               } catch (autoImplError) {
-                console.log(\`❌ Auto-implementation failed for Issue #\${issue.number}: \${autoImplError.message}\`);
+                console.log(`❌ Auto-implementation failed for Issue #${issue.number}: ${autoImplError.message}`);
                 continue;
               }
             }
