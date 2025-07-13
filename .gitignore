@@ -1,0 +1,42 @@
+# Gitignore for RepairGPT project
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+venv/
+.venv/
+
+# IDEs
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Environment variables
+.env
+.flaskenv
+
+# AI/ML
+.ipynb_checkpoints/
+
+# Untracked files from Gemini CLI
+GEMINI.md
+LICENSE
+README-repairgpt.md
