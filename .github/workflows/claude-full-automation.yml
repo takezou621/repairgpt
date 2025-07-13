@@ -4,11 +4,18 @@ on:
   workflow_run:
     workflows: ["Claude Code"]
     types: [completed]
-    branches: [main]
+  push:
+    branches: [claude/**]
+  schedule:
+    # Fallback: 5分ごとにチェック
+    - cron: '*/5 * * * *'
 
 jobs:
   auto-pr-merge-flow:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/claude/')) ||
+      github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,26 +33,75 @@ jobs:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Extract issue information from workflow
+    - name: Extract issue information from trigger
       id: extract-issue
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const workflowRun = context.payload.workflow_run;
-          console.log(`Workflow run: ${workflowRun.id}, conclusion: ${workflowRun.conclusion}`);
-          
-          // Issue番号をワークフロー名から抽出
-          const issueMatch = workflowRun.display_title.match(/#(\d+)|issue[:\s-]*(\d+)/i);
           let issueNumber = null;
+          let triggerSource = '';
           
-          if (issueMatch) {
-            issueNumber = parseInt(issueMatch[1] || issueMatch[2]);
-            console.log(`Found issue number: ${issueNumber}`);
-          } else {
-            console.log(`No issue number found in title: ${workflowRun.display_title}`);
+          if (context.eventName === 'workflow_run') {
+            // workflow_run トリガーの場合
+            const workflowRun = context.payload.workflow_run;
+            console.log(`Workflow run: ${workflowRun.id}, conclusion: ${workflowRun.conclusion}`);
+            triggerSource = `workflow_run: ${workflowRun.display_title}`;
+            
+            const issueMatch = workflowRun.display_title.match(/#(\d+)|issue[:\s-]*(\d+)/i);
+            if (issueMatch) {
+              issueNumber = parseInt(issueMatch[1] || issueMatch[2]);
+            }
+          } else if (context.eventName === 'push') {
+            // push トリガーの場合（claude/**ブランチ）
+            const branchName = context.ref.replace('refs/heads/', '');
+            console.log(`Push to branch: ${branchName}`);
+            triggerSource = `push: ${branchName}`;
+            
+            const issueMatch = branchName.match(/issue[:\s-]*(\d+)/i);
+            if (issueMatch) {
+              issueNumber = parseInt(issueMatch[1]);
+            }
+          } else if (context.eventName === 'schedule') {
+            // schedule トリガーの場合 - 未処理のclaudeブランチを検索
+            console.log('Triggered by schedule - searching for unprocessed Claude branches');
+            triggerSource = 'schedule';
+            
+            const branches = await github.rest.repos.listBranches({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+            
+            // claude-processedラベルがないIssueに対応するbranchを検索
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'claude-processed',
+              per_page: 100
+            });
+            
+            for (const issue of issues.data) {
+              const claudeBranch = branches.data.find(branch => 
+                branch.name.includes(`issue-${issue.number}`) ||
+                branch.name.includes(`${issue.number}`)
+              );
+              
+              if (claudeBranch) {
+                issueNumber = issue.number;
+                console.log(`Found unprocessed issue ${issueNumber} with branch ${claudeBranch.name}`);
+                break;
+              }
+            }
+          }
+          
+          if (!issueNumber) {
+            console.log(`No issue number found from ${triggerSource}`);
             return { found: false };
           }
+          
+          console.log(`Found issue number: ${issueNumber} from ${triggerSource}`);
           
           // Issue情報を取得
           try {
