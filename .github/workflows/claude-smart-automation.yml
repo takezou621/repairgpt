@@ -7,6 +7,11 @@ on:
     # 土日昼間実行 (10:00, 14:00, 16:00, 18:00, 22:00 JST)
     - cron: '0 1,5,7,9,13 * * 0,6'  # UTC時間 土日
   workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode execution'
+        required: false
+        default: 'false'
 
 jobs:
   smart-automation:
