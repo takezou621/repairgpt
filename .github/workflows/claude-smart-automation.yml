@@ -68,18 +68,38 @@ jobs:
                   per_page: 100
                 });
                 
-                const claudeBranches = branches.data.filter(branch => 
-                  branch.name.includes(`issue-${issue.number}`) ||
-                  branch.name.includes(`claude`) && branch.name.includes(`${issue.number}`)
-                );
+                // 改良されたブランチ検索ロジック - タイムスタンプバグ修正
+                const claudeBranches = branches.data.filter(branch => {
+                  // 正確なパターンマッチング - タイムスタンプ誤検出を防ぐ
+                  const exactIssueMatch = branch.name.includes(`issue-${issue.number}`) && 
+                                          (branch.name.includes(`claude`) || branch.name.includes(`issue-${issue.number}-`));
+                  const claudeIssueMatch = branch.name.match(new RegExp(`claude.*issue.*${issue.number}(?![0-9])`));
+                  
+                  return exactIssueMatch || claudeIssueMatch;
+                });
+                
+                console.log(`Found ${claudeBranches.length} potential branches for Issue #${issue.number}:`);
+                claudeBranches.forEach(branch => console.log(`  - ${branch.name}`));
                 
                 if (claudeBranches.length === 0) {
                   console.log(`No Claude branch found for Issue #${issue.number}`);
                   continue;
                 }
                 
-                const claudeBranch = claudeBranches[0];
-                console.log(`Found branch: ${claudeBranch.name}`);
+                // 最新のブランチを選択 (正確なissue番号マッチを優先)
+                const claudeBranch = claudeBranches.sort((a, b) => {
+                  // issue-{number}を含むブランチを優先
+                  const aHasExactIssue = a.name.includes(`issue-${issue.number}`);
+                  const bHasExactIssue = b.name.includes(`issue-${issue.number}`);
+                  
+                  if (aHasExactIssue && !bHasExactIssue) return -1;
+                  if (!aHasExactIssue && bHasExactIssue) return 1;
+                  
+                  // 両方とも同じ条件なら名前で逆順ソート (新しいブランチが通常後に来る)
+                  return b.name.localeCompare(a.name);
+                })[0];
+                
+                console.log(`Selected branch: ${claudeBranch.name}`);
                 
                 // 既存PRをチェック
                 const existingPRs = await github.rest.pulls.list({
