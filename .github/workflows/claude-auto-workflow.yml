@@ -236,7 +236,6 @@ jobs:
           // PRタイトルとボディを作成
           const prTitle = `🤖 Auto-fix: ${issue.data.title} (closes #${issueNumber})`;
           const prBody = `## 🤖 自動実装 - Claude Code Max
-
 ### 📋 概要
 このPRはClaude Code Max (Opus 4)によって自動実装されたissue #${issueNumber}の解決です。
 
