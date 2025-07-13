@@ -2,13 +2,8 @@ name: Claude Simple Automation
 
 on:
   schedule:
-    - cron: '*/2 * * * *'  # 2分ごとに実行
+    - cron: '*/1 * * * *'  # 1分ごとに実行
   workflow_dispatch:
-    inputs:
-      force:
-        description: 'Force run automation'
-        required: false
-        default: 'true'
 
 jobs:
   process-claude-work:
