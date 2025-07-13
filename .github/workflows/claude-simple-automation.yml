@@ -207,11 +207,13 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: 24,
-                body: `⚠️ 自動マージでエラーが発生しました。
-
-PR #${pr.data.number}: ${pr.data.html_url}
-
-エラー: ${mergeError.message}`
+                body: [
+                  '⚠️ 自動マージでエラーが発生しました。',
+                  '',
+                  `PR #${pr.data.number}: ${pr.data.html_url}`,
+                  '',
+                  `エラー: ${mergeError.message}`
+                ].join('\n')
               });
             }
             
