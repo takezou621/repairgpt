@@ -27,7 +27,8 @@
       "Bash(gh api:*)",
       "Bash(gh workflow view:*)",
       "Bash(echo:*)",
-      "Bash(gh workflow:*)"
+      "Bash(gh workflow:*)",
+      "Bash(gh repo view:*)"
     ],
     "deny": []
   }

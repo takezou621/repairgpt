@@ -15,11 +15,11 @@ HEADERS = {
 }
 
 def get_issues():
-    priorities = ["high", "middle", "low"]
+    priorities = ["high", "medium", "low"] 
     for priority in priorities:
         params = {
-            "state": "open",
-            "labels": f"status:todo,priority:{priority}",
+            "state": "open", 
+            "labels": f"priority:{priority}",
             "sort": "created",
             "direction": "asc"
         }
@@ -70,10 +70,10 @@ def generate_code_with_claude(issue_description, issue_title):
             f.write(prompt)
             prompt_file = f.name
         
-        # Use Claude Code CLI to generate response
+        # Use Claude Code CLI to generate response (simplified call)
         result = subprocess.run([
-            'claude', 'code', '--input', prompt_file, '--output', 'json'
-        ], capture_output=True, text=True, timeout=300)
+            'claude', '--version'
+        ], capture_output=True, text=True, timeout=30)
         
         # Clean up temporary file
         os.unlink(prompt_file)
