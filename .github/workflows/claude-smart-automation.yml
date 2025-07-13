@@ -6,7 +6,7 @@ on:
     - cron: '0 14,17,20 * * 1-5'  # UTC時間 月-金
     # 土日昼間実行 (10:00, 14:00, 18:00, 22:00 JST)
     - cron: '0 1,5,9,13 * * 0,6'  # UTC時間 土日
-  workflow_dispatch:
+  
 
 jobs:
   smart-automation:
