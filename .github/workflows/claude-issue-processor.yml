@@ -4,7 +4,7 @@ on:
   schedule:
     # 毎日23:00(JST)に実行（深夜帯に処理）
     - cron: '0 14 * * *'  # UTC 14:00 = JST 23:00
-  workflow_dispatch:  # 手動実行も可能
+  workflow_dispatch: {}  # 手動実行も可能
 
 jobs:
   process-issues:
