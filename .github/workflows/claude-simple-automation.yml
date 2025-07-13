@@ -89,34 +89,36 @@ jobs:
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `fix: ${issue.data.title} (closes #${24})`,
+              title: `fix: ${issue.data.title} (closes #24)`,
               head: claudeBranch.name,
               base: 'main',
-              body: `## 🤖 完全自動化によるPR作成
-
-### 関連Issue
-Closes #${24}
-
-### 概要
-Claude Code Maxによる実装を自動検知し、完全自動化フローでPRを作成しました。
-
-### 実装内容
-- Issue #${24}: ${issue.data.title}
-- Branch: \`${claudeBranch.name}\`
-- 自動検知: スケジュール自動化
-
-### 自動化フロー
-- [x] ✅ Claude Code Maxによる実装
-- [x] ✅ スケジュール自動検知
-- [x] ✅ 自動PR作成
-- [ ] 🔄 自動マージ実行中
-- [ ] 🔄 Issue自動クローズ
-- [ ] 🔄 ブランチ自動削除
-
----
-🎯 **真の100%完全自動化達成** | Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>`
+              body: [
+                '## 🤖 完全自動化によるPR作成',
+                '',
+                '### 関連Issue',
+                'Closes #24',
+                '',
+                '### 概要',
+                'Claude Code Maxによる実装を自動検知し、完全自動化フローでPRを作成しました。',
+                '',
+                '### 実装内容',
+                `- Issue #24: ${issue.data.title}`,
+                `- Branch: \`${claudeBranch.name}\``,
+                '- 自動検知: スケジュール自動化',
+                '',
+                '### 自動化フロー',
+                '- [x] ✅ Claude Code Maxによる実装',
+                '- [x] ✅ スケジュール自動検知',
+                '- [x] ✅ 自動PR作成',
+                '- [ ] 🔄 自動マージ実行中',
+                '- [ ] 🔄 Issue自動クローズ',
+                '- [ ] 🔄 ブランチ自動削除',
+                '',
+                '---',
+                '🎯 **真の100%完全自動化達成** | Generated with [Claude Code](https://claude.ai/code)',
+                '',
+                'Co-Authored-By: Claude <noreply@anthropic.com>'
+              ].join('\n')
             });
             
             console.log(`✅ Created PR #${pr.data.number}: ${pr.data.html_url}`);
@@ -138,7 +140,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>`
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: pr.data.number,
-                commit_title: `Auto-merge: Issue #${24} complete automation`,
+                commit_title: `Auto-merge: Issue #24 complete automation`,
                 merge_method: 'squash'
               });
               
@@ -149,20 +151,22 @@ Co-Authored-By: Claude <noreply@anthropic.com>`
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: 24,
-                body: `✅ **真の100%完全自動化達成！**
-
-スケジュール自動化により、人間の介入なしで完全自動処理が実行されました。
-
-**実行内容:**
-- 🕐 2分間隔の自動検知
-- 📝 自動PR作成: #${pr.data.number}
-- ✅ 自動マージ実行
-- 🧹 ブランチクリーンアップ実行中
-
-**PR**: ${pr.data.html_url}
-
----
-🚀 **100%自動化証明完了** | Claude Code Max + GitHub Actions`
+                body: [
+                  '✅ **真の100%完全自動化達成！**',
+                  '',
+                  'スケジュール自動化により、人間の介入なしで完全自動処理が実行されました。',
+                  '',
+                  '**実行内容:**',
+                  '- 🕐 2分間隔の自動検知',
+                  `- 📝 自動PR作成: #${pr.data.number}`,
+                  '- ✅ 自動マージ実行',
+                  '- 🧹 ブランチクリーンアップ実行中',
+                  '',
+                  `**PR**: ${pr.data.html_url}`,
+                  '',
+                  '---',
+                  '🚀 **100%自動化証明完了** | Claude Code Max + GitHub Actions'
+                ].join('\n')
               });
               
               // Issue #24をクローズ
