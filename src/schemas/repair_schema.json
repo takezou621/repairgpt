@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RepairGPT Repair Data Schema",
+  "description": "JSON schema for repair guide data in RepairGPT system",
+  "type": "object",
+  "properties": {
+    "guide_id": {
+      "type": "string",
+      "description": "Unique identifier for the repair guide"
+    },
+    "title": {
+      "type": "string",
+      "description": "Title of the repair guide",
+      "minLength": 1
+    },
+    "device": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Device name (e.g., Nintendo Switch, iPhone 12)"
+        },
+        "model": {
+          "type": "string",
+          "description": "Specific model or variant"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["gaming_console", "smartphone", "tablet", "laptop", "desktop", "other"]
+        },
+        "manufacturer": {
+          "type": "string",
+          "description": "Device manufacturer"
+        }
+      },
+      "required": ["name", "category"]
+    },
+    "issue": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the problem"
+        },
+        "symptoms": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "List of observable symptoms"
+        },
+        "causes": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Possible causes of the issue"
+        }
+      },
+      "required": ["description"]
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["easy", "medium", "hard", "expert"],
+      "description": "Repair difficulty level"
+    },
+    "estimated_time": {
+      "type": "string",
+      "description": "Estimated time to complete repair (e.g., '30 minutes', '1-2 hours')"
+    },
+    "cost_estimate": {
+      "type": "object",
+      "properties": {
+        "min": {"type": "number", "minimum": 0},
+        "max": {"type": "number", "minimum": 0},
+        "currency": {"type": "string", "default": "USD"}
+      }
+    },
+    "tools_required": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "required": {"type": "boolean", "default": true},
+          "alternatives": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "required": ["name"]
+      },
+      "description": "Tools needed for the repair"
+    },
+    "parts_required": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "part_number": {"type": "string"},
+          "description": {"type": "string"},
+          "quantity": {"type": "integer", "minimum": 1, "default": 1},
+          "estimated_cost": {"type": "number", "minimum": 0},
+          "where_to_buy": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "required": ["name"]
+      },
+      "description": "Replacement parts needed"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Brief title for the step"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed instructions for this step"
+          },
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to step illustration image"
+          },
+          "video_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to step video"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Safety warnings for this step"
+          },
+          "tips": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Helpful tips for this step"
+          },
+          "estimated_time": {
+            "type": "string",
+            "description": "Time estimate for this step"
+          }
+        },
+        "required": ["step_number", "description"]
+      },
+      "minItems": 1
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["safety", "warranty", "difficulty", "damage_risk"]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"]
+          },
+          "message": {"type": "string"}
+        },
+        "required": ["type", "severity", "message"]
+      },
+      "description": "Important warnings and cautions"
+    },
+    "troubleshooting": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "problem": {"type": "string"},
+          "solution": {"type": "string"},
+          "prevention": {"type": "string"}
+        },
+        "required": ["problem", "solution"]
+      },
+      "description": "Common issues and solutions during repair"
+    },
+    "testing": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "How to test if the repair was successful"
+        },
+        "steps": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "success_rate": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Estimated success rate percentage"
+    },
+    "skill_requirements": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["soldering", "micro_electronics", "precision_work", "cable_management", "software"]
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "author": {"type": "string"},
+        "created_date": {"type": "string", "format": "date-time"},
+        "updated_date": {"type": "string", "format": "date-time"},
+        "version": {"type": "string"},
+        "source": {"type": "string", "description": "Source of the guide (e.g., iFixit, user-generated)"},
+        "language": {"type": "string", "default": "en"},
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    }
+  },
+  "required": ["guide_id", "title", "device", "issue", "difficulty", "steps"],
+  "additionalProperties": false
+}
