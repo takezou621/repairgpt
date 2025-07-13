@@ -20,14 +20,21 @@ try:
     from chat.llm_chatbot import RepairChatbot, RepairContext
     from clients.ifixit_client import IFixitClient, Guide
     from data.offline_repair_database import OfflineRepairDatabase
+    from i18n import i18n, _
+    from ui.language_selector import language_selector, get_localized_device_categories, get_localized_skill_levels
 except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
 
 
+# Initialize i18n and set default language from session state
+if 'language' not in st.session_state:
+    st.session_state.language = 'en'
+i18n.set_language(st.session_state.language)
+
 # Page configuration
 st.set_page_config(
-    page_title="RepairGPT - AI Repair Assistant",
+    page_title=_("app.title"),
     page_icon="🔧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -92,6 +99,9 @@ st.markdown("""
 
 def initialize_session_state():
     """Initialize Streamlit session state variables"""
+    if 'language' not in st.session_state:
+        st.session_state.language = 'en'
+    
     if 'chatbot' not in st.session_state:
         st.session_state.chatbot = RepairChatbot(preferred_model="auto")
     
@@ -124,52 +134,53 @@ def initialize_session_state():
 
 def sidebar_device_setup():
     """Sidebar for device and context setup"""
-    st.sidebar.header("🔧 Device Information")
+    st.sidebar.header(_("ui.headers.device_info"))
     
     # Device selection
-    device_categories = [
-        "Select Device Type...",
-        "Nintendo Switch", "Nintendo Switch Lite", "Nintendo Switch OLED",
-        "iPhone", "iPad", "MacBook", "iMac",
-        "PlayStation 5", "PlayStation 4", "Xbox Series X/S", "Xbox One",
-        "Samsung Galaxy", "Google Pixel",
-        "Gaming PC", "Laptop", "Desktop PC",
-        "Other"
-    ]
+    device_categories = get_localized_device_categories()
     
     selected_device = st.sidebar.selectbox(
-        "Device Type",
+        _("ui.labels.device_type"),
         device_categories,
         index=0
     )
     
     device_model = ""
-    if selected_device != "Select Device Type...":
-        if selected_device == "Other":
-            device_model = st.sidebar.text_input("Enter device name:")
+    if selected_device != _("ui.placeholders.select_device"):
+        if selected_device == _("devices.other"):
+            device_model = st.sidebar.text_input(_("ui.placeholders.device_model"))
             selected_device = device_model
         else:
-            device_model = st.sidebar.text_input("Model/Version (optional):")
+            device_model = st.sidebar.text_input(_("ui.labels.device_model"))
     
     # Issue description
     issue_description = st.sidebar.text_area(
-        "Describe the issue:",
-        placeholder="e.g., Joy-Con drift, cracked screen, won't turn on..."
+        _("ui.labels.issue_description"),
+        placeholder=_("ui.placeholders.issue_description")
     )
     
     # Skill level
+    skill_levels = get_localized_skill_levels()
     skill_level = st.sidebar.selectbox(
-        "Your repair experience:",
-        ["beginner", "intermediate", "expert"]
+        _("ui.labels.skill_level"),
+        skill_levels
     )
     
+    # Convert localized skill level back to English for internal use
+    skill_level_map = {
+        _("skill_levels.beginner"): "beginner",
+        _("skill_levels.intermediate"): "intermediate", 
+        _("skill_levels.expert"): "expert"
+    }
+    internal_skill_level = skill_level_map.get(skill_level, "beginner")
+    
     # Update context
-    if selected_device != "Select Device Type...":
+    if selected_device != _("ui.placeholders.select_device"):
         st.session_state.device_context.update({
             'device_type': selected_device,
             'device_model': device_model,
             'issue_description': issue_description,
-            'skill_level': skill_level
+            'skill_level': internal_skill_level
         })
         
         # Update chatbot context
@@ -177,28 +188,28 @@ def sidebar_device_setup():
             device_type=selected_device,
             device_model=device_model,
             issue_description=issue_description,
-            user_skill_level=skill_level
+            user_skill_level=internal_skill_level
         )
     
     # Show current context
     if st.session_state.device_context['device_type']:
-        with st.sidebar.expander("Current Context", expanded=False):
-            st.write(f"**Device:** {st.session_state.device_context['device_type']}")
+        with st.sidebar.expander(_("ui.labels.current_context"), expanded=False):
+            st.write(f"**{_("guide.device")}:** {st.session_state.device_context['device_type']}")
             if st.session_state.device_context['device_model']:
-                st.write(f"**Model:** {st.session_state.device_context['device_model']}")
+                st.write(f"**{_("ui.labels.device_model")}:** {st.session_state.device_context['device_model']}")
             if st.session_state.device_context['issue_description']:
-                st.write(f"**Issue:** {st.session_state.device_context['issue_description']}")
-            st.write(f"**Skill Level:** {st.session_state.device_context['skill_level']}")
+                st.write(f"**{_("ui.labels.issue_description")}:** {st.session_state.device_context['issue_description']}")
+            st.write(f"**{_("ui.labels.skill_level")}:** {skill_level}")
 
 
 def image_upload_section():
     """Image upload and analysis section"""
-    st.sidebar.header("📸 Image Upload")
+    st.sidebar.header(_("ui.headers.image_upload"))
     
     uploaded_file = st.sidebar.file_uploader(
-        "Upload device photo",
+        _("ui.labels.upload_image"),
         type=['png', 'jpg', 'jpeg'],
-        help="Upload a clear photo of your device or the problem area"
+        help=_("ui.help.upload_image")
     )
     
     if uploaded_file is not None:
@@ -210,9 +221,9 @@ def image_upload_section():
         # Store in session state
         st.session_state.uploaded_image = image
         
-        if st.sidebar.button("🔍 Analyze Image", type="primary"):
-            st.sidebar.success("Image uploaded successfully!")
-            st.sidebar.info("AI-powered image analysis coming soon...")
+        if st.sidebar.button(_("ui.buttons.analyze_image"), type="primary"):
+            st.sidebar.success(_("ui.messages.image_uploaded"))
+            st.sidebar.info(_("ui.messages.image_analysis_coming"))
             
             # TODO: Integrate with vision AI
             # For now, add context about image upload
@@ -221,7 +232,7 @@ def image_upload_section():
                 f"User uploaded an image of their {st.session_state.device_context['device_type']}. Image analysis capabilities will be available in future updates."
             )
     
-    if st.sidebar.button("🗑️ Clear Image"):
+    if st.sidebar.button(_("ui.buttons.clear_image")):
         st.session_state.uploaded_image = None
         st.rerun()
 
@@ -353,25 +364,32 @@ def main_chat_interface():
     """Main chat interface"""
     # Header
     st.markdown('<h1 class="main-header">🔧 RepairGPT</h1>', unsafe_allow_html=True)
-    st.markdown("### AI-Powered Electronic Device Repair Assistant")
+    st.markdown(f"### {_("app.subtitle")}")
     
     # Safety warning
-    st.markdown("""
+    st.markdown(f"""
     <div class="safety-warning">
-        <strong>⚠️ Safety First:</strong> Always power off devices before repair. 
-        Work in a static-free environment. If unsure, consult a professional.
+        {_("ui.messages.safety_warning")}
     </div>
     """, unsafe_allow_html=True)
     
     # Device context display
     if st.session_state.device_context['device_type']:
         device_info = st.session_state.device_context
+        # Get localized skill level for display
+        skill_level_display_map = {
+            "beginner": _("skill_levels.beginner"),
+            "intermediate": _("skill_levels.intermediate"), 
+            "expert": _("skill_levels.expert")
+        }
+        skill_display = skill_level_display_map.get(device_info['skill_level'], device_info['skill_level'])
+        
         st.markdown(f"""
         <div class="device-card">
-            <h4>🔧 Current Device: {device_info['device_type']}</h4>
-            {f"<strong>Model:</strong> {device_info['device_model']}<br>" if device_info['device_model'] else ""}
-            {f"<strong>Issue:</strong> {device_info['issue_description']}<br>" if device_info['issue_description'] else ""}
-            <strong>Skill Level:</strong> {device_info['skill_level'].title()}
+            <h4>{_("ui.headers.current_device", device=device_info['device_type'])}</h4>
+            {f"<strong>{_("ui.labels.device_model")}:</strong> {device_info['device_model']}<br>" if device_info['device_model'] else ""}
+            {f"<strong>{_("ui.labels.issue_description")}:</strong> {device_info['issue_description']}<br>" if device_info['issue_description'] else ""}
+            <strong>{_("ui.labels.skill_level")}:</strong> {skill_display}
         </div>
         """, unsafe_allow_html=True)
     
@@ -382,13 +400,13 @@ def main_chat_interface():
             if message["role"] == "user":
                 st.markdown(f"""
                 <div class="chat-message user-message">
-                    <strong>You:</strong> {message["content"]}
+                    <strong>{_("chat.you")}:</strong> {message["content"]}
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="chat-message assistant-message">
-                    <strong>RepairGPT:</strong> {message["content"]}
+                    <strong>{_("chat.repairgpt")}:</strong> {message["content"]}
                 </div>
                 """, unsafe_allow_html=True)
     
@@ -399,16 +417,16 @@ def main_chat_interface():
         
         with col1:
             user_input = st.text_area(
-                "Describe your repair issue or ask a question:",
-                placeholder="e.g., My Nintendo Switch Joy-Con is drifting. How can I fix it?",
+                _("ui.labels.chat_input"),
+                placeholder=_("ui.placeholders.chat_input"),
                 height=100,
                 key="chat_input"
             )
         
         with col2:
             st.write("")  # Spacing
-            send_button = st.button("Send 🚀", type="primary", use_container_width=True)
-            clear_button = st.button("Clear Chat 🗑️", use_container_width=True)
+            send_button = st.button(_("ui.buttons.send"), type="primary", use_container_width=True)
+            clear_button = st.button(_("ui.buttons.clear_chat"), use_container_width=True)
     
     # Handle user input
     if send_button and user_input.strip():
@@ -416,12 +434,12 @@ def main_chat_interface():
         st.session_state.messages.append({"role": "user", "content": user_input})
         
         # Get bot response
-        with st.spinner("RepairGPT is thinking..."):
+        with st.spinner(_("ui.messages.thinking")):
             try:
                 response = st.session_state.chatbot.chat(user_input)
                 st.session_state.messages.append({"role": "assistant", "content": response})
             except Exception as e:
-                error_response = f"I apologize, but I encountered an error: {e}"
+                error_response = _("ui.messages.error_response", error=str(e))
                 st.session_state.messages.append({"role": "assistant", "content": error_response})
         
         # Clear input and rerun
@@ -437,33 +455,33 @@ def main_chat_interface():
 def quick_help_section():
     """Quick help and examples section"""
     if not st.session_state.messages:  # Only show when chat is empty
-        st.markdown("### 💡 Quick Start Examples")
+        st.markdown(f"### {_("ui.headers.quick_start")}")
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("🎮 Joy-Con Drift Fix", use_container_width=True):
-                example_text = "My Nintendo Switch Joy-Con is drifting. What are my options to fix this?"
+            if st.button(_("ui.examples.joycon_drift"), use_container_width=True):
+                example_text = _("ui.examples.joycon_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
-                with st.spinner("Getting response..."):
+                with st.spinner(_("ui.messages.getting_response")):
                     response = st.session_state.chatbot.chat(example_text)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
         
         with col2:
-            if st.button("📱 Cracked Screen Repair", use_container_width=True):
-                example_text = "I dropped my iPhone and the screen is cracked. Is it worth repairing myself?"
+            if st.button(_("ui.examples.cracked_screen"), use_container_width=True):
+                example_text = _("ui.examples.screen_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
-                with st.spinner("Getting response..."):
+                with st.spinner(_("ui.messages.getting_response")):
                     response = st.session_state.chatbot.chat(example_text)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
         
         with col3:
-            if st.button("💻 Laptop Won't Boot", use_container_width=True):
-                example_text = "My laptop won't turn on after a power surge. What should I check first?"
+            if st.button(_("ui.examples.laptop_boot"), use_container_width=True):
+                example_text = _("ui.examples.laptop_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
-                with st.spinner("Getting response..."):
+                with st.spinner(_("ui.messages.getting_response")):
                     response = st.session_state.chatbot.chat(example_text)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
@@ -472,11 +490,11 @@ def quick_help_section():
 def footer():
     """Application footer"""
     st.markdown("---")
-    st.markdown("""
+    st.markdown(f"""
     <div style="text-align: center; color: #666; margin-top: 2rem;">
-        <p>🔧 RepairGPT - Open Source AI Repair Assistant</p>
-        <p>Always prioritize safety and consider professional help for complex repairs.</p>
-        <p>Powered by AI • Data from iFixit • Built with Streamlit</p>
+        <p>{_("app.footer.description")}</p>
+        <p>{_("app.footer.safety")}</p>
+        <p>{_("app.footer.powered")}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -485,6 +503,12 @@ def main():
     """Main application function"""
     # Initialize session state
     initialize_session_state()
+    
+    # Language selector
+    language_selector()
+    
+    # Update i18n with current language
+    i18n.set_language(st.session_state.language)
     
     # Sidebar
     sidebar_device_setup()

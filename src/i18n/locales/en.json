@@ -1,0 +1,152 @@
+{
+  "app": {
+    "title": "RepairGPT - AI Repair Assistant",
+    "subtitle": "AI-Powered Electronic Device Repair Assistant",
+    "footer": {
+      "description": "🔧 RepairGPT - Open Source AI Repair Assistant",
+      "safety": "Always prioritize safety and consider professional help for complex repairs.",
+      "powered": "Powered by AI • Data from iFixit • Built with Streamlit"
+    }
+  },
+  "ui": {
+    "buttons": {
+      "send": "Send 🚀",
+      "clear_chat": "Clear Chat 🗑️",
+      "clear_image": "🗑️ Clear Image",
+      "analyze_image": "🔍 Analyze Image",
+      "online_search": "🌐 Online",
+      "offline_search": "💾 Offline",
+      "view_details": "View Details",
+      "language": "Language"
+    },
+    "labels": {
+      "device_type": "Device Type",
+      "device_model": "Model/Version (optional)",
+      "issue_description": "Describe the issue:",
+      "skill_level": "Your repair experience:",
+      "chat_input": "Describe your repair issue or ask a question:",
+      "upload_image": "Upload device photo",
+      "current_context": "Current Context",
+      "debug_info": "Show Debug Info"
+    },
+    "placeholders": {
+      "device_model": "Enter device name:",
+      "issue_description": "e.g., Joy-Con drift, cracked screen, won't turn on...",
+      "chat_input": "e.g., My Nintendo Switch Joy-Con is drifting. How can I fix it?",
+      "select_device": "Select Device Type..."
+    },
+    "headers": {
+      "device_info": "🔧 Device Information",
+      "image_upload": "📸 Image Upload",
+      "repair_guides": "📚 Repair Guides",
+      "quick_start": "💡 Quick Start Examples",
+      "current_device": "🔧 Current Device: {device}",
+      "online_guides": "🌐 Online Guides (iFixit):",
+      "offline_guides": "💾 Offline Guides:",
+      "tools_required": "🛠️ Tools Required",
+      "parts_required": "🔧 Parts Required",
+      "warnings": "⚠️ Important Warnings",
+      "repair_steps": "📋 Repair Steps",
+      "pro_tips": "💡 Pro Tips"
+    },
+    "messages": {
+      "safety_warning": "<strong>⚠️ Safety First:</strong> Always power off devices before repair. Work in a static-free environment. If unsure, consult a professional.",
+      "image_uploaded": "Image uploaded successfully!",
+      "image_analysis_coming": "AI-powered image analysis coming soon...",
+      "thinking": "RepairGPT is thinking...",
+      "getting_response": "Getting response...",
+      "searching_ifixit": "Searching iFixit guides...",
+      "searching_offline": "Searching offline repair database...",
+      "found_online_guides": "Found {count} online guides!",
+      "found_offline_guides": "Found {count} offline guides!",
+      "no_online_guides": "No online guides found. Try offline guides.",
+      "no_offline_guides": "No matching offline guides found.",
+      "online_search_failed": "Online search failed: {error}",
+      "offline_search_failed": "Offline search failed: {error}",
+      "try_offline": "Try offline guides instead!",
+      "error_response": "I apologize, but I encountered an error: {error}"
+    },
+    "help": {
+      "upload_image": "Upload a clear photo of your device or the problem area",
+      "online_search": "Search iFixit guides online",
+      "offline_search": "Search built-in repair database"
+    },
+    "examples": {
+      "joycon_drift": "🎮 Joy-Con Drift Fix",
+      "cracked_screen": "📱 Cracked Screen Repair",
+      "laptop_boot": "💻 Laptop Won't Boot",
+      "joycon_text": "My Nintendo Switch Joy-Con is drifting. What are my options to fix this?",
+      "screen_text": "I dropped my iPhone and the screen is cracked. Is it worth repairing myself?",
+      "laptop_text": "My laptop won't turn on after a power surge. What should I check first?"
+    }
+  },
+  "devices": {
+    "nintendo_switch": "Nintendo Switch",
+    "nintendo_switch_lite": "Nintendo Switch Lite",
+    "nintendo_switch_oled": "Nintendo Switch OLED",
+    "iphone": "iPhone",
+    "ipad": "iPad",
+    "macbook": "MacBook",
+    "imac": "iMac",
+    "playstation_5": "PlayStation 5",
+    "playstation_4": "PlayStation 4",
+    "xbox_series": "Xbox Series X/S",
+    "xbox_one": "Xbox One",
+    "samsung_galaxy": "Samsung Galaxy",
+    "google_pixel": "Google Pixel",
+    "gaming_pc": "Gaming PC",
+    "laptop": "Laptop",
+    "desktop_pc": "Desktop PC",
+    "other": "Other"
+  },
+  "skill_levels": {
+    "beginner": "beginner",
+    "intermediate": "intermediate",
+    "expert": "expert"
+  },
+  "guide": {
+    "difficulty": "Difficulty",
+    "time": "Time",
+    "cost": "Cost",
+    "success_rate": "Success Rate",
+    "device": "Device",
+    "summary": "Summary",
+    "view_full_guide": "View Full Guide",
+    "step": "Step {step}: {title}"
+  },
+  "debug": {
+    "active_llm": "Active LLM Client",
+    "message_count": "Message Count",
+    "device_context": "Device Context",
+    "has_image": "Has Image",
+    "ifixit_guides": "iFixit Guides",
+    "offline_guides": "Offline Guides",
+    "total_offline_db": "Total Offline DB",
+    "available_devices": "Available Devices"
+  },
+  "chat": {
+    "you": "You",
+    "repairgpt": "RepairGPT"
+  },
+  "api": {
+    "health": {
+      "message": "RepairGPT API is running successfully"
+    },
+    "devices": {
+      "success": "Successfully retrieved supported devices"
+    },
+    "skill_levels": {
+      "success": "Successfully retrieved skill levels"
+    },
+    "guides": {
+      "search_success": "Successfully found repair guides"
+    },
+    "languages": {
+      "success": "Successfully retrieved supported languages"
+    },
+    "errors": {
+      "chat_failed": "Failed to process chat request: {error}",
+      "search_failed": "Failed to search repair guides: {error}"
+    }
+  }
+}
