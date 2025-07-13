@@ -2,7 +2,6 @@ name: Claude Issue Processor
 
 on:
   schedule:
-    # 毎日23:00(JST)に実行（深夜帯に処理）
     - cron: '0 14 * * *'  # UTC 14:00 = JST 23:00
   workflow_dispatch:
 
@@ -28,10 +27,9 @@ jobs:
           const owner = context.repo.owner;
           const repo = context.repo.repo;
           
-          console.log('🔍 Searching for unprocessed issues...');
+          console.log('Searching for unprocessed issues...');
           
           try {
-            // 未処理のissueを検索（claude-processedラベルがないもの）
             const issues = await github.rest.issues.listForRepo({
               owner,
               repo,
@@ -42,7 +40,6 @@ jobs:
               per_page: 100
             });
             
-            // claude-processedラベルがないissueをフィルタリング
             const unprocessedIssues = [];
             for (const issue of issues.data) {
               const labels = issue.labels.map(label => label.name);
@@ -52,12 +49,15 @@ jobs:
             }
             
             if (unprocessedIssues.length === 0) {
-              console.log('✅ No unprocessed issues found');
+              console.log('No unprocessed issues found');
               return;
             }
             
-            // 優先度でソート（priority:highが最優先）
-            const priorityOrder = { 'priority:high': 1, 'priority:medium': 2, 'priority:low': 3 };
+            const priorityOrder = { 
+              'priority:high': 1, 
+              'priority:medium': 2, 
+              'priority:low': 3 
+            };
             unprocessedIssues.sort((a, b) => {
               const aPriority = a.labels.find(label => label.name.startsWith('priority:'));
               const bPriority = b.labels.find(label => label.name.startsWith('priority:'));
@@ -68,22 +68,10 @@ jobs:
               return aOrder - bOrder;
             });
             
-            // 最初の未処理issueを選択
             const targetIssue = unprocessedIssues[0];
-            console.log(`🎯 Processing issue #${targetIssue.number}: ${targetIssue.title}`);
+            console.log('Processing issue #' + targetIssue.number + ': ' + targetIssue.title);
             
-            // @claudeメンションを含むコメントを追加（Claude Code Max用）
-            const comment = `@claude このissueを解決してください。
-
-以下の点に注意して作業を進めてください：
-- 既存のコードスタイルとドキュメント規約に従う
-- 適切なテストコードを含める
-- 必要に応じてドキュメントを更新する
-- セキュリティベストプラクティスに従う
-
-**Note**: Claude Code Max (Opus 4)を使用して高度な分析と実装を行います。
-
-作業が完了したら、実装内容の概要を報告してください。`;
+            const comment = '@claude このissueを解決してください。\n\n以下の点に注意して作業を進めてください：\n- 既存のコードスタイルとドキュメント規約に従う\n- 適切なテストコードを含める\n- 必要に応じてドキュメントを更新する\n- セキュリティベストプラクティスに従う\n\n**Note**: Claude Code Max (Opus 4)を使用して高度な分析と実装を行います。\n\n作業が完了したら、実装内容の概要を報告してください。';
             
             await github.rest.issues.createComment({
               owner,
@@ -92,7 +80,6 @@ jobs:
               body: comment
             });
             
-            // claude-processedラベルを追加
             await github.rest.issues.addLabels({
               owner,
               repo,
@@ -100,16 +87,15 @@ jobs:
               labels: ['claude-processed']
             });
             
-            console.log(`✅ Issue #${targetIssue.number} has been marked for Claude processing`);
+            console.log('Issue #' + targetIssue.number + ' has been marked for Claude processing');
             
           } catch (error) {
-            console.error('❌ Error processing issues:', error);
+            console.error('Error processing issues:', error);
             throw error;
           }
     
     - name: Wait for processing
       run: |
-        echo "✅ Issue has been marked for Claude processing"
-        echo "🤖 Claude will process this issue asynchronously"
-        # 深夜帯の処理なので、少し待機してから終了
+        echo "Issue has been marked for Claude processing"
+        echo "Claude will process this issue asynchronously"
         sleep 60

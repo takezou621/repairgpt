@@ -2,7 +2,7 @@ name: Nightly Claude Code Action (Full Automation)
 
 on:
   schedule:
-    - cron: '0,30 14-21 * * *'  # JST 23:00〜06:00 を UTC で指定
+    - cron: '0 14,18,22 * * *'  # JST 23:00, 03:00, 07:00 (3回/日)
   workflow_dispatch:
 
 jobs:

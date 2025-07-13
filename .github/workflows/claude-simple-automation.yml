@@ -2,7 +2,7 @@ name: Claude Simple Automation
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # 1分ごとに実行
+    - cron: '*/10 * * * *'  # 10分ごとに実行（適切な頻度に調整）
   workflow_dispatch:
 
 jobs:
