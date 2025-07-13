@@ -64,7 +64,7 @@ jobs:
           
           // 最初の未処理issueを選択
           const targetIssue = unprocessedIssues[0];
-          console.log(`Processing issue #${targetIssue.number}: ${targetIssue.title}`);
+          console.log('Processing issue #' + targetIssue.number + ': ' + targetIssue.title);
           
           // @claudeメンションを含むコメントを追加（Claude Code Max用）
           const comment = `@claude このissueを解決してください。
@@ -94,7 +94,7 @@ jobs:
             labels: ['claude-processed']
           });
           
-          console.log(`Issue #${targetIssue.number} has been marked for Claude processing`);
+          console.log('Issue #' + targetIssue.number + ' has been marked for Claude processing');
     
     - name: Wait for processing
       run: |

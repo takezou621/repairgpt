@@ -50,7 +50,7 @@ jobs:
             console.log(`Found ${processedIssues.length} Claude-processed issues`);
             
             for (const issue of processedIssues) {
-              console.log(`\n🔍 Processing Issue #${issue.number}: ${issue.title}`);
+              console.log('\n🔍 Processing Issue #' + issue.number + ': ' + issue.title);
               
               // 関連ブランチを検索
               const branches = await github.rest.repos.listBranches({
@@ -65,7 +65,7 @@ jobs:
               );
               
               if (!claudeBranch) {
-                console.log(`No branch found for Issue #${issue.number}`);
+                console.log('No branch found for Issue #' + issue.number);
                 continue;
               }
               
@@ -81,54 +81,56 @@ jobs:
               
               if (existingPRs.data.length > 0) {
                 const pr = existingPRs.data[0];
-                console.log(`Found existing PR #${pr.number}, state: ${pr.state}`);
+                console.log('Found existing PR #' + pr.number + ', state: ' + pr.state);
                 
                 if (pr.state === 'open') {
                   // オープンPRを自動マージ
-                  console.log(`🔄 Auto-merging PR #${pr.number}`);
+                  console.log('🔄 Auto-merging PR #' + pr.number);
                   
                   try {
                     await github.rest.pulls.merge({
                       owner: context.repo.owner,
                       repo: context.repo.repo,
                       pull_number: pr.number,
-                      commit_title: `Ultimate Auto-merge: Issue #${issue.number}`,
+                      commit_title: 'Ultimate Auto-merge: Issue #' + issue.number,
                       merge_method: 'squash'
                     });
-                    console.log(`✅ Merged PR #${pr.number}`);
+                    console.log('✅ Merged PR #' + pr.number);
                   } catch (mergeError) {
-                    console.log(`⚠️ Merge failed: ${mergeError.message}`);
+                    console.log('⚠️ Merge failed: ' + mergeError.message);
                     continue;
                   }
                 }
               } else {
                 // PRを作成
-                console.log(`📝 Creating PR for Issue #${issue.number}`);
+                console.log('📝 Creating PR for Issue #' + issue.number);
                 
                 try {
                   const pr = await github.rest.pulls.create({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    title: `fix: ${issue.title} (closes #${issue.number})`,
+                    title: 'fix: ' + issue.title + ' (closes #' + issue.number + ')',
                     head: claudeBranch.name,
                     base: 'main',
-                    body: `## 🤖 究極完全自動化
-          
-          ### 関連Issue
-          Closes #${issue.number}
-          
-          ### 自動化フロー
-          - [x] ✅ Claude Code実装完了
-          - [x] ✅ 自動PR作成
-          - [x] ✅ 即座に自動マージ
-          - [x] ✅ Issue自動クローズ
-          - [x] ✅ ブランチ自動削除
-          
-          ---
-          🚀 **究極の100%完全自動化** | Generated with Claude Code Max`
+                    body: [
+                      '## 🤖 究極完全自動化',
+                      '',
+                      '### 関連Issue',
+                      'Closes #' + issue.number,
+                      '',
+                      '### 自動化フロー',
+                      '- [x] ✅ Claude Code実装完了',
+                      '- [x] ✅ 自動PR作成',
+                      '- [x] ✅ 即座に自動マージ',
+                      '- [x] ✅ Issue自動クローズ',
+                      '- [x] ✅ ブランチ自動削除',
+                      '',
+                      '---',
+                      '🚀 **究極の100%完全自動化** | Generated with Claude Code Max'
+                    ].join('\n')
                   });
                   
-                  console.log(`✅ Created PR #${pr.data.number}`);
+                  console.log('✅ Created PR #' + pr.data.number);
                   
                   // 即座にマージ
                   await new Promise(resolve => setTimeout(resolve, 2000));
@@ -137,39 +139,41 @@ jobs:
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     pull_number: pr.data.number,
-                    commit_title: `Ultimate Auto-merge: Issue #${issue.number}`,
+                    commit_title: 'Ultimate Auto-merge: Issue #' + issue.number,
                     merge_method: 'squash'
                   });
                   
-                  console.log(`✅ Auto-merged PR #${pr.data.number}`);
+                  console.log('✅ Auto-merged PR #' + pr.data.number);
                   
                 } catch (prError) {
-                  console.log(`❌ PR creation/merge failed: ${prError.message}`);
+                  console.log('❌ PR creation/merge failed: ' + prError.message);
                   continue;
                 }
               }
               
               // Issue完了処理
-              console.log(`🔒 Closing Issue #${issue.number}`);
+              console.log('🔒 Closing Issue #' + issue.number);
               
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `🎉 **究極完全自動化フロー実行完了**
-          
-          Issue #${issue.number} の処理が100%自動で完了しました。
-          
-          **実行内容:**
-          - 🤖 Claude Code Max実装検知
-          - 📝 自動PR作成・マージ
-          - 🔒 Issue自動クローズ
-          - 🧹 ブランチ自動削除
-          
-          **実行時刻:** $(date)
-          
-          ---
-          🚀 **真の100%完全自動化達成** | Ultimate Automation`
+                body: [
+                  '🎉 **究極完全自動化フロー実行完了**',
+                  '',
+                  'Issue #' + issue.number + ' の処理が100%自動で完了しました。',
+                  '',
+                  '**実行内容:**',
+                  '- 🤖 Claude Code Max実装検知',
+                  '- 📝 自動PR作成・マージ',
+                  '- 🔒 Issue自動クローズ',
+                  '- 🧹 ブランチ自動削除',
+                  '',
+                  '**実行時刻:** $(date)',
+                  '',
+                  '---',
+                  '🚀 **真の100%完全自動化達成** | Ultimate Automation'
+                ].join('\n')
               });
               
               await github.rest.issues.update({
@@ -195,17 +199,17 @@ jobs:
                   repo: context.repo.repo,
                   ref: `heads/${claudeBranch.name}`
                 });
-                console.log(`🗑️ Deleted branch ${claudeBranch.name}`);
+                console.log('🗑️ Deleted branch ' + claudeBranch.name);
               } catch (deleteError) {
-                console.log(`⚠️ Branch deletion failed: ${deleteError.message}`);
+                console.log('⚠️ Branch deletion failed: ' + deleteError.message);
               }
               
-              console.log(`🎯 Issue #${issue.number} ULTIMATE AUTOMATION COMPLETED!`);
+              console.log('🎯 Issue #' + issue.number + ' ULTIMATE AUTOMATION COMPLETED!');
             }
             
             console.log('\n🚀 ULTIMATE AUTOMATION FINISHED');
             
           } catch (error) {
-            console.log(`❌ Ultimate automation error: ${error.message}`);
+            console.log('❌ Ultimate automation error: ' + error.message);
             console.log(error.stack);
           }

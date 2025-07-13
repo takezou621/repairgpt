@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue create:*)",
+      "Bash(gh issue close:*)",
+      "Bash(mkdir:*)",
+      "Bash(gh issue comment:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh issue view:*)",
+      "WebFetch(domain:www.ifixit.com)",
+      "Bash(python:*)",
+      "Bash(pip3 install:*)",
+      "Bash(gh label create:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(yamllint:*)",
+      "Bash(rm:*)",
+      "Bash(git commit:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
+    ],
+    "deny": []
+  }
+}

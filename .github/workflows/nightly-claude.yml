@@ -1,0 +1,44 @@
+name: Nightly Claude Code Action (Full Automation)
+
+on:
+  schedule:
+    - cron: '0,30 14-21 * * *'  # JST 23:00〜06:00 を UTC で指定
+  workflow_dispatch:
+
+jobs:
+  auto-fix-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "Claude Code Action Bot"
+          git config --global user.email "claude-bot@users.noreply.github.com"
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Install Claude Code CLI
+        run: |
+          curl -L https://github.com/anthropics/claude-code/releases/latest/download/claude-code-linux-amd64.tar.gz | tar -xz
+          sudo mv claude-code /usr/local/bin/claude
+          claude --version
+
+      - name: Run full automation script
+        run: python scripts/comment_issue.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
