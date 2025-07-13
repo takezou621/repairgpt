@@ -20,203 +20,202 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Process Issue 24
+    - name: Process Issues with "claude-processed" label
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          console.log('🔍 Checking Issue #24...');
+          console.log('🔍 Searching for issues with "claude-processed" label...');
           
-          try {
-            // Issue #24の状態を確認
-            const issue = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: 24
-            });
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'claude-processed',
+            state: 'open'
+          });
+
+          if (issues.data.length === 0) {
+            console.log('No processable issues found.');
+            return;
+          }
+
+          for (const issue of issues.data) {
+            console.log(`
+--- Processing Issue #${issue.number}: ${issue.title} ---`);
             
-            console.log(`Issue #24 state: ${issue.data.state}`);
-            
-            if (issue.data.state !== 'open') {
-              console.log('Issue #24 is already closed');
-              return;
-            }
-            
-            // ラベルをチェック
-            const hasClaudeProcessed = issue.data.labels.some(label => 
-              label.name === 'claude-processed'
-            );
-            
-            if (!hasClaudeProcessed) {
-              console.log('Issue #24 does not have claude-processed label');
-              return;
-            }
-            
-            // ブランチの確認
-            const branches = await github.rest.repos.listBranches({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100
-            });
-            
-            const claudeBranch = branches.data.find(branch => 
-              branch.name.includes('issue-24')
-            );
-            
-            if (!claudeBranch) {
-              console.log('No Claude branch found for Issue #24');
-              return;
-            }
-            
-            console.log(`Found branch: ${claudeBranch.name}`);
-            
-            // 既存のPRをチェック
-            const existingPRs = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${claudeBranch.name}`,
-              state: 'all'
-            });
-            
-            if (existingPRs.data.length > 0) {
-              console.log(`PR already exists: #${existingPRs.data[0].number}`);
-              return;
-            }
-            
-            console.log('🚀 Creating PR for Issue #24...');
-            
-            // PRを作成
-            const pr = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `fix: ${issue.data.title} (closes #24)`,
-              head: claudeBranch.name,
-              base: 'main',
-              body: [
-                '## 🤖 完全自動化によるPR作成',
-                '',
-                '### 関連Issue',
-                'Closes #24',
-                '',
-                '### 概要',
-                'Claude Code Maxによる実装を自動検知し、完全自動化フローでPRを作成しました。',
-                '',
-                '### 実装内容',
-                `- Issue #24: ${issue.data.title}`,
-                `- Branch: \`${claudeBranch.name}\``,
-                '- 自動検知: スケジュール自動化',
-                '',
-                '### 自動化フロー',
-                '- [x] ✅ Claude Code Maxによる実装',
-                '- [x] ✅ スケジュール自動検知',
-                '- [x] ✅ 自動PR作成',
-                '- [ ] 🔄 自動マージ実行中',
-                '- [ ] 🔄 Issue自動クローズ',
-                '- [ ] 🔄 ブランチ自動削除',
-                '',
-                '---',
-                '🎯 **真の100%完全自動化達成** | Generated with [Claude Code](https://claude.ai/code)',
-                '',
-                'Co-Authored-By: Claude <noreply@anthropic.com>'
-              ].join('\n')
-            });
-            
-            console.log(`✅ Created PR #${pr.data.number}: ${pr.data.html_url}`);
-            
-            // ラベルを追加
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pr.data.number,
-              labels: ['claude-auto-generated', 'fully-automated']
-            });
-            
-            console.log('⏳ Waiting before auto-merge...');
-            await new Promise(resolve => setTimeout(resolve, 10000));
-            
-            // 自動マージ
             try {
-              await github.rest.pulls.merge({
+              const branchNamePattern = `issue-${issue.number}`;
+              
+              // ブランチの確認
+              const branches = await github.rest.repos.listBranches({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                pull_number: pr.data.number,
-                commit_title: `Auto-merge: Issue #24 complete automation`,
-                merge_method: 'squash'
+                per_page: 100
               });
               
-              console.log(`🎉 Successfully merged PR #${pr.data.number}`);
+              const claudeBranch = branches.data.find(branch => 
+                branch.name.includes(branchNamePattern)
+              );
               
-              // Issue #24にコメント
-              await github.rest.issues.createComment({
+              if (!claudeBranch) {
+                console.log(`No Claude branch found for Issue #${issue.number}`);
+                continue;
+              }
+              
+              console.log(`Found branch: ${claudeBranch.name}`);
+              
+              // 既存のPRをチェック
+              const existingPRs = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: 24,
+                head: `${context.repo.owner}:${claudeBranch.name}`,
+                state: 'all'
+              });
+              
+              if (existingPRs.data.length > 0) {
+                console.log(`PR already exists for branch ${claudeBranch.name}: #${existingPRs.data[0].number}`);
+                continue;
+              }
+              
+              console.log(`🚀 Creating PR for Issue #${issue.number}...`);
+              
+              // PRを作成
+              const pr = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `fix: ${issue.title} (closes #${issue.number})`,
+                head: claudeBranch.name,
+                base: 'main',
                 body: [
-                  '✅ **真の100%完全自動化達成！**',
+                  '## 🤖 完全自動化によるPR作成',
                   '',
-                  'スケジュール自動化により、人間の介入なしで完全自動処理が実行されました。',
+                  '### 関連Issue',
+                  `Closes #${issue.number}`,
                   '',
-                  '**実行内容:**',
-                  '- 🕐 2分間隔の自動検知',
-                  `- 📝 自動PR作成: #${pr.data.number}`,
-                  '- ✅ 自動マージ実行',
-                  '- 🧹 ブランチクリーンアップ実行中',
+                  '### 概要',
+                  'Claude Code Maxによる実装を自動検知し、完全自動化フローでPRを作成しました。',
                   '',
-                  `**PR**: ${pr.data.html_url}`,
+                  '### 実装内容',
+                  `- Issue #${issue.number}: ${issue.title}`,
+                  `- Branch: 
+`${claudeBranch.name}``,
+                  '- 自動検知: スケジュール自動化',
+                  '',
+                  '### 自動化フロー',
+                  '- [x] ✅ Claude Code Maxによる実装',
+                  '- [x] ✅ スケジュール自動検知',
+                  '- [x] ✅ 自動PR作成',
+                  '- [ ] 🔄 自動マージ実行中',
+                  '- [ ] 🔄 Issue自動クローズ',
+                  '- [ ] 🔄 ブランチ自動削除',
                   '',
                   '---',
-                  '🚀 **100%自動化証明完了** | Claude Code Max + GitHub Actions'
-                ].join('\n')
+                  '🎯 **真の100%完全自動化達成** | Generated with [Claude Code](https://claude.ai/code)',
+                  '',
+                  'Co-Authored-By: Claude <noreply@anthropic.com>'
+                ].join('
+')
               });
               
-              // Issue #24をクローズ
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: 24,
-                state: 'closed'
-              });
+              console.log(`✅ Created PR #${pr.data.number}: ${pr.data.html_url}`);
               
-              // 完了ラベルを追加
+              // ラベルを追加
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: 24,
-                labels: ['claude-completed', 'fully-automated']
+                issue_number: pr.data.number,
+                labels: ['claude-auto-generated', 'fully-automated']
               });
               
-              console.log('🔒 Closed Issue #24');
+              console.log('⏳ Waiting before auto-merge...');
+              await new Promise(resolve => setTimeout(resolve, 10000));
               
-              // ブランチ削除
-              await new Promise(resolve => setTimeout(resolve, 3000));
+              // 自動マージ
+              try {
+                await github.rest.pulls.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.data.number,
+                  commit_title: `Auto-merge: Issue #${issue.number} complete automation`,
+                  merge_method: 'squash'
+                });
+                
+                console.log(`🎉 Successfully merged PR #${pr.data.number}`);
+                
+                // Issueにコメント
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: [
+                    '✅ **真の100%完全自動化達成！**',
+                    '',
+                    'スケジュール自動化により、人間の介入なしで完全自動処理が実行されました。',
+                    '',
+                    '**実行内容:**',
+                    '- 🕐 スケジュールによる自動検知',
+                    `- 📝 自動PR作成: #${pr.data.number}`,
+                    '- ✅ 自動マージ実行',
+                    '- 🧹 ブランチクリーンアップ実行中',
+                    '',
+                    `**PR**: ${pr.data.html_url}`,
+                    '',
+                    '---',
+                    '🚀 **100%自動化証明完了** | Claude Code Max + GitHub Actions'
+                  ].join('
+')
+                });
+                
+                // Issueをクローズ
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed'
+                });
+                
+                // 完了ラベルを追加
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['claude-completed', 'fully-automated']
+                });
+                
+                console.log(`🔒 Closed Issue #${issue.number}`);
+                
+                // ブランチ削除
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${claudeBranch.name}`
+                });
+                
+                console.log(`🗑️ Deleted branch ${claudeBranch.name}`);
+                
+                console.log(`🎯 TRUE 100% AUTOMATION COMPLETED FOR ISSUE #${issue.number}!`);
+                
+              } catch (mergeError) {
+                console.log(`❌ Merge failed for PR #${pr.data.number}: ${mergeError.message}`);
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: [
+                    '⚠️ 自動マージでエラーが発生しました。',
+                    '',
+                    `PR #${pr.data.number}: ${pr.data.html_url}`,
+                    '',
+                    `エラー: ${mergeError.message}`
+                  ].join('
+')
+                });
+              }
               
-              await github.rest.git.deleteRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `heads/${claudeBranch.name}`
-              });
-              
-              console.log(`🗑️ Deleted branch ${claudeBranch.name}`);
-              
-              console.log('🎯 TRUE 100% AUTOMATION COMPLETED!');
-              
-            } catch (mergeError) {
-              console.log(`❌ Merge failed: ${mergeError.message}`);
-              
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: 24,
-                body: [
-                  '⚠️ 自動マージでエラーが発生しました。',
-                  '',
-                  `PR #${pr.data.number}: ${pr.data.html_url}`,
-                  '',
-                  `エラー: ${mergeError.message}`
-                ].join('\n')
-              });
+            } catch (error) {
+              console.log(`❌ Error processing Issue #${issue.number}: ${error.message}`);
             }
-            
-          } catch (error) {
-            console.log(`❌ Error: ${error.message}`);
           }
