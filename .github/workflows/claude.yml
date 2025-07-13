@@ -19,9 +19,9 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pull-requests: read
-      issues: read
+      contents: write  # Required for branch creation and commits
+      pull-requests: write  # Required for PR creation
+      issues: write  # Required for issue updates
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
@@ -39,6 +39,11 @@ jobs:
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
+            
+          # Enable Claude to create branches and PRs for full automation
+          allowed_tools: |
+            mcp__github__create_pull_request
+            Bash(git checkout -b),Bash(git add),Bash(git commit),Bash(git push)
           
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"

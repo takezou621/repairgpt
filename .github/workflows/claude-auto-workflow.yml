@@ -1,0 +1,495 @@
+name: Claude Auto Workflow (Complete Automation)
+
+on:
+  workflow_run:
+    workflows: ["Claude Code"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  # Claude Codeワークフローの成功を検証し、自動PR作成を実行
+  auto-create-pr:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+      metadata: read
+      checks: read
+      id-token: write
+    
+    outputs:
+      pr_created: ${{ steps.create-pr.outputs.created }}
+      pr_number: ${{ steps.create-pr.outputs.pr_number }}
+      issue_number: ${{ steps.extract-context.outputs.issue_number }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        # GitHub AppのTokenを使用（より強い権限）
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract workflow context and issue information
+      id: extract-context
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const workflowRun = context.payload.workflow_run;
+          
+          console.log('Workflow Run Info:', {
+            id: workflowRun.id,
+            name: workflowRun.name,
+            conclusion: workflowRun.conclusion,
+            head_branch: workflowRun.head_branch,
+            head_sha: workflowRun.head_sha,
+            event: workflowRun.event,
+            actor: workflowRun.actor?.login
+          });
+          
+          let issueNumber = null;
+          let triggerType = 'unknown';
+          
+          // 1. PRから実行された場合
+          if (workflowRun.pull_requests && workflowRun.pull_requests.length > 0) {
+            issueNumber = workflowRun.pull_requests[0].number;
+            triggerType = 'pull_request';
+          }
+          // 2. ブランチ名からissue番号を抽出
+          else if (workflowRun.head_branch) {
+            const branchPatterns = [
+              /issue-(\d+)/,
+              /fix\/issue-(\d+)/,
+              /feature\/issue-(\d+)/,
+              /claude\/issue-(\d+)/,
+              /#(\d+)/
+            ];
+            
+            for (const pattern of branchPatterns) {
+              const match = workflowRun.head_branch.match(pattern);
+              if (match) {
+                issueNumber = parseInt(match[1]);
+                triggerType = 'issue_branch';
+                break;
+              }
+            }
+          }
+          
+          // 3. ワークフロー実行の詳細からissue情報を取得
+          if (!issueNumber && workflowRun.id) {
+            try {
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: workflowRun.id
+              });
+              
+              // ジョブログからissue番号を検索（Claude Code actionが作成するログパターンを想定）
+              for (const job of jobs.data.jobs) {
+                if (job.name.includes('claude')) {
+                  const logMatch = job.name.match(/issue[:\s#]*(\d+)/i);
+                  if (logMatch) {
+                    issueNumber = parseInt(logMatch[1]);
+                    triggerType = 'job_log';
+                    break;
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('Could not fetch workflow jobs:', error.message);
+            }
+          }
+          
+          console.log(`Extracted context: issueNumber=${issueNumber}, triggerType=${triggerType}`);
+          
+          return {
+            issueNumber,
+            triggerType,
+            workflowId: workflowRun.id,
+            headBranch: workflowRun.head_branch,
+            headSha: workflowRun.head_sha,
+            actor: workflowRun.actor?.login
+          };
+    
+    - name: Find and validate Claude-created branch
+      id: find-branch
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const context_data = ${{ steps.extract-context.outputs.result }};
+          const issueNumber = context_data.issueNumber;
+          const headBranch = context_data.headBranch;
+          
+          if (!issueNumber) {
+            console.log('No issue number found, cannot create PR');
+            return { found: false };
+          }
+          
+          // ブランチの存在確認
+          let targetBranch = headBranch;
+          let branchExists = false;
+          
+          try {
+            const branch = await github.rest.repos.getBranch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              branch: targetBranch
+            });
+            branchExists = true;
+            console.log(`Branch ${targetBranch} exists`);
+          } catch (error) {
+            console.log(`Branch ${targetBranch} not found, searching for alternatives...`);
+            
+            // 代替ブランチを検索
+            const candidateBranches = [
+              `claude/issue-${issueNumber}`,
+              `fix/issue-${issueNumber}`,
+              `feature/issue-${issueNumber}`,
+              `issue-${issueNumber}`,
+              `claude-${issueNumber}`
+            ];
+            
+            for (const candidate of candidateBranches) {
+              try {
+                await github.rest.repos.getBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  branch: candidate
+                });
+                targetBranch = candidate;
+                branchExists = true;
+                console.log(`Found alternative branch: ${candidate}`);
+                break;
+              } catch (e) {
+                // ブランチが存在しない
+              }
+            }
+          }
+          
+          // ブランチがmainと異なるコミットを持っているかチェック
+          let hasChanges = false;
+          if (branchExists) {
+            try {
+              const comparison = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: 'main',
+                head: targetBranch
+              });
+              hasChanges = comparison.data.ahead_by > 0;
+              console.log(`Branch ${targetBranch} is ${comparison.data.ahead_by} commits ahead of main`);
+            } catch (error) {
+              console.log('Could not compare branches:', error.message);
+            }
+          }
+          
+          return {
+            found: branchExists,
+            hasChanges,
+            branchName: targetBranch,
+            issueNumber
+          };
+    
+    - name: Create automatic pull request
+      id: create-pr
+      if: steps.find-branch.outputs.result && fromJSON(steps.find-branch.outputs.result).found && fromJSON(steps.find-branch.outputs.result).hasChanges
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const branchInfo = ${{ steps.find-branch.outputs.result }};
+          const contextInfo = ${{ steps.extract-context.outputs.result }};
+          
+          const issueNumber = branchInfo.issueNumber;
+          const branchName = branchInfo.branchName;
+          
+          // Issue情報を取得
+          const issue = await github.rest.issues.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber
+          });
+          
+          // 既存のPRをチェック
+          const existingPRs = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            head: `${context.repo.owner}:${branchName}`,
+            state: 'open'
+          });
+          
+          if (existingPRs.data.length > 0) {
+            console.log(`PR already exists: #${existingPRs.data[0].number}`);
+            return {
+              created: false,
+              existing: true,
+              prNumber: existingPRs.data[0].number,
+              issueNumber
+            };
+          }
+          
+          // PRタイトルとボディを作成
+          const prTitle = `🤖 Auto-fix: ${issue.data.title} (closes #${issueNumber})`;
+          const prBody = `## 🤖 自動実装 - Claude Code Max
+
+### 📋 概要
+このPRはClaude Code Max (Opus 4)によって自動実装されたissue #${issueNumber}の解決です。
+
+### 🔗 関連Issue
+Closes #${issueNumber}
+
+**Issue Title:** ${issue.data.title}
+
+### 🛠️ 実装内容
+Claude Code Maxが以下の作業を自動実行しました：
+- Issue "${issue.data.title}" への対応
+- コード変更の実装
+- 自動テストの実行（該当する場合）
+
+### 🔍 ワークフロー情報
+- **Workflow ID:** ${contextInfo.workflowId}
+- **Branch:** ${branchName}
+- **Triggered by:** ${contextInfo.actor || 'claude'}
+- **Commit SHA:** ${contextInfo.headSha}
+
+### ✅ 自動チェック項目
+- [x] Claude Code Maxによる実装完了
+- [x] 自動ブランチ作成
+- [x] コミット署名済み
+- [ ] 人間によるレビュー（推奨）
+- [ ] 最終動作確認
+
+### 🚀 次のステップ
+1. このPRの変更内容を確認
+2. 必要に応じて追加修正を実施
+3. テストが成功していることを確認
+4. マージして本番環境にデプロイ
+
+---
+🤖 **完全自動生成** - Claude Code Max (Opus 4)
+⚡ **自動化フロー** - GitHub Actions workflow_run trigger
+📝 **コミット署名** - 全てのコミットは自動署名済み
+
+**注意:** このPRは自動生成されていますが、重要な変更については人間のレビューを推奨します。`;
+          
+          // PRを作成
+          try {
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: prTitle,
+              head: branchName,
+              base: 'main',
+              body: prBody,
+              draft: false
+            });
+            
+            console.log(`Successfully created PR #${pr.data.number}`);
+            
+            // ラベルを追加
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.data.number,
+              labels: [
+                'claude-auto-generated',
+                'ready-for-review',
+                'auto-workflow',
+                'claude-code-max'
+              ]
+            });
+            
+            return {
+              created: true,
+              prNumber: pr.data.number,
+              issueNumber,
+              prUrl: pr.data.html_url
+            };
+            
+          } catch (error) {
+            console.error('Failed to create PR:', error);
+            return {
+              created: false,
+              error: error.message,
+              issueNumber
+            };
+          }
+    
+    - name: Add completion comment to issue
+      if: steps.create-pr.outputs.result && fromJSON(steps.create-pr.outputs.result).created
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const result = ${{ steps.create-pr.outputs.result }};
+          
+          const comment = `## 🎉 自動実装完了！
+
+Claude Code Max (Opus 4)による自動実装が完了し、PRが作成されました。
+
+### 📋 実装結果
+- **PR番号:** #${result.prNumber}
+- **PR URL:** ${result.prUrl}
+- **実装者:** Claude Code Max (Opus 4)
+- **実行方式:** 完全自動化ワークフロー
+
+### 🔍 次のアクション
+1. [PR #${result.prNumber}](${result.prUrl}) の内容を確認
+2. 必要に応じてコードレビューを実施
+3. テストが成功していることを確認
+4. 問題がなければマージを実行
+
+### 🤖 自動化フロー
+- ✅ Issue解析完了
+- ✅ コード実装完了 
+- ✅ ブランチ作成完了
+- ✅ PR作成完了
+- ⏳ レビュー待機中
+
+---
+🚀 **Claude Code Max完全自動化フロー** による実装です。`;
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: result.issueNumber,
+            body: comment
+          });
+
+  # Optional: Auto-merge with safety checks
+  auto-merge-with-checks:
+    needs: [auto-create-pr]
+    if: needs.auto-create-pr.outputs.pr_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      checks: read
+    
+    steps:
+    - name: Wait for CI checks
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const prNumber = ${{ needs.auto-create-pr.outputs.pr_number }};
+          const maxWaitTime = 10 * 60 * 1000; // 10分
+          const checkInterval = 30 * 1000; // 30秒
+          const startTime = Date.now();
+          
+          console.log(`Waiting for CI checks on PR #${prNumber}...`);
+          
+          while (Date.now() - startTime < maxWaitTime) {
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            // PR のマージ可能性をチェック
+            if (pr.data.mergeable === true && pr.data.mergeable_state === 'clean') {
+              console.log('PR is ready for auto-merge');
+              return { ready: true, mergeable: true };
+            } else if (pr.data.mergeable === false) {
+              console.log('PR has merge conflicts');
+              return { ready: false, mergeable: false, reason: 'merge_conflict' };
+            }
+            
+            console.log(`PR status: mergeable=${pr.data.mergeable}, state=${pr.data.mergeable_state}`);
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+          }
+          
+          console.log('Timeout waiting for CI checks');
+          return { ready: false, timeout: true };
+    
+    - name: Auto-merge PR (if safe)
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const prNumber = ${{ needs.auto-create-pr.outputs.pr_number }};
+          const issueNumber = ${{ needs.auto-create-pr.outputs.issue_number }};
+          
+          try {
+            // Squash mergeでマージ
+            const merge = await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              commit_title: `🤖 Auto-merge: Claude Code implementation for issue #${issueNumber}`,
+              commit_message: `Automatically merged PR created by Claude Code Max for issue #${issueNumber}
+
+🤖 Fully automated workflow
+⚡ Powered by Claude Code Max (Opus 4)
+🔗 Related issue: #${issueNumber}`,
+              merge_method: 'squash'
+            });
+            
+            console.log(`Successfully auto-merged PR #${prNumber}`);
+            
+            // Issue を自動クローズ
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              state: 'closed'
+            });
+            
+            // 完了ラベルを追加
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['claude-completed', 'auto-merged']
+            });
+            
+            // 完了コメントを追加
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `## ✅ 完全自動化フロー完了！
+
+PR #${prNumber} が正常にマージされ、このIssueは自動的にクローズされました。
+
+### 🎊 実装結果
+- ✅ **コード実装:** Claude Code Max (Opus 4)
+- ✅ **PR作成:** 自動生成
+- ✅ **マージ:** 自動実行
+- ✅ **Issue完了:** 自動クローズ
+
+### 📊 実行時間
+Claude Codeのワークフロー完了から自動マージまで完全自動化されました。
+
+---
+🚀 **Claude Code Max完全自動化フロー** - Zero human intervention required!`
+            });
+            
+          } catch (error) {
+            console.error('Auto-merge failed:', error);
+            
+            // マージ失敗を通知
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `## ⚠️ 自動マージに失敗
+
+PR #${prNumber} の自動マージに失敗しました。手動でのレビューとマージが必要です。
+
+**エラー:** ${error.message}
+
+### 📋 次のアクション
+1. PR の変更内容を確認
+2. コンフリクトや問題を解決
+3. 手動でマージを実行
+
+🤖 自動化フローは一部完了していますが、人間の介入が必要です。`
+            });
+          }

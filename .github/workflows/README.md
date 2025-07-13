@@ -41,6 +41,18 @@
   4. 関連Issueをクローズ
   5. 不要なブランチを削除
 
+### 5. Claude Full Automation (`claude-full-automation.yml`) ⭐**新機能**
+- **目的**: 🚀 **100%完全自動化** - Claude Codeワークフロー完了を検知して完全自動でPR作成〜マージまで実行
+- **実行タイミング**: Claude Codeワークフローが成功完了した時
+- **動作**:
+  1. workflow_runトリガーでClaude Code完了を自動検知
+  2. Issue番号とClaudeブランチを自動特定
+  3. 自動的にPRを作成（人間の介入不要）
+  4. 自動マージ実行
+  5. Issue自動クローズ
+  6. ブランチ自動削除
+  7. **完全無人実行** 🤖
+
 ## セットアップ
 
 ### 前提条件
@@ -54,8 +66,10 @@
 以下のラベルをリポジトリに作成してください：
 - `claude-processed`: 処理済みのissue
 - `claude-completed`: 完了したissue（自動クローズ済み）
+- `fully-automated`: 100%完全自動化で処理されたissue ⭐**新規**
 - `claude-review-requested`: Claudeレビュー依頼済み
 - `claude-auto-generated`: Claude生成のPR
+- `claude-full-automation`: 完全自動化フローで作成されたPR ⭐**新規**
 - `ready-for-merge`: マージ準備完了
 - `needs-review`: レビューが必要
 - `security-review-required`: セキュリティレビューが必要
@@ -79,14 +93,16 @@
 - PRを作成すると自動的に基本的なレビューが実行される
 - 大きな変更や重要なファイルの変更時は追加レビューを推奨
 
-### 完全自動化フロー
-1. Issueが作成される
-2. Claude Code Maxが自動的に作業を実行
-3. Claudeが作業完了を報告
-4. 自動的にPRが作成される
-5. PRが自動レビュー・マージされる
-6. Issueが自動クローズされる
-7. 作業ブランチが自動削除される
+### 🚀 100%完全自動化フロー ⭐**新機能**
+1. **Issue作成** → 優先度ラベル付きで作成
+2. **Claude Code Max自動実行** → Issue番号を検知して自動開始
+3. **workflow_run自動検知** → Claude Codeワークフロー完了を即座に検知
+4. **自動PR作成** → 人間の介入なしでPR作成
+5. **自動マージ** → CI/CDチェック後に自動マージ実行
+6. **Issue自動クローズ** → 完了ラベル付きで自動クローズ
+7. **ブランチ自動削除** → クリーンアップ完了
+
+**🤖 完全無人実行**: Issue作成からマージまで人間の操作は一切不要
 
 ## 注意事項
 

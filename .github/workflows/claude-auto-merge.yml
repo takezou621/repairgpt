@@ -6,20 +6,68 @@ on:
   workflow_run:
     workflows: ["Claude Code"]
     types: [completed]
+    branches: [main]
 
 jobs:
+  # workflow_runイベントでClaude Codeワークフローの成功を検知
+  check-workflow-success:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.check-conclusion.outputs.success }}
+      issue_number: ${{ steps.extract-issue.outputs.issue_number }}
+    steps:
+    - name: Check workflow conclusion
+      id: check-conclusion
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const conclusion = context.payload.workflow_run.conclusion;
+          const success = conclusion === 'success';
+          console.log(`Workflow conclusion: ${conclusion}, Success: ${success}`);
+          return success;
+    
+    - name: Extract issue number from workflow run
+      id: extract-issue
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          // ワークフロー実行のトリガーイベントから issue番号を抽出
+          const workflowRun = context.payload.workflow_run;
+          let issueNumber = null;
+          
+          // PRから実行された場合
+          if (workflowRun.pull_requests && workflowRun.pull_requests.length > 0) {
+            issueNumber = workflowRun.pull_requests[0].number;
+          }
+          // issueコメントから実行された場合（ヘッドブランチ名から推測）
+          else if (workflowRun.head_branch) {
+            const match = workflowRun.head_branch.match(/issue-(\d+)/);
+            if (match) {
+              issueNumber = parseInt(match[1]);
+            }
+          }
+          
+          console.log(`Extracted issue number: ${issueNumber}`);
+          return issueNumber;
+
   auto-pr-and-merge:
-    # Claudeが作業完了を報告した場合のみ実行
+    # Claudeが作業完了を報告した場合またはworkflow_runが成功した場合に実行
     if: |
-      github.event_name == 'issue_comment' && 
-      github.event.comment.user.login == 'claude' &&
-      (contains(github.event.comment.body, '作業が完了') || 
-       contains(github.event.comment.body, '作業完了') ||
-       contains(github.event.comment.body, 'finished') ||
-       contains(github.event.comment.body, 'Task completed') ||
-       contains(github.event.comment.body, 'Implementation complete') ||
-       contains(github.event.comment.body, 'work is complete') ||
-       contains(github.event.comment.body, 'job is done'))
+      (github.event_name == 'issue_comment' && 
+       github.event.comment.user.login == 'claude' &&
+       (contains(github.event.comment.body, '作業が完了') || 
+        contains(github.event.comment.body, '作業完了') ||
+        contains(github.event.comment.body, 'finished') ||
+        contains(github.event.comment.body, 'Task completed') ||
+        contains(github.event.comment.body, 'Implementation complete') ||
+        contains(github.event.comment.body, 'work is complete') ||
+        contains(github.event.comment.body, 'job is done'))) ||
+      (github.event_name == 'workflow_run' && 
+       needs.check-workflow-success.outputs.success == 'true')
+    needs: [check-workflow-success]
     
     runs-on: ubuntu-latest
     permissions:
@@ -30,6 +78,7 @@ jobs:
       metadata: read
       checks: read
       repository-projects: read
+      id-token: write
     
     steps:
     - name: Checkout repository
@@ -46,15 +95,30 @@ jobs:
         script: |
           let issueNumber, issueTitle, issueBody;
           
+          // workflow_runイベントの場合は前のジョブから取得
+          if (context.eventName === 'workflow_run') {
+            issueNumber = ${{ needs.check-workflow-success.outputs.issue_number }};
+            if (issueNumber) {
+              const issue = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber
+              });
+              issueTitle = issue.data.title;
+              issueBody = issue.data.body;
+            }
+          }
           // コメントイベントの場合
-          issueNumber = context.issue.number;
-          const issue = await github.rest.issues.get({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: issueNumber
-          });
-          issueTitle = issue.data.title;
-          issueBody = issue.data.body;
+          else {
+            issueNumber = context.issue.number;
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            issueTitle = issue.data.title;
+            issueBody = issue.data.body;
+          }
           
           // Claudeが作成したブランチを検索
           let candidateBranches = [
