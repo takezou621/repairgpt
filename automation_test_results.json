@@ -1,0 +1,70 @@
+{
+  "test_id": "automation_test_20250713_014500",
+  "start_time": "2025-07-13T01:45:00.000000",
+  "end_time": "2025-07-13T01:45:01.000000",
+  "expected_results": {
+    "branch_creation": {
+      "expected": "success",
+      "actual": "success"
+    },
+    "auto_pr_creation": {
+      "expected": "failure", 
+      "actual": "partial_success"
+    },
+    "auto_merge": {
+      "expected": "manual_required",
+      "actual": "manual_required"
+    },
+    "auto_issue_close": {
+      "expected": "manual_required",
+      "actual": "manual_required"
+    }
+  },
+  "actual_capabilities": [
+    {
+      "capability": "branch_creation",
+      "description": "GitHubワークフローによる自動ブランチ作成",
+      "status": "SUCCESS",
+      "details": {
+        "branch_name": "claude/issue-32-20250713_014355",
+        "created_by": "GitHub Actions + Claude Code",
+        "automation_level": "完全自動",
+        "user_intervention": "不要"
+      }
+    },
+    {
+      "capability": "pr_creation",
+      "description": "プルリクエストの自動作成", 
+      "status": "PARTIAL",
+      "details": {
+        "claude_can_provide": "PRリンク生成（prefilled）",
+        "claude_cannot_do": "実際のPR作成API実行",
+        "automation_level": "半自動",
+        "user_intervention": "リンククリックが必要"
+      }
+    },
+    {
+      "capability": "auto_merge",
+      "description": "プルリクエストの自動マージ",
+      "status": "MANUAL_REQUIRED",
+      "details": {
+        "claude_cannot_do": "PR承認・マージ操作",
+        "security_reason": "セキュリティ上の制限", 
+        "automation_level": "手動",
+        "user_intervention": "必須（レビュー・承認・マージ）"
+      }
+    },
+    {
+      "capability": "auto_issue_close",
+      "description": "Issueの自動クローズ",
+      "status": "MANUAL_REQUIRED",
+      "details": {
+        "claude_cannot_do": "Issue状態変更API実行",
+        "workaround": "コメントでクローズ提案は可能",
+        "automation_level": "手動", 
+        "user_intervention": "必須（手動クローズ）"
+      }
+    }
+  ],
+  "verification_status": "completed"
+}
