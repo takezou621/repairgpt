@@ -89,19 +89,19 @@ jobs:
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `fix: ${issue.data.title} (closes #24)`,
+              title: `fix: ${issue.data.title} (closes #${24})`,
               head: claudeBranch.name,
               base: 'main',
               body: `## 🤖 完全自動化によるPR作成
 
 ### 関連Issue
-Closes #24
+Closes #${24}
 
 ### 概要
 Claude Code Maxによる実装を自動検知し、完全自動化フローでPRを作成しました。
 
 ### 実装内容
-- Issue #24: ${issue.data.title}
+- Issue #${24}: ${issue.data.title}
 - Branch: \`${claudeBranch.name}\`
 - 自動検知: スケジュール自動化
 
@@ -138,7 +138,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>`
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: pr.data.number,
-                commit_title: `Auto-merge: Issue #24 complete automation`,
+                commit_title: `Auto-merge: Issue #${24} complete automation`,
                 merge_method: 'squash'
               });
               
