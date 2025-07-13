@@ -1,11 +1,11 @@
 name: Claude Ultimate Automation
 
 on:
-  schedule:
-    - cron: '*/1 * * * *'  # 毎分実行
-  workflow_dispatch:
-  push:
-    branches: ['claude/**']
+  # schedule:
+  #   - cron: '*/1 * * * *'  # 毎分実行 - 無効化
+  workflow_dispatch:  # 手動実行のみ
+  # push:
+  #   branches: ['claude/**']  # 無効化
 
 jobs:
   ultimate-automation:
