@@ -36,7 +36,9 @@ build/
 # AI/ML
 .ipynb_checkpoints/
 
-# Untracked files from Gemini CLI
+# Temporary files
+automation_test_results.json
+
+# Documentation files (untracked)
 GEMINI.md
-LICENSE
-README-repairgpt.md
+README-smart-automation.md
