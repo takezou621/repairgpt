@@ -22,6 +22,7 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
+        ref: main
     
     - name: Ultimate Issue Processing
       uses: actions/github-script@v7
@@ -46,7 +47,7 @@ jobs:
               issue.labels.some(label => label.name === 'claude-processed')
             );
             
-            console.log(`Found ${processedIssues.data.length} Claude-processed issues`);
+            console.log(`Found ${processedIssues.length} Claude-processed issues`);
             
             for (const issue of processedIssues) {
               console.log(`\n🔍 Processing Issue #${issue.number}: ${issue.title}`);
