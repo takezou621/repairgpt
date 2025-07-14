@@ -33,9 +33,31 @@ jobs:
           const hour = now.getUTCHours();
           const isWeekend = day === 0 || day === 6;
           
+          // APIレート制限チェック関数
+          async function checkRateLimit() {
+            const rateLimit = await github.rest.rateLimit.get();
+            const remaining = rateLimit.data.rate.remaining;
+            const resetTime = new Date(rateLimit.data.rate.reset * 1000);
+            
+            console.log(`📊 API Rate Limit: ${remaining} remaining`);
+            console.log(`🔄 Reset time: ${resetTime.toISOString()}`);
+            
+            // 残りが100未満の場合は待機
+            if (remaining < 100) {
+              const waitTime = resetTime - now;
+              console.log(`⏳ API rate limit low. Waiting ${Math.ceil(waitTime / 1000 / 60)} minutes...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+            
+            return remaining;
+          }
+          
           console.log(`🤖 Claude Smart Automation started`);
           console.log(`Current time: ${now.toISOString()}`);
           console.log(`Day: ${day}, Hour: ${hour}UTC, Weekend: ${isWeekend}`);
+          
+          // APIコール前にレート制限をチェック
+          await checkRateLimit();
           
           // Issue検索
           const issues = await github.rest.issues.listForRepo({
@@ -57,36 +79,56 @@ jobs:
           for (const issue of issues.data) {
             console.log(`\n🔍 Processing Issue #${issue.number}: ${issue.title}`);
             
+            // 重複実行防止: processing ラベルのチェック
+            const hasProcessingLabel = issue.labels.some(label => label.name === 'claude-processing');
+            if (hasProcessingLabel) {
+              console.log(`⚠️ Issue #${issue.number} is already being processed. Skipping...`);
+              continue;
+            }
+            
             try {
-              // ブランチ検索（複数パターン）
-              const patterns = [
-                `issue-${issue.number}`,
-                `fix-issue-${issue.number}`,
-                `claude-issue-${issue.number}`,
-                `issue${issue.number}`
-              ];
+              // 処理開始を示すラベルを追加
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['claude-processing']
+              });
               
+              // APIレート制限チェック
+              await checkRateLimit();
+              // ブランチ検索（柔軟なパターンマッチング）
               const branches = await github.rest.repos.listBranches({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 per_page: 100
               });
               
-              let targetBranch = null;
-              for (const pattern of patterns) {
-                targetBranch = branches.data.find(branch => 
-                  branch.name.toLowerCase().includes(pattern.toLowerCase())
+              // Instead of strict patterns, use inclusive search
+              const claudeBranches = branches.data.filter(branch => {
+                const branchLower = branch.name.toLowerCase();
+                const issueNum = issue.number.toString();
+                
+                return (
+                  branchLower.includes(`issue-${issueNum}`) ||
+                  (branchLower.includes(`claude`) && branchLower.includes(issueNum)) ||
+                  branchLower.includes(`fix-${issueNum}`) ||
+                  branchLower.includes(`feature-${issueNum}`)
                 );
-                if (targetBranch) {
-                  console.log(`✅ Found branch: ${targetBranch.name} (pattern: ${pattern})`);
-                  break;
-                }
-              }
+              });
               
-              if (!targetBranch) {
+              if (claudeBranches.length === 0) {
                 console.log(`⚠️ No branch found for Issue #${issue.number}`);
                 console.log(`Available branches: ${branches.data.slice(0, 10).map(b => b.name).join(', ')}...`);
                 continue;
+              }
+              
+              // Use the first matching branch
+              const targetBranch = claudeBranches[0];
+              console.log(`✅ Found branch: ${targetBranch.name} for Issue #${issue.number}`);
+              
+              if (claudeBranches.length > 1) {
+                console.log(`ℹ️ Multiple branches found: ${claudeBranches.map(b => b.name).join(', ')}`);
               }
               
               // 既存PR確認
@@ -157,6 +199,97 @@ jobs:
               console.log('⏳ Waiting before auto-merge...');
               await new Promise(resolve => setTimeout(resolve, 5000));
               
+              // セキュリティチェック実行
+              console.log('🔒 Running security checks...');
+              const securityIssues = [];
+              
+              // PRの変更ファイルを取得
+              const prFiles = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.data.number
+              });
+              
+              // セキュリティリスクのあるファイルパターン
+              const riskyPatterns = [
+                /\.env$/,
+                /\.env\./,
+                /secret/i,
+                /password/i,
+                /token/i,
+                /key/i,
+                /credential/i,
+                /config\/production/,
+                /\.pem$/,
+                /\.key$/,
+                /\.crt$/
+              ];
+              
+              // セキュリティリスクのあるコンテンツパターン
+              const riskyContentPatterns = [
+                /password\s*=\s*['""][^'"]{8,}/i,
+                /token\s*=\s*['""][^'"]{20,}/i,
+                /api_key\s*=\s*['""][^'"]{20,}/i,
+                /secret\s*=\s*['""][^'"]{10,}/i,
+                /-----BEGIN.*PRIVATE KEY-----/i
+              ];
+              
+              for (const file of prFiles.data) {
+                // ファイル名チェック
+                const isRiskyFile = riskyPatterns.some(pattern => pattern.test(file.filename));
+                if (isRiskyFile) {
+                  securityIssues.push(`🚨 Risky file: ${file.filename}`);
+                }
+                
+                // ファイル内容チェック（パッチ内容）
+                if (file.patch) {
+                  const hasRiskyContent = riskyContentPatterns.some(pattern => pattern.test(file.patch));
+                  if (hasRiskyContent) {
+                    securityIssues.push(`🚨 Risky content in: ${file.filename}`);
+                  }
+                }
+              }
+              
+              // セキュリティ問題が発見された場合の処理
+              if (securityIssues.length > 0) {
+                console.log(`❌ Security issues found: ${securityIssues.length}`);
+                securityIssues.forEach(issue => console.log(issue));
+                
+                // セキュリティ警告コメントを追加
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.data.number,
+                  body: [
+                    '🚨 **セキュリティチェック: 警告**',
+                    '',
+                    'この PR には潜在的なセキュリティリスクが含まれている可能性があります：',
+                    '',
+                    ...securityIssues.map(issue => `- ${issue}`),
+                    '',
+                    '⚠️ **自動マージを停止しました**',
+                    '',
+                    '手動レビューが必要です。機密情報が含まれていないことを確認してください。',
+                    '',
+                    '---',
+                    '🤖 自動セキュリティチェック'
+                  ].join('\n')
+                });
+                
+                // セキュリティラベルを追加
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.data.number,
+                  labels: ['security-review-required', 'blocked-auto-merge']
+                });
+                
+                console.log('🛑 Auto-merge blocked due to security concerns');
+                continue; // 次のIssueに進む
+              }
+              
+              console.log('✅ Security checks passed');
+              
               // 自動マージ実行
               try {
                 await github.rest.pulls.merge({
@@ -202,11 +335,19 @@ jobs:
                   state: 'closed'
                 });
                 
+                // 処理完了ラベルを追加し、processingラベルを削除
                 await github.rest.issues.addLabels({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
                   labels: ['claude-completed', 'smart-automation']
+                });
+                
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  name: 'claude-processing'
                 });
                 
                 console.log(`🔒 Closed Issue #${issue.number}`);
@@ -249,6 +390,49 @@ jobs:
               
             } catch (error) {
               console.log(`❌ Error processing Issue #${issue.number}: ${error.message}`);
+              
+              // エラー時はprocessingラベルを削除
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  name: 'claude-processing'
+                });
+              } catch (removeLabelError) {
+                // ラベル削除エラーは無視
+              }
+              
+              // 重大エラーの場合、新しいIssueを作成
+              if (error.status === 500 || error.status === 502 || error.status === 503) {
+                try {
+                  await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title: `[自動化エラー] Issue #${issue.number} の処理中にエラーが発生`,
+                    body: [
+                      '## エラー詳細',
+                      '',
+                      `- **元のIssue**: #${issue.number}`,
+                      `- **エラー時刻**: ${now.toISOString()}`,
+                      `- **エラーステータス**: ${error.status}`,
+                      `- **エラーメッセージ**: ${error.message}`,
+                      '',
+                      '## スタックトレース',
+                      '```',
+                      error.stack || 'スタックトレースなし',
+                      '```',
+                      '',
+                      '---',
+                      '🤖 自動生成されたエラーレポート'
+                    ].join('\n'),
+                    labels: ['bug', 'automation-error', 'high-priority']
+                  });
+                  console.log('📝 Created error issue for critical error');
+                } catch (issueError) {
+                  console.log(`Failed to create error issue: ${issueError.message}`);
+                }
+              }
               
               try {
                 await github.rest.issues.createComment({
