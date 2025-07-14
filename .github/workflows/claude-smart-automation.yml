@@ -149,7 +149,7 @@ jobs:
               });
               
               // Instead of strict patterns, use inclusive search
-              const claudeBranches = branches.data.filter(branch => {
+              let claudeBranches = branches.data.filter(branch => {
                 const branchLower = branch.name.toLowerCase();
                 const issueNum = issue.number.toString();
                 
@@ -160,7 +160,6 @@ jobs:
                   branchLower.includes(`feature-${issueNum}`)
                 );
               });
-<<<<<<< HEAD
               
               if (claudeBranches.length === 0) {
                 console.log(`⚠️ No branch found for Issue #${issue.number} - Starting automatic implementation`);
