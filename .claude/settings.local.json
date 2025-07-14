@@ -28,7 +28,18 @@
       "Bash(gh workflow view:*)",
       "Bash(echo:*)",
       "Bash(gh workflow:*)",
-      "Bash(gh repo view:*)"
+      "Bash(gh repo view:*)",
+      "Bash(node:*)",
+      "Bash(gh label:*)",
+      "Bash(git reset:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr checkout:*)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }
