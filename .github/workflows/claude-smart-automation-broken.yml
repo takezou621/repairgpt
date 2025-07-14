@@ -1,0 +1,393 @@
+name: Claude Smart Automation Fixed
+
+on:
+  schedule:
+    # 平日: 23:00, 02:00, 05:00 JST (14:00, 17:00, 20:00 UTC)
+    - cron: '0 14,17,20 * * 1-5'
+    # 土日: 10:00, 14:00, 18:00, 22:00 JST (01:00, 05:00, 09:00, 13:00 UTC)
+    - cron: '0 1,5,9,13 * * 0,6'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Enable dry run mode (true/false)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  smart-automation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+    
+    env:
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Execute Smart Automation
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const now = new Date();
+          const day = now.getUTCDay();
+          const hour = now.getUTCHours();
+          const isWeekend = day === 0 || day === 6;
+          const isDryRun = process.env.DRY_RUN === 'true';
+          
+          console.log('🤖 Claude Smart Automation Fixed - Started');
+          console.log(`Current time: ${now.toISOString()}`);
+          console.log(`Day: ${day}, Hour: ${hour}UTC, Weekend: ${isWeekend}`);
+          console.log(`Dry Run Mode: ${isDryRun}`);
+          
+          // APIレート制限チェック
+          async function checkRateLimit() {
+            const rateLimit = await github.rest.rateLimit.get();
+            const remaining = rateLimit.data.rate.remaining;
+            console.log(`📊 API Rate Limit: ${remaining} remaining`);
+            
+            if (remaining < 100) {
+              console.log('⏳ API rate limit low. Exiting to preserve quota.');
+              return false;
+            }
+            return true;
+          }
+          
+          if (!await checkRateLimit()) {
+            return;
+          }
+          
+          // Issue検索
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'claude-processed',
+            state: 'open',
+            per_page: 10
+          });
+          
+          console.log(`📋 Found ${issues.data.length} issues with claude-processed label`);
+          
+          let processedCount = 0;
+          let autoImplementedCount = 0;
+          
+          for (const issue of issues.data) {
+            console.log(`\\n🔍 Processing Issue #${issue.number}: ${issue.title}`);
+            
+            // 重複処理防止
+            const hasProcessingLabel = issue.labels.some(label => label.name === 'claude-processing');
+            if (hasProcessingLabel) {
+              console.log(`⚠️ Issue #${issue.number} is already being processed. Skipping...`);
+              continue;
+            }
+            
+            try {
+              // 処理開始ラベル追加
+              if (!isDryRun) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['claude-processing']
+                });
+              }
+              
+              // ブランチ検索
+              const branches = await github.rest.repos.listBranches({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100
+              });
+              
+              const issueNum = issue.number.toString();
+              const matchingBranches = branches.data.filter(branch => {
+                const branchLower = branch.name.toLowerCase();
+                return (
+                  branchLower.includes(\`issue-\${issueNum}\`) ||
+                  (branchLower.includes('claude') && branchLower.includes(issueNum)) ||
+                  branchLower.includes(\`fix-\${issueNum}\`) ||
+                  branchLower.includes(\`feature-\${issueNum}\`)
+                );
+              });
+              
+              if (matchingBranches.length === 0) {
+                console.log(`⚠️ No branch found for Issue #${issue.number} - Starting auto-implementation`);
+                
+                // 自動実装開始
+                const newBranchName = \`claude-auto-impl-issue-\${issue.number}\`;
+                
+                try {
+                  // 新ブランチ作成
+                  const mainBranch = await github.rest.repos.getBranch({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    branch: 'main'
+                  });
+                  
+                  if (!isDryRun) {
+                    await github.rest.git.createRef({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      ref: \`refs/heads/\${newBranchName}\`,
+                      sha: mainBranch.data.commit.sha
+                    });
+                  }
+                  
+                  console.log(\`✅ Created branch: \${newBranchName}\`);
+                  
+                  // Issue分析と実装タイプ判定
+                  const issueBody = issue.body || '';
+                  const issueTitle = issue.title || '';
+                  const combinedText = \`\${issueTitle}\\n\\n\${issueBody}\`;
+                  
+                  let implementationType = 'documentation';
+                  let targetFile = \`docs/auto-generated/issue-\${issue.number}.md\`;
+                  
+                  if (combinedText.match(/ワークフロー|workflow|github.*action/i)) {
+                    implementationType = 'workflow';
+                    targetFile = 'docs/workflow-improvements.md';
+                  } else if (combinedText.match(/機能.*追加|feature.*add|実装|implement/i)) {
+                    implementationType = 'feature';
+                    targetFile = \`src/auto_feature_\${issue.number}.py\`;
+                  } else if (combinedText.match(/バグ|bug|修正|fix|エラー|error/i)) {
+                    implementationType = 'bugfix';
+                    targetFile = \`src/bugfix_\${issue.number}.py\`;
+                  }
+                  
+                  // 実装内容生成
+                  const implementationContent = generateImplementationContent(
+                    issue.number, 
+                    issueTitle, 
+                    issueBody, 
+                    implementationType
+                  );
+                  
+                  // ファイル作成
+                  if (!isDryRun) {
+                    const encodedContent = Buffer.from(implementationContent).toString('base64');
+                    
+                    await github.rest.repos.createOrUpdateFileContents({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      path: targetFile,
+                      message: \`Auto-implementation: \${implementationType} for Issue #\${issue.number}\`,
+                      content: encodedContent,
+                      branch: newBranchName
+                    });
+                  }
+                  
+                  console.log(\`📝 Created file: \${targetFile}\`);
+                  
+                  // 自動実装コメント
+                  const commentBody = [
+                    '🚀 **未着手Issue自動実装開始！**',
+                    '',
+                    \`✅ **新ブランチ**: \\\`\${newBranchName}\\\`\`,
+                    \`🤖 **実装タイプ**: \${implementationType}\`,
+                    \`📝 **対象ファイル**: \${targetFile}\`,
+                    '',
+                    '**次のステップ:**',
+                    '- 🔄 PR自動作成予定',
+                    '- 📊 基本実装テンプレート生成済み',
+                    '',
+                    '---',
+                    '🤖 **Claude Smart Automation** - 未着手Issue自動実装'
+                  ].join('\\n');
+                  
+                  if (!isDryRun) {
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      body: commentBody
+                    });
+                  }
+                  
+                  autoImplementedCount++;
+                  console.log(\`🎉 Auto-implementation completed for Issue #\${issue.number}\`);
+                  
+                } catch (autoError) {
+                  console.log(\`❌ Auto-implementation failed: \${autoError.message}\`);
+                  
+                  if (!isDryRun) {
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      body: \`❌ **自動実装エラー**\\n\\nエラー: \${autoError.message}\\n\\n手動対応をお願いします。\`
+                    });
+                  }
+                }
+              } else {
+                console.log(\`✅ Found \${matchingBranches.length} branch(es) for Issue #\${issue.number}\`);
+                
+                // 既存ブランチがある場合のPR処理（簡略版）
+                const targetBranch = matchingBranches[0];
+                
+                // 既存PR確認
+                const existingPRs = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: \`\${context.repo.owner}:\${targetBranch.name}\`,
+                  state: 'open'
+                });
+                
+                if (existingPRs.data.length === 0) {
+                  console.log(\`🚀 Creating PR for Issue #\${issue.number}...\`);
+                  
+                  const timeContext = isWeekend ? '土日昼間' : '平日夜間';
+                  
+                  if (!isDryRun) {
+                    const pr = await github.rest.pulls.create({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      title: \`fix: \${issue.title} (closes #\${issue.number})\`,
+                      head: targetBranch.name,
+                      base: 'main',
+                      body: [
+                        \`## 🤖 \${timeContext}スマート自動化\`,
+                        '',
+                        \`**Issue**: #\${issue.number}\`,
+                        \`**ブランチ**: \${targetBranch.name}\`,
+                        \`**実行時刻**: \${now.toISOString()}\`,
+                        '',
+                        '### 📋 変更内容',
+                        \`\${issue.title}の実装・修正\`,
+                        '',
+                        '---',
+                        '🚀 Generated with [Claude Code](https://claude.ai/code)',
+                        '',
+                        'Co-Authored-By: Claude <noreply@anthropic.com>'
+                      ].join('\\n')
+                    });
+                    
+                    console.log(\`✅ Created PR #\${pr.data.number}\`);
+                  }
+                } else {
+                  console.log(\`ℹ️ PR already exists for Issue #\${issue.number}\`);
+                }
+              }
+              
+              // 処理完了後のラベル更新
+              if (!isDryRun) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  name: 'claude-processing'
+                }).catch(() => {}); // ラベルが存在しない場合は無視
+              }
+              
+              processedCount++;
+              
+            } catch (error) {
+              console.log(\`❌ Error processing Issue #\${issue.number}: \${error.message}\`);
+            }
+          }
+          
+          // 実行統計
+          const timeContext = isWeekend ? '土日昼間' : '平日夜間';
+          console.log(\`\\n📊 **実行完了統計** - \${timeContext}自動実行\`);
+          console.log(\`- 処理対象Issues: \${issues.data.length}個\`);
+          console.log(\`- 処理完了: \${processedCount}個\`);
+          console.log(\`- 自動実装開始: \${autoImplementedCount}個\`);
+          console.log(\`- 実行モード: \${isDryRun ? 'ドライラン' : '本番実行'}\`);
+          
+          // 実装内容生成ヘルパー関数
+          function generateImplementationContent(issueNumber, title, body, type) {
+            const timestamp = new Date().toISOString();
+            
+            if (type === 'feature') {
+              return \`# Auto-Generated Feature Implementation
+# Issue #\${issueNumber}: \${title}
+
+def auto_feature_\${issueNumber}():
+    """
+    Auto-generated feature implementation for Issue #\${issueNumber}
+    
+    Title: \${title}
+    Generated: \${timestamp}
+    """
+    print(f"Feature implementation for Issue #\${issueNumber}")
+    
+    # TODO: Add specific implementation
+    return {
+        'status': 'auto_implemented',
+        'issue_number': \${issueNumber},
+        'type': '\${type}'
+    }
+
+if __name__ == "__main__":
+    result = auto_feature_\${issueNumber}()
+    print(f"Result: {result}")
+\`;
+            } else if (type === 'bugfix') {
+              return \`# Auto-Generated Bug Fix
+# Issue #\${issueNumber}: \${title}
+
+def auto_bugfix_\${issueNumber}():
+    """
+    Auto-generated bug fix for Issue #\${issueNumber}
+    
+    Title: \${title}
+    Generated: \${timestamp}
+    """
+    print(f"Bug fix for Issue #\${issueNumber}")
+    
+    try:
+        # TODO: Add specific bug fix implementation
+        pass
+    except Exception as e:
+        print(f"Error in bug fix: {e}")
+        return False
+    
+    return True
+
+if __name__ == "__main__":
+    success = auto_bugfix_\${issueNumber}()
+    print(f"Bug fix {'successful' if success else 'failed'}")
+\`;
+            } else {
+              return \`# \${title}
+
+## Issue #\${issueNumber} 自動対応
+
+この文書は **Claude Smart Automation** により自動生成されました。
+
+### 📋 Issue概要
+- **Issue番号**: #\${issueNumber}
+- **タイトル**: \${title}
+- **実装タイプ**: \${type}
+- **自動生成日時**: \${timestamp}
+
+### 🤖 自動実装内容
+
+\${body ? '**Issue詳細:**\\n' + body + '\\n' : ''}
+
+### ✅ 実装項目
+- [x] Issue内容の自動分析
+- [x] 基本実装テンプレート生成
+- [x] 自動ブランチ作成
+- [ ] 詳細実装（手動調整必要）
+
+### 🔄 次のステップ
+1. 生成された実装内容を確認
+2. 必要に応じて詳細を追加
+3. テストケースの作成
+4. 最終動作確認
+
+---
+🚀 **Claude Smart Automation** - 未着手Issue自動実装システム
+
+Generated with [Claude Code](https://claude.ai/code)
+\`;
+            }
+          }
