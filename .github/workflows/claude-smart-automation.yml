@@ -248,7 +248,7 @@ def auto_implemented_feature():
     TODO: 具体的な実装内容を追加してください
     """
     
-    print(f"新機能実装: {issue.title}")
+    print(f"新機能実装: {issueTitle}")
     
     # 基本実装テンプレート
     return {
@@ -277,7 +277,7 @@ def auto_bugfix():
     実際のバグ内容に応じて調整が必要です
     """
     
-    print(f"バグ修正実装: ${issue.title}")
+    print(f"バグ修正実装: {issueTitle}")
     
     # 一般的なバグ修正パターン
     try:
@@ -311,7 +311,7 @@ if __name__ == "__main__":
 
 ### 🤖 自動実装内容
 
-${issueBody ? '**Issue詳細:**\n' + issueBody + '\n' : ''}
+${issueBody ? '**Issue詳細:**\\n' + issueBody + '\\n' : ''}
 
 ### ✅ 実装項目
 - [x] Issue内容の自動分析
@@ -622,7 +622,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
                 securityIssues.forEach(issue => console.log(issue));
                 
                 // セキュリティ警告コメントを追加
-                await github.rest.issues.createComment({
+                if (!isDryRun) {
+                  await github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: pr.data.number,
@@ -640,15 +641,18 @@ Co-Authored-By: Claude <noreply@anthropic.com>
                     '---',
                     '🤖 自動セキュリティチェック'
                   ].join('\n')
-                });
+                  });
+                }
                 
                 // セキュリティラベルを追加
-                await github.rest.issues.addLabels({
+                if (!isDryRun) {
+                  await github.rest.issues.addLabels({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: pr.data.number,
                   labels: ['security-review-required', 'blocked-auto-merge']
-                });
+                  });
+                }
                 
                 console.log('🛑 Auto-merge blocked due to security concerns');
                 continue; // 次のIssueに進む
