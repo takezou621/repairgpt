@@ -7,6 +7,15 @@ on:
     # 土日: 10:00, 14:00, 18:00, 22:00 JST (01:00, 05:00, 09:00, 13:00 UTC)
     - cron: '0 1,5,9,13 * * 0,6'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Enable dry run mode (true/false)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   smart-automation:
@@ -16,6 +25,9 @@ jobs:
       pull-requests: write
       issues: write
       actions: read
+    
+    env:
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
     
     steps:
     - name: Checkout
@@ -33,20 +45,45 @@ jobs:
           const hour = now.getUTCHours();
           const isWeekend = day === 0 || day === 6;
           
-          // APIレート制限チェック関数
+          // ドライランモード (環境変数で制御)
+          const isDryRun = process.env.DRY_RUN === 'true';
+          if (isDryRun) {
+            console.log('🧪 DRY RUN MODE: Actions will be simulated only');
+          }
+          
+          // 入力検証
+          function validateInputs() {
+            if (!context.repo.owner || !context.repo.repo) {
+              throw new Error('Repository owner or name is missing');
+            }
+            return true;
+          }
+          
+          // APIレート制限チェック関数 (タイミングバグ修正)
           async function checkRateLimit() {
             const rateLimit = await github.rest.rateLimit.get();
             const remaining = rateLimit.data.rate.remaining;
             const resetTime = new Date(rateLimit.data.rate.reset * 1000);
+            const currentTime = new Date(); // 現在時刻を動的取得
             
             console.log(`📊 API Rate Limit: ${remaining} remaining`);
             console.log(`🔄 Reset time: ${resetTime.toISOString()}`);
             
             // 残りが100未満の場合は待機
             if (remaining < 100) {
-              const waitTime = resetTime - now;
-              console.log(`⏳ API rate limit low. Waiting ${Math.ceil(waitTime / 1000 / 60)} minutes...`);
-              await new Promise(resolve => setTimeout(resolve, waitTime));
+              const waitTime = Math.max(0, resetTime - currentTime); // 負の値を防止
+              const waitMinutes = Math.ceil(waitTime / 1000 / 60);
+              console.log(`⏳ API rate limit low. Waiting ${waitMinutes} minutes...`);
+              
+              if (waitTime > 0 && waitTime < 3600000) { // 1時間以内のみ待機
+                if (isDryRun) {
+                  console.log('🧪 DRY RUN: Skipping actual wait');
+                } else {
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+              } else if (waitTime >= 3600000) {
+                throw new Error(`Wait time too long: ${waitMinutes} minutes. Aborting.`);
+              }
             }
             
             return remaining;
@@ -55,6 +92,9 @@ jobs:
           console.log(`🤖 Claude Smart Automation started`);
           console.log(`Current time: ${now.toISOString()}`);
           console.log(`Day: ${day}, Hour: ${hour}UTC, Weekend: ${isWeekend}`);
+          
+          // 入力検証
+          validateInputs();
           
           // APIコール前にレート制限をチェック
           await checkRateLimit();
@@ -88,12 +128,16 @@ jobs:
             
             try {
               // 処理開始を示すラベルを追加
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                labels: ['claude-processing']
-              });
+              if (isDryRun) {
+                console.log('🧪 DRY RUN: Would add label "claude-processing" to Issue #' + issue.number);
+              } else {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['claude-processing']
+                });
+              }
               
               // APIレート制限チェック
               await checkRateLimit();
@@ -148,7 +192,13 @@ jobs:
               console.log(`🚀 Creating PR for Issue #${issue.number}...`);
               
               const timeContext = isWeekend ? '土日昼間' : '平日夜間';
-              const pr = await github.rest.pulls.create({
+              let pr;
+              
+              if (isDryRun) {
+                console.log('🧪 DRY RUN: Would create PR for Issue #' + issue.number);
+                pr = { data: { number: 999, html_url: 'https://github.com/mock/pr/999' } }; // モックPR
+              } else {
+                pr = await github.rest.pulls.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: `fix: ${issue.title} (closes #${issue.number})`,
@@ -183,32 +233,47 @@ jobs:
                   '',
                   'Co-Authored-By: Claude <noreply@anthropic.com>'
                 ].join('\n')
-              });
+                });
+              }
               
               console.log(`✅ Created PR #${pr.data.number}: ${pr.data.html_url}`);
               
               // ラベル追加
-              await github.rest.issues.addLabels({
+              if (isDryRun) {
+                console.log('🧪 DRY RUN: Would add labels to PR #' + pr.data.number);
+              } else {
+                await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.data.number,
                 labels: ['claude-auto-generated', 'smart-automation']
-              });
+                });
+              }
               
               // 自動マージの待機
               console.log('⏳ Waiting before auto-merge...');
-              await new Promise(resolve => setTimeout(resolve, 5000));
+              if (isDryRun) {
+                console.log('🧪 DRY RUN: Skipping wait time');
+              } else {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              }
               
               // セキュリティチェック実行
               console.log('🔒 Running security checks...');
               const securityIssues = [];
               
               // PRの変更ファイルを取得
-              const prFiles = await github.rest.pulls.listFiles({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.data.number
-              });
+              let prFiles;
+              if (isDryRun) {
+                console.log('🧪 DRY RUN: Using mock PR files');
+                prFiles = { data: [] }; // モックファイルリスト
+              } else {
+                prFiles = await github.rest.pulls.listFiles({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.data.number
+                });
+              }
               
               // セキュリティリスクのあるファイルパターン
               const riskyPatterns = [
@@ -292,79 +357,95 @@ jobs:
               
               // 自動マージ実行
               try {
-                await github.rest.pulls.merge({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: pr.data.number,
-                  commit_title: `Smart automation: ${issue.title} (#${issue.number})`,
-                  commit_message: `${timeContext}スマート自動化によるマージ\n\n🚀 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>`,
-                  merge_method: 'squash'
-                });
+                if (isDryRun) {
+                  console.log('🧪 DRY RUN: Would merge PR #' + pr.data.number);
+                } else {
+                  await github.rest.pulls.merge({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: pr.data.number,
+                    commit_title: `Smart automation: ${issue.title} (#${issue.number})`,
+                    commit_message: `${timeContext}スマート自動化によるマージ\n\n🚀 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>`,
+                    merge_method: 'squash'
+                  });
+                }
                 
                 console.log(`🎉 Successfully merged PR #${pr.data.number}`);
                 
                 // 成功通知
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: [
-                    '✅ **スマート自動化完了！**',
-                    '',
-                    `🕐 **実行時刻**: ${now.toISOString()}`,
-                    `📅 **実行モード**: ${timeContext}自動実行`,
-                    '',
-                    '**実行内容:**',
-                    '- 🔍 Issue自動検知・処理',
-                    `- 📝 PR自動作成: #${pr.data.number}`,
-                    '- ✅ 自動マージ完了',
-                    '- 🧹 ブランチクリーンアップ実行中',
-                    '',
-                    `**PR**: ${pr.data.html_url}`,
-                    '',
-                    '---',
-                    '🚀 **スマート自動化システム** | Claude Code + GitHub Actions'
-                  ].join('\n')
-                });
+                if (isDryRun) {
+                  console.log('🧪 DRY RUN: Would add success comment to Issue #' + issue.number);
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: [
+                      '✅ **スマート自動化完了！**',
+                      '',
+                      `🕐 **実行時刻**: ${now.toISOString()}`,
+                      `📅 **実行モード**: ${timeContext}自動実行`,
+                      '',
+                      '**実行内容:**',
+                      '- 🔍 Issue自動検知・処理',
+                      `- 📝 PR自動作成: #${pr.data.number}`,
+                      '- ✅ 自動マージ完了',
+                      '- 🧹 ブランチクリーンアップ実行中',
+                      '',
+                      `**PR**: ${pr.data.html_url}`,
+                      '',
+                      '---',
+                      '🚀 **スマート自動化システム** | Claude Code + GitHub Actions'
+                    ].join('\n')
+                  });
+                }
                 
                 // Issue完了処理
-                await github.rest.issues.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  state: 'closed'
-                });
-                
-                // 処理完了ラベルを追加し、processingラベルを削除
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  labels: ['claude-completed', 'smart-automation']
-                });
-                
-                await github.rest.issues.removeLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  name: 'claude-processing'
-                });
+                if (isDryRun) {
+                  console.log('🧪 DRY RUN: Would close Issue #' + issue.number);
+                } else {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'closed'
+                  });
+                  
+                  // 処理完了ラベルを追加し、processingラベルを削除
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: ['claude-completed', 'smart-automation']
+                  });
+                  
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    name: 'claude-processing'
+                  });
+                }
                 
                 console.log(`🔒 Closed Issue #${issue.number}`);
                 
                 // ブランチ削除
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                try {
-                  await github.rest.git.deleteRef({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    ref: `heads/${targetBranch.name}`
-                  });
+                if (isDryRun) {
+                  console.log('🧪 DRY RUN: Would delete branch ' + targetBranch.name);
+                } else {
+                  await new Promise(resolve => setTimeout(resolve, 2000));
                   
-                  console.log(`🗑️ Deleted branch ${targetBranch.name}`);
-                } catch (deleteError) {
-                  console.log(`⚠️ Branch deletion failed: ${deleteError.message}`);
+                  try {
+                    await github.rest.git.deleteRef({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      ref: `heads/${targetBranch.name}`
+                    });
+                    
+                    console.log(`🗑️ Deleted branch ${targetBranch.name}`);
+                  } catch (deleteError) {
+                    console.log(`⚠️ Branch deletion failed: ${deleteError.message}`);
+                  }
                 }
                 
                 console.log(`🎯 SMART AUTOMATION COMPLETED FOR ISSUE #${issue.number}!`);
