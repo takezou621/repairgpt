@@ -40,7 +40,9 @@
       "Bash(gh pr merge:*)",
       "Bash(gh pr checkout:*)",
       "Bash(git merge:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(gh pr review:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
