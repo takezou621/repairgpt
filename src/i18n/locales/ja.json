@@ -144,9 +144,16 @@
     "languages": {
       "success": "サポート言語を正常に取得しました"
     },
+    "image_analysis": {
+      "success": "画像分析が正常に完了しました"
+    },
     "errors": {
       "chat_failed": "チャットリクエストの処理に失敗しました: {error}",
-      "search_failed": "修理ガイドの検索に失敗しました: {error}"
+      "search_failed": "修理ガイドの検索に失敗しました: {error}",
+      "invalid_file_type": "有効な画像ファイル（JPG、PNG、WebP）をアップロードしてください",
+      "file_too_large": "画像ファイルが大きすぎます。最大サイズは10MBです",
+      "service_unavailable": "画像分析サービスは現在利用できません",
+      "analysis_failed": "画像分析に失敗しました: {error}"
     }
   }
 }

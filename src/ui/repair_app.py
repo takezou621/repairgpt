@@ -202,6 +202,118 @@ def sidebar_device_setup():
             st.write(f"**{_("ui.labels.skill_level")}:** {skill_level}")
 
 
+def format_analysis_for_chat(analysis_result):
+    """Format image analysis results for chat context"""
+    device_info = analysis_result.device_info
+    damage_list = analysis_result.damage_detected
+    
+    summary = []
+    
+    # Device information
+    device_desc = f"{device_info.device_type.value}"
+    if device_info.brand:
+        device_desc += f" ({device_info.brand}"
+        if device_info.model:
+            device_desc += f" {device_info.model}"
+        device_desc += ")"
+    
+    summary.append(f"Device: {device_desc} (confidence: {device_info.confidence:.0%})")
+    summary.append(f"Overall condition: {analysis_result.overall_condition}")
+    summary.append(f"Repair urgency: {analysis_result.repair_urgency}")
+    
+    # Damage assessment
+    if damage_list:
+        summary.append("\nDetected issues:")
+        for damage in damage_list:
+            damage_desc = f"- {damage.damage_type.value.replace('_', ' ').title()}"
+            if damage.location:
+                damage_desc += f" ({damage.location})"
+            damage_desc += f" - {damage.severity} severity"
+            if damage.description:
+                damage_desc += f": {damage.description}"
+            summary.append(damage_desc)
+    else:
+        summary.append("\nNo significant damage detected")
+    
+    # Recommendations
+    if analysis_result.recommended_actions:
+        summary.append("\nRecommended actions:")
+        for action in analysis_result.recommended_actions:
+            summary.append(f"- {action}")
+    
+    # Warnings
+    if analysis_result.warnings:
+        summary.append("\nWarnings:")
+        for warning in analysis_result.warnings:
+            summary.append(f"⚠️ {warning}")
+    
+    return "\n".join(summary)
+
+
+def display_analysis_results(analysis_result):
+    """Display detailed analysis results in sidebar"""
+    device_info = analysis_result.device_info
+    
+    st.sidebar.subheader("🔍 Analysis Results")
+    
+    # Device information
+    st.sidebar.write(f"**Device**: {device_info.device_type.value.title()}")
+    if device_info.brand:
+        st.sidebar.write(f"**Brand**: {device_info.brand}")
+    if device_info.model:
+        st.sidebar.write(f"**Model**: {device_info.model}")
+    
+    # Overall assessment
+    condition_emoji = {
+        "excellent": "✨",
+        "good": "✅", 
+        "fair": "⚠️",
+        "poor": "❌",
+        "critical": "🚨"
+    }
+    
+    urgency_emoji = {
+        "none": "✅",
+        "low": "🟢",
+        "medium": "🟡", 
+        "high": "🟠",
+        "critical": "🔴"
+    }
+    
+    st.sidebar.write(f"**Condition**: {condition_emoji.get(analysis_result.overall_condition, '❓')} {analysis_result.overall_condition.title()}")
+    st.sidebar.write(f"**Urgency**: {urgency_emoji.get(analysis_result.repair_urgency, '❓')} {analysis_result.repair_urgency.title()}")
+    
+    if analysis_result.estimated_repair_cost:
+        st.sidebar.write(f"**Est. Cost**: {analysis_result.estimated_repair_cost}")
+    
+    if analysis_result.repair_difficulty:
+        st.sidebar.write(f"**Difficulty**: {analysis_result.repair_difficulty.title()}")
+    
+    # Damage details
+    if analysis_result.damage_detected:
+        st.sidebar.subheader("🔧 Issues Found")
+        for damage in analysis_result.damage_detected:
+            severity_color = {
+                "low": "🟢",
+                "medium": "🟡",
+                "high": "🟠", 
+                "critical": "🔴"
+            }
+            
+            st.sidebar.write(f"{severity_color.get(damage.severity, '❓')} **{damage.damage_type.value.replace('_', ' ').title()}**")
+            if damage.location:
+                st.sidebar.write(f"   📍 Location: {damage.location}")
+            if damage.description:
+                st.sidebar.write(f"   📝 {damage.description}")
+            st.sidebar.write(f"   🎯 Confidence: {damage.confidence:.0%}")
+    
+    # Warnings
+    if analysis_result.warnings:
+        st.sidebar.subheader("⚠️ Warnings")
+        for warning in analysis_result.warnings:
+            st.sidebar.warning(warning)
+
+
 def image_upload_section():
     """Image upload and analysis section"""
     st.sidebar.header(_("ui.headers.image_upload"))
@@ -223,14 +335,62 @@ def image_upload_section():
         
         if st.sidebar.button(_("ui.buttons.analyze_image"), type="primary"):
             st.sidebar.success(_("ui.messages.image_uploaded"))
-            st.sidebar.info(_("ui.messages.image_analysis_coming"))
             
-            # TODO: Integrate with vision AI
-            # For now, add context about image upload
-            st.session_state.chatbot.add_message(
-                "system", 
-                f"User uploaded an image of their {st.session_state.device_context['device_type']}. Image analysis capabilities will be available in future updates."
-            )
+            # Perform AI image analysis
+            with st.sidebar.spinner("🔍 Analyzing image..."):
+                try:
+                    # Import image analysis service
+                    from services.image_analysis import ImageAnalysisService
+                    
+                    # Convert PIL image to bytes
+                    img_byte_array = io.BytesIO()
+                    image.save(img_byte_array, format='JPEG')
+                    image_bytes = img_byte_array.getvalue()
+                    
+                    # Initialize analysis service
+                    openai_api_key = os.getenv('OPENAI_API_KEY')
+                    if openai_api_key:
+                        analysis_service = ImageAnalysisService(
+                            provider="openai",
+                            api_key=openai_api_key
+                        )
+                        
+                        # Perform analysis
+                        import asyncio
+                        async def analyze_image():
+                            return await analysis_service.analyze_device_image(
+                                image_data=image_bytes,
+                                language=st.session_state.language
+                            )
+                        
+                        # Run async analysis
+                        result = asyncio.run(analyze_image())
+                        
+                        # Format analysis results for chat
+                        analysis_summary = format_analysis_for_chat(result)
+                        
+                        # Add analysis to chat context
+                        st.session_state.chatbot.add_message(
+                            "system", 
+                            f"AI Image Analysis Results:\n{analysis_summary}"
+                        )
+                        
+                        # Display analysis results in sidebar
+                        display_analysis_results(result)
+                        
+                    else:
+                        st.sidebar.warning("OpenAI API key not configured. Image analysis disabled.")
+                        st.session_state.chatbot.add_message(
+                            "system", 
+                            f"User uploaded an image of their device, but image analysis is not available (API key missing)."
+                        )
+                        
+                except Exception as e:
+                    st.sidebar.error(f"Analysis failed: {str(e)}")
+                    st.session_state.chatbot.add_message(
+                        "system", 
+                        f"User uploaded an image but analysis failed: {str(e)}"
+                    )
     
     if st.sidebar.button(_("ui.buttons.clear_image")):
         st.session_state.uploaded_image = None

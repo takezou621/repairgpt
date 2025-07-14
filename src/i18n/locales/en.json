@@ -144,9 +144,16 @@
     "languages": {
       "success": "Successfully retrieved supported languages"
     },
+    "image_analysis": {
+      "success": "Image analysis completed successfully"
+    },
     "errors": {
       "chat_failed": "Failed to process chat request: {error}",
-      "search_failed": "Failed to search repair guides: {error}"
+      "search_failed": "Failed to search repair guides: {error}",
+      "invalid_file_type": "Please upload a valid image file (JPG, PNG, or WebP)",
+      "file_too_large": "Image file is too large. Maximum size is 10MB",
+      "service_unavailable": "Image analysis service is currently unavailable",
+      "analysis_failed": "Image analysis failed: {error}"
     }
   }
 }

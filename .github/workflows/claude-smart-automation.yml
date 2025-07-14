@@ -58,31 +58,29 @@ jobs:
             console.log(`\n🔍 Processing Issue #${issue.number}: ${issue.title}`);
             
             try {
-              // ブランチ検索（改良版 - より柔軟なパターンマッチング）
+              // ブランチ検索（複数パターン）
+              const patterns = [
+                `issue-${issue.number}`,
+                `fix-issue-${issue.number}`,
+                `claude-issue-${issue.number}`,
+                `issue${issue.number}`
+              ];
+              
               const branches = await github.rest.repos.listBranches({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 per_page: 100
               });
               
-              // 柔軟なブランチ検索ロジック
-              const issueNum = issue.number.toString();
-              const targetBranch = branches.data.find(branch => {
-                const branchLower = branch.name.toLowerCase();
-                
-                return (
-                  branchLower.includes(`issue-${issueNum}`) ||
-                  branchLower.includes(`fix-issue-${issueNum}`) ||
-                  branchLower.includes(`claude-issue-${issueNum}`) ||
-                  branchLower.includes(`issue${issueNum}`) ||
-                  (branchLower.includes(`claude`) && branchLower.includes(`issue`) && branchLower.includes(issueNum)) ||
-                  branchLower.includes(`feature-${issueNum}`) ||
-                  branchLower.includes(`bugfix-${issueNum}`)
+              let targetBranch = null;
+              for (const pattern of patterns) {
+                targetBranch = branches.data.find(branch => 
+                  branch.name.toLowerCase().includes(pattern.toLowerCase())
                 );
-              });
-              
-              if (targetBranch) {
-                console.log(`✅ Found branch: ${targetBranch.name} (flexible matching)`);
+                if (targetBranch) {
+                  console.log(`✅ Found branch: ${targetBranch.name} (pattern: ${pattern})`);
+                  break;
+                }
               }
               
               if (!targetBranch) {
