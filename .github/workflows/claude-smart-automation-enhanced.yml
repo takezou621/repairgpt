@@ -317,7 +317,7 @@ jobs:
                         '### 🔄 自動レビューフロー\\n' +
                         '- ✅ 基本チェック: 自動実行\\n' +
                         '- 👤 レビュアー: ' + repoOwner + ' (自動指定)\\n' +
-                        '- ⏰ 自動マージ: ' + (autoMergeEnabled ? '24時間後' : '無効') + '\\n\\n' +
+                        '- ⏰ 自動マージ: Claude自動レビュー後即座実行\\n\\n' +
                         '---\\n' +
                         '🚀 Generated with [Claude Code](https://claude.ai/code)\\n\\n' +
                         'Co-Authored-By: Claude <noreply@anthropic.com>'
@@ -349,8 +349,8 @@ jobs:
                             '✅ 構文チェック: 通過\\n' +
                             '✅ セキュリティスキャン: 問題なし\\n' +
                             '✅ 基本品質チェック: 通過\\n\\n' +
-                            '⏰ 24時間後に自動マージ予定\\n' +
-                            '手動承認による即座のマージも可能です。',
+                            '🔄 次のステップ: Claude自動レビュー・マージ待機中\\n' +
+                            'Claude Auto Review システムにより自動レビュー・マージされます。',
                           event: 'COMMENT'
                         });
                         console.log('🔍 Added auto-review comment');
