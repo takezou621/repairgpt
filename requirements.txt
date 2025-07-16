@@ -32,3 +32,12 @@ mypy>=1.5.0
 
 # Environment management
 python-dotenv>=1.0.0
+
+# Security dependencies
+pydantic-settings>=2.0.0
+bleach>=6.0.0
+cryptography>=41.0.0
+passlib>=1.7.4
+
+# Monitoring and observability
+prometheus-client>=0.17.0

@@ -2,7 +2,7 @@
 テスト設定ファイル - pytest configuration for RepairGPT
 
 Issue #88: 基本的なユニットテストとテスト環境の構築
-Issue #33: 夜間自動化システム動作確認テスト (既存)
+Issue #33: 夜間自動化システム動作確認テスト
 """
 
 import pytest
@@ -89,7 +89,7 @@ def test_device_data() -> Dict[str, Any]:
     }
 
 
-# ===== 自動化テスト用フィクスチャ (Issue #33 - 既存) =====
+# ===== 自動化テスト用フィクスチャ (Issue #33) =====
 
 @pytest.fixture
 def automation_test_data():

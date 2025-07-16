@@ -1,5 +1,6 @@
 """
 FastAPI backend for RepairGPT with internationalization support
+Implements Issue #90: 🔒 設定管理とセキュリティ強化
 """
 
 from fastapi import FastAPI, Request, HTTPException
@@ -10,6 +11,15 @@ import json
 import os
 from pathlib import Path
 
+# Import security and configuration
+from ..config.settings import settings, validate_api_keys
+from ..utils.security import (
+    SecurityHeaders, 
+    RateLimitMiddleware, 
+    RateLimiter, 
+    sanitize_log_data,
+    create_audit_log
+)
 
 class I18nMiddleware:
     """Middleware to handle internationalization for API responses"""
@@ -86,21 +96,42 @@ class I18nMiddleware:
 
 
 def create_app() -> FastAPI:
-    """Create and configure FastAPI application with i18n support"""
+    """Create and configure FastAPI application with i18n and security support"""
     
     app = FastAPI(
-        title="RepairGPT API",
-        description="AI-Powered Electronic Device Repair Assistant API",
-        version="1.0.0"
+        title=settings.app_name,
+        description=settings.app_description,
+        version=settings.app_version,
+        debug=settings.debug
     )
     
-    # Add CORS middleware
+    # Add security headers middleware
+    if settings.enable_security_headers:
+        app.add_middleware(
+            SecurityHeaders,
+            headers=settings.get_security_headers()
+        )
+    
+    # Add rate limiting middleware
+    rate_limiter = RateLimiter(
+        max_requests=settings.rate_limit_requests_per_minute,
+        window_seconds=60
+    )
+    app.add_middleware(
+        RateLimitMiddleware,
+        rate_limiter=rate_limiter,
+        hash_ips=True,
+        exempt_paths=["/health", "/docs", "/openapi.json", "/redoc"]
+    )
+    
+    # Add CORS middleware with secure configuration
+    cors_config = settings.get_cors_config()
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Configure appropriately for production
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=cors_config["allow_origins"],
+        allow_credentials=cors_config["allow_credentials"],
+        allow_methods=cors_config["allow_methods"],
+        allow_headers=cors_config["allow_headers"],
     )
     
     # Add i18n middleware
@@ -116,6 +147,38 @@ def create_app() -> FastAPI:
         response = await call_next(request)
         response.headers["Content-Language"] = language
         return response
+    
+    # Add startup event for validation
+    @app.on_event("startup")
+    async def startup_event():
+        """Validate configuration on startup"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Validate production configuration
+        if settings.is_production():
+            from ..config.settings import validate_production_config
+            issues = validate_production_config()
+            if issues:
+                logger.error("Production configuration issues found:")
+                for issue in issues:
+                    logger.error(f"  - {issue}")
+                raise RuntimeError("Invalid production configuration")
+        
+        # Validate API keys
+        api_validation = validate_api_keys()
+        for service, result in api_validation.items():
+            if result["configured"]:
+                if result["valid"]:
+                    logger.info(f"{service.upper()} API key configured and valid")
+                else:
+                    logger.warning(f"{service.upper()} API key configured but invalid: {result.get('error', 'Unknown error')}")
+            else:
+                logger.warning(f"{service.upper()} API key not configured")
+        
+        logger.info(f"RepairGPT API starting in {settings.environment} mode")
+        logger.info(f"Security headers: {'enabled' if settings.enable_security_headers else 'disabled'}")
+        logger.info(f"Rate limiting: {settings.rate_limit_requests_per_minute} requests/minute")
     
     return app
 
