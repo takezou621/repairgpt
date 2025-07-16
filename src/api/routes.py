@@ -434,3 +434,227 @@ async def analyze_device_image(
             error_code="ANALYSIS_FAILED",
             error=str(e)
         )
+
+
+# Additional diagnosis models for the diagnose endpoint
+from enum import Enum
+
+class DiagnoseRequest(BaseModel):
+    device_type: str
+    device_model: Optional[str] = None
+    issue_description: str
+    symptoms: Optional[List[str]] = None
+    skill_level: str = "beginner"
+    language: Optional[str] = "en"
+    
+    @validator("device_type", "issue_description")
+    def validate_required_fields(cls, v):
+        """Validate required text fields"""
+        if v:
+            return sanitize_input(v, max_length=500)
+        return v
+    
+    @validator("symptoms")
+    def validate_symptoms(cls, v):
+        """Validate and sanitize symptoms list"""
+        if v:
+            return [sanitize_input(symptom, max_length=200) for symptom in v[:10]]
+        return v
+
+
+class DiagnosisStep(BaseModel):
+    step_number: int
+    description: str
+    expected_result: str
+    warnings: Optional[List[str]] = None
+
+
+class RepairRecommendation(BaseModel):
+    title: str
+    description: str
+    difficulty: str
+    estimated_time: str
+    estimated_cost: str
+    success_rate: str
+    tools_required: List[str]
+    parts_required: List[str]
+    warnings: List[str]
+
+
+class DiagnoseResponse(BaseModel):
+    diagnosis_id: str
+    device_type: str
+    device_model: Optional[str] = None
+    primary_issue: str
+    possible_causes: List[str]
+    severity: str
+    confidence: float
+    diagnostic_steps: List[DiagnosisStep]
+    repair_recommendations: List[RepairRecommendation]
+    recommend_professional: bool
+    professional_reason: Optional[str] = None
+    estimated_repair_time: str
+    estimated_total_cost: str
+    preventive_measures: List[str]
+    language: str
+    timestamp: str
+
+
+@router.post("/diagnose", response_model=DiagnoseResponse)
+async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
+    """
+    Diagnose device issues and provide repair recommendations with security logging
+    
+    This endpoint analyzes device problems and provides structured diagnosis results
+    including possible causes, diagnostic steps, and repair recommendations.
+    """
+    # Create audit log for diagnosis request
+    client_ip = get_client_ip(request)
+    audit_entry = create_audit_log(
+        action="diagnosis_request",
+        ip_address=client_ip,
+        details={
+            "device_type": diagnose_request.device_type,
+            "skill_level": diagnose_request.skill_level,
+            "language": diagnose_request.language,
+            "issue_length": len(diagnose_request.issue_description),
+            "has_symptoms": bool(diagnose_request.symptoms)
+        }
+    )
+    logger.info(f"Diagnosis request: {audit_entry}")
+    
+    try:
+        import uuid
+        from datetime import datetime
+        
+        # Import here to avoid circular imports
+        from ..chat.llm_chatbot import RepairChatbot
+        
+        # Generate unique diagnosis ID
+        diagnosis_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat() + "Z"
+        
+        # Initialize chatbot with context
+        chatbot = RepairChatbot(preferred_model="auto")
+        
+        # Update chatbot context
+        chatbot.update_context(
+            device_type=diagnose_request.device_type,
+            device_model=diagnose_request.device_model,
+            issue_description=diagnose_request.issue_description,
+            user_skill_level=diagnose_request.skill_level
+        )
+        
+        # Create diagnosis prompt
+        diagnosis_prompt = f"""
+        Please provide a structured diagnosis for the following device issue:
+        
+        Device: {diagnose_request.device_type} {diagnose_request.device_model or ''}
+        Issue: {diagnose_request.issue_description}
+        Symptoms: {', '.join(diagnose_request.symptoms) if diagnose_request.symptoms else 'None specified'}
+        User Skill Level: {diagnose_request.skill_level}
+        
+        Please provide:
+        1. Primary issue identification
+        2. Possible causes (list)
+        3. Severity assessment
+        4. Diagnostic steps to confirm the issue
+        5. Repair recommendations with difficulty levels
+        6. Whether professional help is recommended
+        7. Estimated time and cost if possible
+        8. Preventive measures
+        
+        Format your response clearly and focus on safety and accuracy.
+        """
+        
+        # Get diagnosis from chatbot
+        raw_response = chatbot.chat(diagnosis_prompt)
+        
+        # Determine severity based on keywords
+        severity = "medium"
+        if any(word in diagnose_request.issue_description.lower() for word in ['broken', 'dead', 'won\'t turn on', 'completely']):
+            severity = "high"
+        elif any(word in diagnose_request.issue_description.lower() for word in ['slow', 'minor', 'sometimes', 'occasional']):
+            severity = "low"
+        
+        # Determine if professional help is recommended
+        recommend_professional = False
+        professional_reason = None
+        if diagnose_request.skill_level == "beginner" and severity in ["high", "critical"]:
+            recommend_professional = True
+            professional_reason = "Complex repair requiring advanced technical skills and specialized tools"
+        
+        # Create basic diagnostic steps
+        diagnostic_steps = [
+            DiagnosisStep(
+                step_number=1,
+                description="Visual inspection of the device for obvious damage",
+                expected_result="Identify any visible cracks, damage, or loose components",
+                warnings=["Ensure device is powered off", "Handle with care to avoid further damage"]
+            ),
+            DiagnosisStep(
+                step_number=2,
+                description="Check power connections and charging cables",
+                expected_result="Verify power delivery to the device",
+                warnings=["Use only official chargers", "Check for frayed cables"]
+            )
+        ]
+        
+        # Create repair recommendation
+        repair_recommendations = [
+            RepairRecommendation(
+                title="Initial Troubleshooting",
+                description=raw_response[:500] + "..." if len(raw_response) > 500 else raw_response,
+                difficulty="easy" if diagnose_request.skill_level != "beginner" else "medium",
+                estimated_time="30-60 minutes",
+                estimated_cost="$0-50",
+                success_rate="70-85%",
+                tools_required=["Screwdriver set", "Multimeter (optional)"],
+                parts_required=["Replacement parts may be needed after diagnosis"],
+                warnings=["Always power off device before opening", "Work in anti-static environment"]
+            )
+        ]
+        
+        # Determine confidence based on issue description specificity
+        confidence = 0.8 if len(diagnose_request.issue_description) > 20 else 0.6
+        if diagnose_request.symptoms:
+            confidence += 0.1
+        confidence = min(confidence, 1.0)
+        
+        return DiagnoseResponse(
+            diagnosis_id=diagnosis_id,
+            device_type=diagnose_request.device_type,
+            device_model=diagnose_request.device_model,
+            primary_issue=diagnose_request.issue_description,
+            possible_causes=[
+                "Hardware failure",
+                "Software malfunction",
+                "Power supply issues",
+                "Component wear and tear"
+            ],
+            severity=severity,
+            confidence=confidence,
+            diagnostic_steps=diagnostic_steps,
+            repair_recommendations=repair_recommendations,
+            recommend_professional=recommend_professional,
+            professional_reason=professional_reason,
+            estimated_repair_time="1-3 hours",
+            estimated_total_cost="$20-100",
+            preventive_measures=[
+                "Regular cleaning and maintenance",
+                "Proper storage when not in use",
+                "Avoid exposure to extreme temperatures",
+                "Use protective cases when applicable"
+            ],
+            language=diagnose_request.language or request.state.language,
+            timestamp=timestamp
+        )
+    
+    except Exception as e:
+        logger.error(f"Diagnosis failed: {e}")
+        raise get_localized_error(
+            request,
+            "api.errors.diagnosis_failed",
+            status_code=500,
+            error=str(e)
+        )

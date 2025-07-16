@@ -30,7 +30,6 @@ def github_workflows_dir(repo_root):
     return repo_root / ".github" / "workflows"
 
 
-
 # ===== 基本的なユニットテスト用フィクスチャ (Issue #88) =====
 
 @pytest.fixture

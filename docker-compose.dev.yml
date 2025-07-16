@@ -1,0 +1,108 @@
+# RepairGPT Development Docker Compose Configuration
+version: '3.8'
+
+services:
+  # PostgreSQL Database (same as production)
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-repairgpt_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-repairgpt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"  # Different port for dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-repairgpt}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - repairgpt-dev-network
+
+  # Redis Cache (same as production)
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6380}:6379"  # Different port for dev
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - repairgpt-dev-network
+
+  # FastAPI Backend (development mode with hot reload)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Use builder stage for development
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql://${POSTGRES_USER:-repairgpt}:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/${POSTGRES_DB:-repairgpt_dev}
+      # Redis configuration
+      REDIS_URL: redis://redis:6379/0
+      # API Keys
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      IFIXIT_API_KEY: ${IFIXIT_API_KEY}
+      # Development settings
+      ENVIRONMENT: development
+      DEBUG: true
+      RELOAD: true
+      LOG_LEVEL: DEBUG
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      - /app/__pycache__
+    restart: unless-stopped
+    networks:
+      - repairgpt-dev-network
+    command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  # Streamlit UI (development mode)
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    environment:
+      API_BASE_URL: http://api:8000
+      STREAMLIT_SERVER_PORT: 8501
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      STREAMLIT_SERVER_RUN_ON_SAVE: true
+    ports:
+      - "${UI_PORT:-8501}:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - repairgpt-dev-network
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  repairgpt-dev-network:
+    driver: bridge
