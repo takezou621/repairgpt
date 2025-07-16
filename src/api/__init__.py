@@ -21,7 +21,6 @@ from ..utils.security import (
     create_audit_log
 )
 
-
 class I18nMiddleware:
     """Middleware to handle internationalization for API responses"""
     
