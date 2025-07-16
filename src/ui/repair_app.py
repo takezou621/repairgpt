@@ -19,10 +19,13 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
+    from chat.llm_chatbot import RepairChatbot, RepairContext
     from clients.ifixit_client import IFixitClient, Guide
     from data.offline_repair_database import OfflineRepairDatabase
     from i18n import i18n, _
     from ui.language_selector import language_selector, get_localized_device_categories, get_localized_skill_levels
+    from ui.responsive_design import initialize_responsive_design, enhance_ui_components
+    from ui.ui_enhancements import show_responsive_design_info, add_responsive_navigation_hints
 except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
@@ -118,7 +121,6 @@ def check_api_health() -> bool:
     except:
         return False
 
-
 # Initialize i18n and set default language from session state
 if 'language' not in st.session_state:
     st.session_state.language = 'en'
@@ -132,67 +134,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-    .main-header {
-        text-align: center;
-        padding: 1rem 0;
-        background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3rem;
-        font-weight: bold;
-        margin-bottom: 2rem;
-    }
-    
-    .device-card {
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #4ECDC4;
-        margin: 1rem 0;
-    }
-    
-    .safety-warning {
-        background: #fff3cd;
-        border: 1px solid #ffecb5;
-        border-radius: 5px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .step-container {
-        background: #e8f5e8;
-        padding: 1rem;
-        border-radius: 8px;
-        margin: 0.5rem 0;
-        border-left: 3px solid #28a745;
-    }
-    
-    .chat-message {
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 10px;
-    }
-    
-    .user-message {
-        background: #e3f2fd;
-        margin-left: 2rem;
-    }
-    
-    .assistant-message {
-        background: #f1f8e9;
-        margin-right: 2rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Initialize responsive design and UI enhancements
+responsive_manager = initialize_responsive_design()
+enhance_ui_components()
 
 
 def initialize_session_state():
     """Initialize Streamlit session state variables"""
     if 'language' not in st.session_state:
         st.session_state.language = 'en'
+    
+    if 'chatbot' not in st.session_state:
+        st.session_state.chatbot = RepairChatbot(preferred_model="auto")
     
     # Check API health on first load
     if 'api_status' not in st.session_state:
@@ -281,8 +234,13 @@ def sidebar_device_setup():
             'skill_level': internal_skill_level
         })
         
-        # Store device context for API calls
-        # Context will be passed to API calls when needed
+        # Update chatbot context
+        st.session_state.chatbot.update_context(
+            device_type=selected_device,
+            device_model=device_model,
+            issue_description=issue_description,
+            user_skill_level=internal_skill_level
+        )
         
         # Add diagnostic button if context is available
         if selected_device and issue_description:
@@ -389,6 +347,7 @@ def display_diagnosis_results():
                 st.rerun()
 
 
+>>>>>>> main
 def format_analysis_for_chat(analysis_result):
     """Format image analysis results for chat context"""
     device_info = analysis_result.device_info
@@ -556,19 +515,32 @@ def image_upload_section():
                         # Format analysis results for chat
                         analysis_summary = format_analysis_for_chat(result)
                         
-                        # Add analysis to next chat message context
-                        if 'image_analysis_context' not in st.session_state:
-                            st.session_state.image_analysis_context = analysis_summary
+                        # Add analysis to chat context (for chatbot)
+                        st.session_state.chatbot.add_message(
+                            "system", 
+                            f"AI Image Analysis Results:\n{analysis_summary}"
+                        )
+                        
+                        # Add analysis to next chat message context (for API)
+                        st.session_state.image_analysis_context = analysis_summary
                         
                         # Display analysis results in sidebar
                         display_analysis_results(result)
                         
                     else:
                         st.sidebar.warning("OpenAI API key not configured. Image analysis disabled.")
+                        st.session_state.chatbot.add_message(
+                            "system", 
+                            f"User uploaded an image of their device, but image analysis is not available (API key missing)."
+                        )
                         st.session_state.image_analysis_context = "User uploaded an image but analysis is not available (API key missing)."
                         
                 except Exception as e:
                     st.sidebar.error(f"Analysis failed: {str(e)}")
+                    st.session_state.chatbot.add_message(
+                        "system", 
+                        f"User uploaded an image but analysis failed: {str(e)}"
+                    )
                     st.session_state.image_analysis_context = f"User uploaded an image but analysis failed: {str(e)}"
     
     if st.sidebar.button(_("ui.buttons.clear_image")):
@@ -782,7 +754,7 @@ def main_chat_interface():
         # Add user message
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        # Get bot response via API
+        # Get bot response (try API first, fallback to chatbot)
         with st.spinner(_("ui.messages.thinking")):
             try:
                 # Prepare message with context
@@ -792,7 +764,12 @@ def main_chat_interface():
                     # Clear the context after use
                     del st.session_state.image_analysis_context
                 
-                response = call_chat_api(message_with_context, st.session_state.device_context)
+                # Try API first if available
+                if st.session_state.api_status:
+                    response = call_chat_api(message_with_context, st.session_state.device_context)
+                else:
+                    # Fallback to direct chatbot
+                    response = st.session_state.chatbot.chat(message_with_context)
                 st.session_state.messages.append({"role": "assistant", "content": response})
             except Exception as e:
                 error_response = _("ui.messages.error_response", error=str(e))
@@ -804,6 +781,7 @@ def main_chat_interface():
     # Clear chat
     if clear_button:
         st.session_state.messages = []
+        st.session_state.chatbot.reset_conversation()
         # Clear any image analysis context
         if hasattr(st.session_state, 'image_analysis_context'):
             del st.session_state.image_analysis_context
@@ -823,7 +801,10 @@ def quick_help_section():
                 example_text = _("ui.examples.joycon_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
                 with st.spinner(_("ui.messages.getting_response")):
-                    response = call_chat_api(example_text, st.session_state.device_context)
+                    if st.session_state.api_status:
+                        response = call_chat_api(example_text, st.session_state.device_context)
+                    else:
+                        response = st.session_state.chatbot.chat(example_text)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
         
@@ -832,7 +813,10 @@ def quick_help_section():
                 example_text = _("ui.examples.screen_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
                 with st.spinner(_("ui.messages.getting_response")):
-                    response = call_chat_api(example_text, st.session_state.device_context)
+                    if st.session_state.api_status:
+                        response = call_chat_api(example_text, st.session_state.device_context)
+                    else:
+                        response = st.session_state.chatbot.chat(example_text)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
         
@@ -841,7 +825,10 @@ def quick_help_section():
                 example_text = _("ui.examples.laptop_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
                 with st.spinner(_("ui.messages.getting_response")):
-                    response = call_chat_api(example_text, st.session_state.device_context)
+                    if st.session_state.api_status:
+                        response = call_chat_api(example_text, st.session_state.device_context)
+                    else:
+                        response = st.session_state.chatbot.chat(example_text)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
 
@@ -884,20 +871,30 @@ def main():
     # Main interface
     main_chat_interface()
     quick_help_section()
+    
+    # Add responsive design navigation hints
+    add_responsive_navigation_hints()
+    
     footer()
     
     # Debug info (only in development)
-    if st.sidebar.checkbox("Show Debug Info"):
-        st.sidebar.json({
-            "API Status": st.session_state.api_status,
-            "API Base URL": API_BASE_URL,
-            "Message Count": len(st.session_state.messages),
-            "Device Context": st.session_state.device_context,
-            "Has Image": st.session_state.uploaded_image is not None,
-            "iFixit Guides": len(st.session_state.repair_guides),
-            "Total Offline DB": len(st.session_state.offline_db.guides),
-            "Available Devices": st.session_state.offline_db.get_all_devices()
-        })
+    with st.sidebar.expander("🔧 Development Options"):
+        if st.checkbox("Show Debug Info"):
+            st.json({
+                "API Status": st.session_state.api_status,
+                "API Base URL": API_BASE_URL,
+                "Active LLM Client": st.session_state.chatbot.active_client,
+                "Message Count": len(st.session_state.messages),
+                "Device Context": st.session_state.device_context,
+                "Has Image": st.session_state.uploaded_image is not None,
+                "iFixit Guides": len(st.session_state.repair_guides),
+                "Offline Guides": len(st.session_state.offline_guides),
+                "Total Offline DB": len(st.session_state.offline_db.guides),
+                "Available Devices": st.session_state.offline_db.get_all_devices()
+            })
+        
+        if st.checkbox("Show UI/UX Improvements"):
+            show_responsive_design_info()
 
 
 if __name__ == "__main__":
