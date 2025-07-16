@@ -22,6 +22,8 @@ try:
     from data.offline_repair_database import OfflineRepairDatabase
     from i18n import i18n, _
     from ui.language_selector import language_selector, get_localized_device_categories, get_localized_skill_levels
+    from ui.responsive_design import initialize_responsive_design, enhance_ui_components
+    from ui.ui_enhancements import show_responsive_design_info, add_responsive_navigation_hints
 except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
@@ -40,61 +42,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-    .main-header {
-        text-align: center;
-        padding: 1rem 0;
-        background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3rem;
-        font-weight: bold;
-        margin-bottom: 2rem;
-    }
-    
-    .device-card {
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #4ECDC4;
-        margin: 1rem 0;
-    }
-    
-    .safety-warning {
-        background: #fff3cd;
-        border: 1px solid #ffecb5;
-        border-radius: 5px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .step-container {
-        background: #e8f5e8;
-        padding: 1rem;
-        border-radius: 8px;
-        margin: 0.5rem 0;
-        border-left: 3px solid #28a745;
-    }
-    
-    .chat-message {
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 10px;
-    }
-    
-    .user-message {
-        background: #e3f2fd;
-        margin-left: 2rem;
-    }
-    
-    .assistant-message {
-        background: #f1f8e9;
-        margin-right: 2rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Initialize responsive design and UI enhancements
+responsive_manager = initialize_responsive_design()
+enhance_ui_components()
 
 
 def initialize_session_state():
@@ -697,20 +647,28 @@ def main():
     # Main interface
     main_chat_interface()
     quick_help_section()
+    
+    # Add responsive design navigation hints
+    add_responsive_navigation_hints()
+    
     footer()
     
     # Debug info (only in development)
-    if st.sidebar.checkbox("Show Debug Info"):
-        st.sidebar.json({
-            "Active LLM Client": st.session_state.chatbot.active_client,
-            "Message Count": len(st.session_state.messages),
-            "Device Context": st.session_state.device_context,
-            "Has Image": st.session_state.uploaded_image is not None,
-            "iFixit Guides": len(st.session_state.repair_guides),
-            "Offline Guides": len(st.session_state.offline_guides),
-            "Total Offline DB": len(st.session_state.offline_db.guides),
-            "Available Devices": st.session_state.offline_db.get_all_devices()
-        })
+    with st.sidebar.expander("🔧 Development Options"):
+        if st.checkbox("Show Debug Info"):
+            st.json({
+                "Active LLM Client": st.session_state.chatbot.active_client,
+                "Message Count": len(st.session_state.messages),
+                "Device Context": st.session_state.device_context,
+                "Has Image": st.session_state.uploaded_image is not None,
+                "iFixit Guides": len(st.session_state.repair_guides),
+                "Offline Guides": len(st.session_state.offline_guides),
+                "Total Offline DB": len(st.session_state.offline_db.guides),
+                "Available Devices": st.session_state.offline_db.get_all_devices()
+            })
+        
+        if st.checkbox("Show UI/UX Improvements"):
+            show_responsive_design_info()
 
 
 if __name__ == "__main__":
