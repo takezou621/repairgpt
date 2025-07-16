@@ -1,20 +1,30 @@
 """
-API routes for RepairGPT with internationalization support
+API routes for RepairGPT with internationalization and security support
+Implements Issue #90: 🔒 設定管理とセキュリティ強化
 """
 
 from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import List, Optional, Dict, Any
 import json
 import os
 import logging
 
 from . import get_localized_response, get_localized_error
+from ..config.settings import settings
+from ..utils.security import (
+    sanitize_input, 
+    sanitize_filename, 
+    validate_content_type,
+    validate_image_content,
+    create_audit_log,
+    get_client_ip
+)
 
 logger = logging.getLogger(__name__)
 
 
-# Request/Response models
+# Request/Response models with security validation
 class ChatRequest(BaseModel):
     message: str
     device_type: Optional[str] = None
@@ -22,6 +32,35 @@ class ChatRequest(BaseModel):
     issue_description: Optional[str] = None
     skill_level: Optional[str] = "beginner"
     language: Optional[str] = "en"
+    
+    @validator("message")
+    def validate_message(cls, v):
+        """Validate and sanitize chat message"""
+        if not v or not v.strip():
+            raise ValueError("Message cannot be empty")
+        return sanitize_input(v, max_length=settings.max_text_length)
+    
+    @validator("device_type", "device_model", "issue_description")
+    def validate_text_fields(cls, v):
+        """Validate and sanitize text fields"""
+        if v:
+            return sanitize_input(v, max_length=500)
+        return v
+    
+    @validator("skill_level")
+    def validate_skill_level(cls, v):
+        """Validate skill level"""
+        allowed_levels = ["beginner", "intermediate", "expert"]
+        if v not in allowed_levels:
+            raise ValueError(f"Skill level must be one of: {allowed_levels}")
+        return v
+    
+    @validator("language")
+    def validate_language(cls, v):
+        """Validate language"""
+        if v not in settings.supported_languages:
+            raise ValueError(f"Language must be one of: {settings.supported_languages}")
+        return v
 
 
 class ChatResponse(BaseModel):
@@ -77,7 +116,21 @@ async def health_check(request: Request):
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(chat_request: ChatRequest, request: Request):
-    """Chat endpoint for repair assistance"""
+    """Chat endpoint for repair assistance with security logging"""
+    # Create audit log
+    client_ip = get_client_ip(request)
+    audit_entry = create_audit_log(
+        action="chat_request",
+        ip_address=client_ip,
+        details={
+            "device_type": chat_request.device_type,
+            "skill_level": chat_request.skill_level,
+            "language": chat_request.language,
+            "message_length": len(chat_request.message)
+        }
+    )
+    logger.info(f"Chat request: {audit_entry}")
+    
     try:
         # Import here to avoid circular imports
         from ..chat.llm_chatbot import RepairChatbot
@@ -253,27 +306,51 @@ async def analyze_device_image(
         )
         from ..services.image_analysis import ImageAnalysisService
         
+        # Sanitize filename
+        safe_filename = sanitize_filename(file.filename) if file.filename else "upload"
+        
         # Validate file type
-        if not file.content_type or not file.content_type.startswith('image/'):
+        allowed_types = [f"image/{ext}" for ext in settings.allowed_file_types]
+        if not file.content_type or not validate_content_type(file.content_type, allowed_types):
+            logger.warning(f"Invalid file type uploaded: {file.content_type}")
             raise get_localized_error(
                 request,
                 "api.errors.invalid_file_type",
                 status_code=400,
-                error_code="INVALID_FILE_TYPE"
+                error_code="INVALID_FILE_TYPE",
+                allowed_types=list(settings.allowed_file_types)
             )
         
-        # Validate file size (10MB limit)
-        file_size = 0
+        # Read and validate file content
         content = await file.read()
         file_size = len(content)
+        max_size = settings.max_image_size_mb * 1024 * 1024
         
-        if file_size > 10 * 1024 * 1024:  # 10MB
+        if file_size > max_size:
+            logger.warning(f"File too large uploaded: {file_size} bytes")
             raise get_localized_error(
                 request,
                 "api.errors.file_too_large",
                 status_code=400,
-                error_code="FILE_TOO_LARGE"
+                error_code="FILE_TOO_LARGE",
+                max_size_mb=settings.max_image_size_mb
             )
+        
+        # Validate image content for security
+        image_validation = validate_image_content(content, max_size)
+        if not image_validation["valid"]:
+            logger.warning(f"Invalid image content: {image_validation['error']}")
+            raise get_localized_error(
+                request,
+                "api.errors.invalid_image_content",
+                status_code=400,
+                error_code="INVALID_IMAGE_CONTENT",
+                error=image_validation["error"]
+            )
+        
+        # Log warnings if any
+        for warning in image_validation.get("warnings", []):
+            logger.warning(f"Image security warning: {warning}")
         
         # Parse context if provided
         parsed_context = {}
@@ -283,19 +360,20 @@ async def analyze_device_image(
             except json.JSONDecodeError:
                 pass
         
-        # Initialize image analysis service
-        openai_api_key = os.getenv('OPENAI_API_KEY')
-        if not openai_api_key:
+        # Initialize image analysis service with secure configuration
+        if not settings.openai_api_key:
+            logger.error("OpenAI API key not configured")
             raise get_localized_error(
                 request,
                 "api.errors.service_unavailable",
                 status_code=503,
-                error_code="API_KEY_MISSING"
+                error_code="API_KEY_MISSING",
+                service="OpenAI"
             )
         
         analysis_service = ImageAnalysisService(
             provider="openai",
-            api_key=openai_api_key
+            api_key=settings.openai_api_key
         )
         
         # Perform analysis

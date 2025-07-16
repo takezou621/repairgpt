@@ -1,6 +1,7 @@
 """
 RepairGPT Streamlit Application
 Implements Issue #11: Streamlit基本チャットUIの実装
+Enhanced with Issue #90: 🔒 設定管理とセキュリティ強化
 """
 
 import streamlit as st
@@ -12,6 +13,7 @@ import json
 import io
 from PIL import Image
 import base64
+import logging
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -22,9 +24,16 @@ try:
     from data.offline_repair_database import OfflineRepairDatabase
     from i18n import i18n, _
     from ui.language_selector import language_selector, get_localized_device_categories, get_localized_skill_levels
+    
+    # Import security and configuration
+    from config.settings import settings
+    from utils.security import sanitize_input, sanitize_filename, mask_sensitive_data
 except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 # Initialize i18n and set default language from session state
@@ -32,9 +41,9 @@ if 'language' not in st.session_state:
     st.session_state.language = 'en'
 i18n.set_language(st.session_state.language)
 
-# Page configuration
+# Page configuration with security settings
 st.set_page_config(
-    page_title=_("app.title"),
+    page_title=f"{settings.app_name} - {_('app.title')}",
     page_icon="🔧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -148,16 +157,23 @@ def sidebar_device_setup():
     device_model = ""
     if selected_device != _("ui.placeholders.select_device"):
         if selected_device == _("devices.other"):
-            device_model = st.sidebar.text_input(_("ui.placeholders.device_model"))
-            selected_device = device_model
+            device_model_input = st.sidebar.text_input(_("ui.placeholders.device_model"))
+            if device_model_input:
+                device_model = sanitize_input(device_model_input, max_length=100)
+                selected_device = device_model
         else:
-            device_model = st.sidebar.text_input(_("ui.labels.device_model"))
+            device_model_input = st.sidebar.text_input(_("ui.labels.device_model"))
+            if device_model_input:
+                device_model = sanitize_input(device_model_input, max_length=100)
     
-    # Issue description
-    issue_description = st.sidebar.text_area(
+    # Issue description with sanitization
+    issue_description_input = st.sidebar.text_area(
         _("ui.labels.issue_description"),
         placeholder=_("ui.placeholders.issue_description")
     )
+    issue_description = ""
+    if issue_description_input:
+        issue_description = sanitize_input(issue_description_input, max_length=1000)
     
     # Skill level
     skill_levels = get_localized_skill_levels()
@@ -351,12 +367,11 @@ def image_upload_section():
                     image.save(img_byte_array, format='JPEG')
                     image_bytes = img_byte_array.getvalue()
                     
-                    # Initialize analysis service
-                    openai_api_key = os.getenv('OPENAI_API_KEY')
-                    if openai_api_key:
+                    # Initialize analysis service with secure configuration
+                    if settings.openai_api_key:
                         analysis_service = ImageAnalysisService(
                             provider="openai",
-                            api_key=openai_api_key
+                            api_key=settings.openai_api_key
                         )
                         
                         # Perform analysis
@@ -384,6 +399,7 @@ def image_upload_section():
                         
                     else:
                         st.sidebar.warning("OpenAI API key not configured. Image analysis disabled.")
+                        logger.warning("OpenAI API key not configured for image analysis")
                         st.session_state.chatbot.add_message(
                             "system", 
                             f"User uploaded an image of their device, but image analysis is not available (API key missing)."
@@ -602,19 +618,30 @@ def main_chat_interface():
             send_button = st.button(_("ui.buttons.send"), type="primary", use_container_width=True)
             clear_button = st.button(_("ui.buttons.clear_chat"), use_container_width=True)
     
-    # Handle user input
+    # Handle user input with security validation
     if send_button and user_input.strip():
-        # Add user message
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        
-        # Get bot response
-        with st.spinner(_("ui.messages.thinking")):
-            try:
-                response = st.session_state.chatbot.chat(user_input)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-            except Exception as e:
-                error_response = _("ui.messages.error_response", error=str(e))
-                st.session_state.messages.append({"role": "assistant", "content": error_response})
+        try:
+            # Sanitize user input
+            sanitized_input = sanitize_input(user_input, max_length=settings.max_text_length)
+            
+            # Add user message
+            st.session_state.messages.append({"role": "user", "content": sanitized_input})
+            
+            # Log user interaction (without sensitive content)
+            logger.info(f"User chat input received (length: {len(sanitized_input)})")
+            
+            # Get bot response
+            with st.spinner(_("ui.messages.thinking")):
+                try:
+                    response = st.session_state.chatbot.chat(sanitized_input)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                except Exception as e:
+                    logger.error(f"Chat error: {str(e)}")
+                    error_response = _("ui.messages.error_response", error=str(e))
+                    st.session_state.messages.append({"role": "assistant", "content": error_response})
+        except ValueError as e:
+            st.error(f"Input validation error: {str(e)}")
+            logger.warning(f"Invalid user input: {str(e)}")
         
         # Clear input and rerun
         st.rerun()
@@ -701,6 +728,7 @@ def main():
     
     # Debug info (only in development)
     if st.sidebar.checkbox("Show Debug Info"):
+        # Application info
         st.sidebar.json({
             "Active LLM Client": st.session_state.chatbot.active_client,
             "Message Count": len(st.session_state.messages),
@@ -711,6 +739,39 @@ def main():
             "Total Offline DB": len(st.session_state.offline_db.guides),
             "Available Devices": st.session_state.offline_db.get_all_devices()
         })
+        
+        # Security and configuration info
+        if settings.is_development():
+            st.sidebar.subheader("🔒 Security Configuration")
+            
+            # API key status (masked)
+            api_keys_status = {}
+            if settings.openai_api_key:
+                api_keys_status["OpenAI"] = f"Configured ({mask_sensitive_data(settings.openai_api_key, 8)})"
+            else:
+                api_keys_status["OpenAI"] = "Not configured"
+                
+            if settings.claude_api_key:
+                api_keys_status["Claude"] = f"Configured ({mask_sensitive_data(settings.claude_api_key, 8)})"
+            else:
+                api_keys_status["Claude"] = "Not configured"
+                
+            if settings.ifixit_api_key:
+                api_keys_status["iFixit"] = f"Configured ({mask_sensitive_data(settings.ifixit_api_key, 4)})"
+            else:
+                api_keys_status["iFixit"] = "Not configured"
+            
+            security_info = {
+                "Environment": settings.environment.value,
+                "Debug Mode": settings.debug,
+                "Security Headers": settings.enable_security_headers,
+                "Rate Limiting": f"{settings.rate_limit_requests_per_minute}/min",
+                "Max Image Size": f"{settings.max_image_size_mb}MB",
+                "Max Text Length": settings.max_text_length,
+                "API Keys": api_keys_status
+            }
+            
+            st.sidebar.json(security_info)
 
 
 if __name__ == "__main__":
