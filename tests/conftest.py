@@ -1,12 +1,16 @@
 """
-テスト設定ファイル - pytest configuration for automation tests
+テスト設定ファイル - pytest configuration for RepairGPT
 
-Issue #33: 夜間自動化システム動作確認テスト
+Issue #88: 基本的なユニットテストとテスト環境の構築
+Issue #33: 夜間自動化システム動作確認テスト (既存)
 """
 
 import pytest
 import os
+import tempfile
+import shutil
 from pathlib import Path
+from typing import Any, Dict, Generator
 
 
 @pytest.fixture(scope="session")
@@ -25,6 +29,67 @@ def github_workflows_dir(repo_root):
     """GitHub Actionsワークフローディレクトリのパス"""
     return repo_root / ".github" / "workflows"
 
+
+# ===== 基本的なユニットテスト用フィクスチャ (Issue #88) =====
+
+@pytest.fixture
+def sample_test_data() -> Dict[str, Any]:
+    """基本的なテスト用サンプルデータ"""
+    return {
+        "test_key": "test_value",
+        "numbers": [1, 2, 3],
+        "config": {
+            "debug": True,
+            "timeout": 30
+        },
+        "items": ["item1", "item2", "item3"]
+    }
+
+
+@pytest.fixture
+def temp_test_directory() -> Generator[Path, None, None]:
+    """一時テストディレクトリの作成と削除"""
+    temp_dir = Path(tempfile.mkdtemp(prefix="repairgpt_test_"))
+    try:
+        yield temp_dir
+    finally:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+
+
+@pytest.fixture
+def mock_api_response() -> Dict[str, Any]:
+    """模擬API応答データ"""
+    return {
+        "status": "success",
+        "data": {
+            "id": 123,
+            "name": "Test Device",
+            "type": "smartphone",
+            "issues": ["screen_crack", "battery_drain"]
+        },
+        "timestamp": "2025-07-16T21:30:00Z"
+    }
+
+
+@pytest.fixture
+def test_device_data() -> Dict[str, Any]:
+    """テスト用デバイスデータ"""
+    return {
+        "device_id": "test_device_001",
+        "manufacturer": "TestCorp",
+        "model": "TestPhone Pro",
+        "os_version": "TestOS 15.0",
+        "symptoms": [
+            "Device won't turn on",
+            "Battery drains quickly",
+            "Screen flickering"
+        ],
+        "repair_history": []
+    }
+
+
+# ===== 自動化テスト用フィクスチャ (Issue #33 - 既存) =====
 
 @pytest.fixture
 def automation_test_data():
@@ -64,11 +129,16 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(autouse=True)
-def test_environment_setup():
+def test_environment_setup(request):
     """各テスト前の環境設定"""
-    # 現在のディレクトリがリポジトリルートかチェック
-    if not Path(".github").exists():
-        pytest.skip("GitHub Actions環境でないため、スキップします")
+    # 自動化テストのみGitHub Actions環境が必要
+    if hasattr(request, 'node'):
+        test_path = str(request.node.fspath)
+        if "automation" in test_path or "night_automation" in request.node.name:
+            # 自動化テストの場合はGitHub Actions環境が必要
+            if not Path(".github").exists():
+                pytest.skip("GitHub Actions環境でないため、自動化テストをスキップします")
+    # 基本的なユニットテストは環境制限なし
 
 
 def pytest_sessionfinish(session, exitstatus):
