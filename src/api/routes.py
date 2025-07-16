@@ -14,50 +14,12 @@ from . import get_localized_response, get_localized_error
 logger = logging.getLogger(__name__)
 
 
-# Request/Response models
-class ChatRequest(BaseModel):
-    message: str
-    device_type: Optional[str] = None
-    device_model: Optional[str] = None
-    issue_description: Optional[str] = None
-    skill_level: Optional[str] = "beginner"
-    language: Optional[str] = "en"
-
-
-class ChatResponse(BaseModel):
-    response: str
-    language: str
-    context: Dict[str, Any]
-
-
-class DeviceInfo(BaseModel):
-    device_type: str
-    device_model: Optional[str] = None
-    issue_description: Optional[str] = None
-    skill_level: str = "beginner"
-
-
-class RepairGuide(BaseModel):
-    id: str
-    title: str
-    difficulty: str
-    time_estimate: str
-    cost_estimate: str
-    success_rate: str
-    device: str
-    summary: Optional[str] = None
-    tools_required: List[str]
-    parts_required: List[str]
-    warnings: List[str]
-    steps: List[Dict[str, Any]]
-    tips: List[str]
-
-
-class HealthResponse(BaseModel):
-    status: str
-    message: str
-    language: str
-    version: str
+# Import models from centralized models file
+from .models import (
+    ChatRequest, ChatResponse, DeviceInfo, RepairGuide, HealthResponse,
+    DiagnoseRequest, DiagnoseResponse, DiagnosisStep, RepairRecommendation,
+    DeviceType, SkillLevel, RepairUrgency, RepairDifficulty
+)
 
 
 # Create router
@@ -88,10 +50,10 @@ async def chat_endpoint(chat_request: ChatRequest, request: Request):
         # Update context if provided
         if chat_request.device_type:
             chatbot.update_context(
-                device_type=chat_request.device_type,
+                device_type=chat_request.device_type.value if hasattr(chat_request.device_type, 'value') else chat_request.device_type,
                 device_model=chat_request.device_model,
                 issue_description=chat_request.issue_description,
-                user_skill_level=chat_request.skill_level
+                user_skill_level=chat_request.skill_level.value if hasattr(chat_request.skill_level, 'value') else chat_request.skill_level
             )
         
         # Get response
@@ -101,10 +63,10 @@ async def chat_endpoint(chat_request: ChatRequest, request: Request):
             response=response,
             language=request.state.language,
             context={
-                "device_type": chat_request.device_type,
+                "device_type": chat_request.device_type.value if hasattr(chat_request.device_type, 'value') else chat_request.device_type,
                 "device_model": chat_request.device_model,
                 "issue_description": chat_request.issue_description,
-                "skill_level": chat_request.skill_level
+                "skill_level": chat_request.skill_level.value if hasattr(chat_request.skill_level, 'value') else chat_request.skill_level
             }
         )
     
@@ -112,6 +74,154 @@ async def chat_endpoint(chat_request: ChatRequest, request: Request):
         raise get_localized_error(
             request, 
             "api.errors.chat_failed", 
+            status_code=500,
+            error=str(e)
+        )
+
+
+@router.post("/diagnose", response_model=DiagnoseResponse)
+async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
+    """
+    Diagnose device issues and provide repair recommendations
+    
+    This endpoint analyzes device problems and provides structured diagnosis results
+    including possible causes, diagnostic steps, and repair recommendations.
+    """
+    try:
+        import uuid
+        from datetime import datetime
+        
+        # Import here to avoid circular imports
+        from ..chat.llm_chatbot import RepairChatbot
+        
+        # Generate unique diagnosis ID
+        diagnosis_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat() + "Z"
+        
+        # Initialize chatbot with context
+        chatbot = RepairChatbot(preferred_model="auto")
+        
+        # Update chatbot context
+        chatbot.update_context(
+            device_type=diagnose_request.device_type.value,
+            device_model=diagnose_request.device_model,
+            issue_description=diagnose_request.issue_description,
+            user_skill_level=diagnose_request.skill_level.value
+        )
+        
+        # Create diagnosis prompt
+        diagnosis_prompt = f"""
+        Please provide a structured diagnosis for the following device issue:
+        
+        Device: {diagnose_request.device_type.value} {diagnose_request.device_model or ''}
+        Issue: {diagnose_request.issue_description}
+        Symptoms: {', '.join(diagnose_request.symptoms) if diagnose_request.symptoms else 'None specified'}
+        User Skill Level: {diagnose_request.skill_level.value}
+        
+        Please provide:
+        1. Primary issue identification
+        2. Possible causes (list)
+        3. Severity assessment
+        4. Diagnostic steps to confirm the issue
+        5. Repair recommendations with difficulty levels
+        6. Whether professional help is recommended
+        7. Estimated time and cost if possible
+        8. Preventive measures
+        
+        Format your response clearly and focus on safety and accuracy.
+        """
+        
+        # Get diagnosis from chatbot
+        raw_response = chatbot.chat(diagnosis_prompt)
+        
+        # Parse and structure the response (simplified implementation)
+        # In a production system, you might use more sophisticated NLP parsing
+        
+        # Determine severity based on keywords
+        severity = RepairUrgency.MEDIUM
+        if any(word in diagnose_request.issue_description.lower() for word in ['broken', 'dead', 'won\'t turn on', 'completely']):
+            severity = RepairUrgency.HIGH
+        elif any(word in diagnose_request.issue_description.lower() for word in ['slow', 'minor', 'sometimes', 'occasional']):
+            severity = RepairUrgency.LOW
+        
+        # Determine if professional help is recommended
+        recommend_professional = False
+        professional_reason = None
+        if diagnose_request.skill_level == SkillLevel.BEGINNER and severity in [RepairUrgency.HIGH, RepairUrgency.CRITICAL]:
+            recommend_professional = True
+            professional_reason = "Complex repair requiring advanced technical skills and specialized tools"
+        
+        # Create basic diagnostic steps
+        diagnostic_steps = [
+            DiagnosisStep(
+                step_number=1,
+                description="Visual inspection of the device for obvious damage",
+                expected_result="Identify any visible cracks, damage, or loose components",
+                warnings=["Ensure device is powered off", "Handle with care to avoid further damage"]
+            ),
+            DiagnosisStep(
+                step_number=2,
+                description="Check power connections and charging cables",
+                expected_result="Verify power delivery to the device",
+                warnings=["Use only official chargers", "Check for frayed cables"]
+            )
+        ]
+        
+        # Create repair recommendation
+        repair_recommendations = [
+            RepairRecommendation(
+                title="Initial Troubleshooting",
+                description=raw_response[:500] + "..." if len(raw_response) > 500 else raw_response,
+                difficulty=RepairDifficulty.EASY if diagnose_request.skill_level != SkillLevel.BEGINNER else RepairDifficulty.MEDIUM,
+                estimated_time="30-60 minutes",
+                estimated_cost="$0-50",
+                success_rate="70-85%",
+                tools_required=["Screwdriver set", "Multimeter (optional)"],
+                parts_required=["Replacement parts may be needed after diagnosis"],
+                warnings=["Always power off device before opening", "Work in anti-static environment"]
+            )
+        ]
+        
+        # Determine confidence based on issue description specificity
+        confidence = 0.8 if len(diagnose_request.issue_description) > 20 else 0.6
+        if diagnose_request.symptoms:
+            confidence += 0.1
+        confidence = min(confidence, 1.0)
+        
+        return DiagnoseResponse(
+            diagnosis_id=diagnosis_id,
+            device_type=diagnose_request.device_type,
+            device_model=diagnose_request.device_model,
+            primary_issue=diagnose_request.issue_description,
+            possible_causes=[
+                "Hardware failure",
+                "Software malfunction",
+                "Power supply issues",
+                "Component wear and tear"
+            ],
+            severity=severity,
+            confidence=confidence,
+            diagnostic_steps=diagnostic_steps,
+            repair_recommendations=repair_recommendations,
+            recommend_professional=recommend_professional,
+            professional_reason=professional_reason,
+            estimated_repair_time="1-3 hours",
+            estimated_total_cost="$20-100",
+            preventive_measures=[
+                "Regular cleaning and maintenance",
+                "Proper storage when not in use",
+                "Avoid exposure to extreme temperatures",
+                "Use protective cases when applicable"
+            ],
+            language=diagnose_request.language or request.state.language,
+            timestamp=timestamp
+        )
+    
+    except Exception as e:
+        logger.error(f"Diagnosis failed: {e}")
+        raise get_localized_error(
+            request,
+            "api.errors.diagnosis_failed",
             status_code=500,
             error=str(e)
         )

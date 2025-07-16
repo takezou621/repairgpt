@@ -12,12 +12,13 @@ import json
 import io
 from PIL import Image
 import base64
+import requests
+import time
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
-    from chat.llm_chatbot import RepairChatbot, RepairContext
     from clients.ifixit_client import IFixitClient, Guide
     from data.offline_repair_database import OfflineRepairDatabase
     from i18n import i18n, _
@@ -25,6 +26,97 @@ try:
 except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
+
+# FastAPI server configuration
+API_BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://localhost:8000")
+API_TIMEOUT = 30
+
+
+def call_chat_api(message: str, device_context: Dict = None) -> str:
+    """Call the FastAPI chat endpoint"""
+    try:
+        payload = {
+            "message": message,
+            "language": st.session_state.language
+        }
+        
+        # Add device context if available
+        if device_context:
+            payload.update({
+                "device_type": device_context.get("device_type"),
+                "device_model": device_context.get("device_model"),
+                "issue_description": device_context.get("issue_description"),
+                "skill_level": device_context.get("skill_level", "beginner")
+            })
+        
+        response = requests.post(
+            f"{API_BASE_URL}/api/v1/chat",
+            json=payload,
+            timeout=API_TIMEOUT,
+            headers={"Accept-Language": st.session_state.language}
+        )
+        
+        if response.status_code == 200:
+            return response.json()["response"]
+        else:
+            error_msg = f"API Error {response.status_code}: {response.text}"
+            st.error(error_msg)
+            return f"Sorry, I encountered an error: {error_msg}"
+            
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Connection error: {str(e)}"
+        st.error(error_msg)
+        return f"Sorry, I couldn't connect to the repair service: {error_msg}"
+    except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}"
+        st.error(error_msg)
+        return f"Sorry, something went wrong: {error_msg}"
+
+
+def call_diagnose_api(device_type: str, issue_description: str, device_model: str = None, 
+                     symptoms: List[str] = None, skill_level: str = "beginner") -> Dict:
+    """Call the FastAPI diagnose endpoint"""
+    try:
+        payload = {
+            "device_type": device_type,
+            "issue_description": issue_description,
+            "skill_level": skill_level,
+            "language": st.session_state.language
+        }
+        
+        if device_model:
+            payload["device_model"] = device_model
+        if symptoms:
+            payload["symptoms"] = symptoms
+            
+        response = requests.post(
+            f"{API_BASE_URL}/api/v1/diagnose",
+            json=payload,
+            timeout=API_TIMEOUT,
+            headers={"Accept-Language": st.session_state.language}
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Diagnosis API Error {response.status_code}: {response.text}")
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"Connection error: {str(e)}")
+        return None
+    except Exception as e:
+        st.error(f"Diagnosis error: {str(e)}")
+        return None
+
+
+def check_api_health() -> bool:
+    """Check if the FastAPI server is running"""
+    try:
+        response = requests.get(f"{API_BASE_URL}/api/v1/health", timeout=5)
+        return response.status_code == 200
+    except:
+        return False
 
 
 # Initialize i18n and set default language from session state
@@ -102,8 +194,11 @@ def initialize_session_state():
     if 'language' not in st.session_state:
         st.session_state.language = 'en'
     
-    if 'chatbot' not in st.session_state:
-        st.session_state.chatbot = RepairChatbot(preferred_model="auto")
+    # Check API health on first load
+    if 'api_status' not in st.session_state:
+        st.session_state.api_status = check_api_health()
+        if not st.session_state.api_status:
+            st.warning(f"⚠️ FastAPI server not reachable at {API_BASE_URL}. Please start the FastAPI server.")
     
     if 'ifixit_client' not in st.session_state:
         st.session_state.ifixit_client = IFixitClient()
@@ -127,6 +222,9 @@ def initialize_session_state():
     
     if 'repair_guides' not in st.session_state:
         st.session_state.repair_guides = []
+    
+    if 'diagnosis_result' not in st.session_state:
+        st.session_state.diagnosis_result = None
     
     if 'offline_guides' not in st.session_state:
         st.session_state.offline_guides = []
@@ -183,13 +281,26 @@ def sidebar_device_setup():
             'skill_level': internal_skill_level
         })
         
-        # Update chatbot context
-        st.session_state.chatbot.update_context(
-            device_type=selected_device,
-            device_model=device_model,
-            issue_description=issue_description,
-            user_skill_level=internal_skill_level
-        )
+        # Store device context for API calls
+        # Context will be passed to API calls when needed
+        
+        # Add diagnostic button if context is available
+        if selected_device and issue_description:
+            if st.sidebar.button("🔍 Run Full Diagnosis", type="primary", use_container_width=True):
+                with st.spinner("Running comprehensive diagnosis..."):
+                    diagnosis_result = call_diagnose_api(
+                        device_type=selected_device,
+                        issue_description=issue_description,
+                        device_model=device_model,
+                        skill_level=internal_skill_level
+                    )
+                    
+                    if diagnosis_result:
+                        st.session_state.diagnosis_result = diagnosis_result
+                        st.success("Diagnosis completed! See results below.")
+                        st.rerun()
+                    else:
+                        st.error("Diagnosis failed. Please check your input and try again.")
     
     # Show current context
     if st.session_state.device_context['device_type']:
@@ -204,6 +315,78 @@ def sidebar_device_setup():
                 st.write(f"**{issue_label}:** {st.session_state.device_context['issue_description']}")
             skill_label = _("ui.labels.skill_level")
             st.write(f"**{skill_label}:** {skill_level}")
+
+
+def display_diagnosis_results():
+    """Display diagnosis results from the API"""
+    if st.session_state.diagnosis_result:
+        diagnosis = st.session_state.diagnosis_result
+        
+        with st.expander("🔍 Full Diagnosis Results", expanded=True):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("📋 Diagnosis Summary")
+                st.write(f"**Device**: {diagnosis['device_type'].replace('_', ' ').title()}")
+                if diagnosis.get('device_model'):
+                    st.write(f"**Model**: {diagnosis['device_model']}")
+                st.write(f"**Primary Issue**: {diagnosis['primary_issue']}")
+                st.write(f"**Severity**: {diagnosis['severity'].title()}")
+                st.write(f"**Confidence**: {diagnosis['confidence']:.0%}")
+                
+                if diagnosis.get('recommend_professional'):
+                    st.warning(f"⚠️ **Professional Help Recommended**: {diagnosis.get('professional_reason', 'Complex repair required')}")
+                
+            with col2:
+                st.subheader("🕒 Time & Cost Estimates")
+                if diagnosis.get('estimated_repair_time'):
+                    st.write(f"**Estimated Time**: {diagnosis['estimated_repair_time']}")
+                if diagnosis.get('estimated_total_cost'):
+                    st.write(f"**Estimated Cost**: {diagnosis['estimated_total_cost']}")
+            
+            # Possible Causes
+            if diagnosis.get('possible_causes'):
+                st.subheader("🔍 Possible Causes")
+                for cause in diagnosis['possible_causes']:
+                    st.write(f"• {cause}")
+            
+            # Diagnostic Steps
+            if diagnosis.get('diagnostic_steps'):
+                st.subheader("🔧 Diagnostic Steps")
+                for step in diagnosis['diagnostic_steps']:
+                    with st.expander(f"Step {step['step_number']}: {step['description']}", expanded=False):
+                        st.write(f"**Expected Result**: {step['expected_result']}")
+                        if step.get('warnings'):
+                            st.warning("⚠️ **Warnings**: " + ", ".join(step['warnings']))
+            
+            # Repair Recommendations
+            if diagnosis.get('repair_recommendations'):
+                st.subheader("⚙️ Repair Recommendations")
+                for rec in diagnosis['repair_recommendations']:
+                    with st.expander(f"{rec['title']} (Difficulty: {rec['difficulty'].title()})", expanded=False):
+                        st.write(rec['description'])
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**Time**: {rec.get('estimated_time', 'Unknown')}")
+                            st.write(f"**Cost**: {rec.get('estimated_cost', 'Unknown')}")
+                        with col2:
+                            st.write(f"**Success Rate**: {rec.get('success_rate', 'Unknown')}")
+                        
+                        if rec.get('tools_required'):
+                            st.write("**Tools needed**: " + ", ".join(rec['tools_required']))
+                        if rec.get('warnings'):
+                            st.warning("⚠️ **Warnings**: " + ", ".join(rec['warnings']))
+            
+            # Preventive Measures
+            if diagnosis.get('preventive_measures'):
+                st.subheader("🛡️ Preventive Measures")
+                for measure in diagnosis['preventive_measures']:
+                    st.write(f"• {measure}")
+            
+            # Clear diagnosis button
+            if st.button("Clear Diagnosis", type="secondary"):
+                st.session_state.diagnosis_result = None
+                st.rerun()
 
 
 def format_analysis_for_chat(analysis_result):
@@ -373,28 +556,20 @@ def image_upload_section():
                         # Format analysis results for chat
                         analysis_summary = format_analysis_for_chat(result)
                         
-                        # Add analysis to chat context
-                        st.session_state.chatbot.add_message(
-                            "system", 
-                            f"AI Image Analysis Results:\n{analysis_summary}"
-                        )
+                        # Add analysis to next chat message context
+                        if 'image_analysis_context' not in st.session_state:
+                            st.session_state.image_analysis_context = analysis_summary
                         
                         # Display analysis results in sidebar
                         display_analysis_results(result)
                         
                     else:
                         st.sidebar.warning("OpenAI API key not configured. Image analysis disabled.")
-                        st.session_state.chatbot.add_message(
-                            "system", 
-                            f"User uploaded an image of their device, but image analysis is not available (API key missing)."
-                        )
+                        st.session_state.image_analysis_context = "User uploaded an image but analysis is not available (API key missing)."
                         
                 except Exception as e:
                     st.sidebar.error(f"Analysis failed: {str(e)}")
-                    st.session_state.chatbot.add_message(
-                        "system", 
-                        f"User uploaded an image but analysis failed: {str(e)}"
-                    )
+                    st.session_state.image_analysis_context = f"User uploaded an image but analysis failed: {str(e)}"
     
     if st.sidebar.button(_("ui.buttons.clear_image")):
         st.session_state.uploaded_image = None
@@ -607,10 +782,17 @@ def main_chat_interface():
         # Add user message
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        # Get bot response
+        # Get bot response via API
         with st.spinner(_("ui.messages.thinking")):
             try:
-                response = st.session_state.chatbot.chat(user_input)
+                # Prepare message with context
+                message_with_context = user_input
+                if hasattr(st.session_state, 'image_analysis_context'):
+                    message_with_context = f"{st.session_state.image_analysis_context}\n\nUser question: {user_input}"
+                    # Clear the context after use
+                    del st.session_state.image_analysis_context
+                
+                response = call_chat_api(message_with_context, st.session_state.device_context)
                 st.session_state.messages.append({"role": "assistant", "content": response})
             except Exception as e:
                 error_response = _("ui.messages.error_response", error=str(e))
@@ -622,7 +804,9 @@ def main_chat_interface():
     # Clear chat
     if clear_button:
         st.session_state.messages = []
-        st.session_state.chatbot.reset_conversation()
+        # Clear any image analysis context
+        if hasattr(st.session_state, 'image_analysis_context'):
+            del st.session_state.image_analysis_context
         st.rerun()
 
 
@@ -639,7 +823,7 @@ def quick_help_section():
                 example_text = _("ui.examples.joycon_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
                 with st.spinner(_("ui.messages.getting_response")):
-                    response = st.session_state.chatbot.chat(example_text)
+                    response = call_chat_api(example_text, st.session_state.device_context)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
         
@@ -648,7 +832,7 @@ def quick_help_section():
                 example_text = _("ui.examples.screen_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
                 with st.spinner(_("ui.messages.getting_response")):
-                    response = st.session_state.chatbot.chat(example_text)
+                    response = call_chat_api(example_text, st.session_state.device_context)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
         
@@ -657,7 +841,7 @@ def quick_help_section():
                 example_text = _("ui.examples.laptop_text")
                 st.session_state.messages.append({"role": "user", "content": example_text})
                 with st.spinner(_("ui.messages.getting_response")):
-                    response = st.session_state.chatbot.chat(example_text)
+                    response = call_chat_api(example_text, st.session_state.device_context)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 st.rerun()
 
@@ -694,6 +878,9 @@ def main():
     image_upload_section()
     ifixit_guides_section()
     
+    # Display diagnosis results if available
+    display_diagnosis_results()
+    
     # Main interface
     main_chat_interface()
     quick_help_section()
@@ -702,12 +889,12 @@ def main():
     # Debug info (only in development)
     if st.sidebar.checkbox("Show Debug Info"):
         st.sidebar.json({
-            "Active LLM Client": st.session_state.chatbot.active_client,
+            "API Status": st.session_state.api_status,
+            "API Base URL": API_BASE_URL,
             "Message Count": len(st.session_state.messages),
             "Device Context": st.session_state.device_context,
             "Has Image": st.session_state.uploaded_image is not None,
             "iFixit Guides": len(st.session_state.repair_guides),
-            "Offline Guides": len(st.session_state.offline_guides),
             "Total Offline DB": len(st.session_state.offline_db.guides),
             "Available Devices": st.session_state.offline_db.get_all_devices()
         })
