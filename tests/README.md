@@ -1,13 +1,62 @@
-# RepairGPT 夜間自動化システムテスト
+# RepairGPT テストスイート
 
-**Issue #33**: テスト: 夜間自動化システム動作確認  
-**実行時刻**: #午後
+**Issue #88**: 基本的なユニットテストとテスト環境の構築  
+**Issue #33**: 夜間自動化システム動作確認（既存）
 
 ## 概要
 
-このテストスイートは RepairGPT プロジェクトの夜間自動化システムの動作確認を行います。
+このテストスイートは RepairGPT プロジェクトの包括的なテスト環境を提供します：
 
-## テスト項目
+1. **基本的なユニットテスト環境** (Issue #88)
+2. **夜間自動化システムテスト** (Issue #33)
+
+## 基本的なユニットテスト環境 (Issue #88)
+
+### 機能
+
+- **pytest** を使用した包括的なテスト環境
+- **カバレッジ測定** (目標: 80%以上)
+- **フィクスチャ** による再利用可能なテストデータ
+- **パラメータ化テスト** による効率的なテスト実行
+- **型ヒント** と **docstring** による明確な仕様
+
+### テストファイル構成
+
+```
+tests/
+├── conftest.py                 # pytest設定とフィクスチャ
+├── test_basic_examples.py      # 基本的なユニットテストの例
+├── pytest.ini                 # pytest設定ファイル
+├── requirements-test.txt       # テスト依存関係
+└── README.md                   # このファイル
+```
+
+### 利用可能なフィクスチャ
+
+- `sample_test_data`: 基本的なテスト用サンプルデータ
+- `temp_test_directory`: 一時テストディレクトリ
+- `mock_api_response`: 模擬API応答データ
+- `test_device_data`: テスト用デバイスデータ
+
+### テスト例
+
+```python
+def test_basic_functionality(sample_test_data):
+    """基本機能のテスト例"""
+    assert sample_test_data["test_key"] == "test_value"
+    assert len(sample_test_data["numbers"]) == 3
+
+@pytest.mark.parametrize("input,expected", [
+    (1, 2), (2, 4), (3, 6)
+])
+def test_parametrized_example(input, expected):
+    """パラメータ化テストの例"""
+    assert input * 2 == expected
+```
+
+## 夜間自動化システムテスト (Issue #33)
+
+### テスト項目
 
 - ✅ **Claude Code**: ブランチ作成・実装
 - 🔄 **夜間自動PR作成**: テスト実行
@@ -29,20 +78,49 @@ tests/
 
 ## 実行方法
 
-### 1. pytest を使用した実行
+### 基本的なユニットテストの実行
 
 ```bash
 # テスト依存関係のインストール
 pip install -r tests/requirements-test.txt
 
-# 全テスト実行
+# 基本的なユニットテストのみ実行
+pytest tests/test_basic_examples.py
+
+# カバレッジ付きで基本テスト実行（推奨）
+pytest --cov=src tests/test_basic_examples.py
+
+# 全テスト実行（基本テスト + 自動化テスト）
 pytest tests/
 
 # 詳細出力で実行
 pytest -v tests/
 
+# 特定のマーカーのテストのみ実行
+pytest -m "basic" tests/          # 基本テストのみ
+pytest -m "automation" tests/     # 自動化テストのみ
+pytest -m "slow" tests/           # 時間のかかるテストのみ
+```
+
+### pytest設定の特徴
+
+- **カバレッジ目標**: 80%以上 (`--cov-fail-under=80`)
+- **カバレッジレポート**: ターミナル表示 + HTML レポート (`htmlcov/`)
+- **テストマーカー**: `basic`, `unit`, `automation`, `slow`, `integration`
+
+### 自動化システムテストの実行
+
+```bash
+# 1. pytest を使用した実行
+
+# 全自動化テスト実行
+pytest -m "automation" tests/
+
+# 詳細出力で実行
+pytest -v -m "automation" tests/
+
 # カバレッジ付きで実行
-pytest --cov=. tests/
+pytest --cov=. -m "automation" tests/
 ```
 
 ### 2. 独立テストランナーの使用
