@@ -194,12 +194,16 @@ def sidebar_device_setup():
     # Show current context
     if st.session_state.device_context['device_type']:
         with st.sidebar.expander(_("ui.labels.current_context"), expanded=False):
-            st.write(f"**{_("guide.device")}:** {st.session_state.device_context['device_type']}")
+            device_label = _("guide.device")
+            st.write(f"**{device_label}:** {st.session_state.device_context['device_type']}")
             if st.session_state.device_context['device_model']:
-                st.write(f"**{_("ui.labels.device_model")}:** {st.session_state.device_context['device_model']}")
+                model_label = _("ui.labels.device_model")
+                st.write(f"**{model_label}:** {st.session_state.device_context['device_model']}")
             if st.session_state.device_context['issue_description']:
-                st.write(f"**{_("ui.labels.issue_description")}:** {st.session_state.device_context['issue_description']}")
-            st.write(f"**{_("ui.labels.skill_level")}:** {skill_level}")
+                issue_label = _("ui.labels.issue_description")
+                st.write(f"**{issue_label}:** {st.session_state.device_context['issue_description']}")
+            skill_label = _("ui.labels.skill_level")
+            st.write(f"**{skill_label}:** {skill_level}")
 
 
 def image_upload_section():
@@ -364,12 +368,14 @@ def main_chat_interface():
     """Main chat interface"""
     # Header
     st.markdown('<h1 class="main-header">🔧 RepairGPT</h1>', unsafe_allow_html=True)
-    st.markdown(f"### {_("app.subtitle")}")
+    subtitle = _("app.subtitle")
+    st.markdown(f"### {subtitle}")
     
     # Safety warning
+    safety_warning = _("ui.messages.safety_warning")
     st.markdown(f"""
     <div class="safety-warning">
-        {_("ui.messages.safety_warning")}
+        {safety_warning}
     </div>
     """, unsafe_allow_html=True)
     
@@ -384,12 +390,20 @@ def main_chat_interface():
         }
         skill_display = skill_level_display_map.get(device_info['skill_level'], device_info['skill_level'])
         
+        current_device_header = _("ui.headers.current_device", device=device_info['device_type'])
+        device_model_label = _("ui.labels.device_model")
+        issue_label = _("ui.labels.issue_description") 
+        skill_level_label = _("ui.labels.skill_level")
+        
+        model_html = f"<strong>{device_model_label}:</strong> {device_info['device_model']}<br>" if device_info['device_model'] else ""
+        issue_html = f"<strong>{issue_label}:</strong> {device_info['issue_description']}<br>" if device_info['issue_description'] else ""
+        
         st.markdown(f"""
         <div class="device-card">
-            <h4>{_("ui.headers.current_device", device=device_info['device_type'])}</h4>
-            {f"<strong>{_("ui.labels.device_model")}:</strong> {device_info['device_model']}<br>" if device_info['device_model'] else ""}
-            {f"<strong>{_("ui.labels.issue_description")}:</strong> {device_info['issue_description']}<br>" if device_info['issue_description'] else ""}
-            <strong>{_("ui.labels.skill_level")}:</strong> {skill_display}
+            <h4>{current_device_header}</h4>
+            {model_html}
+            {issue_html}
+            <strong>{skill_level_label}:</strong> {skill_display}
         </div>
         """, unsafe_allow_html=True)
     
@@ -455,7 +469,8 @@ def main_chat_interface():
 def quick_help_section():
     """Quick help and examples section"""
     if not st.session_state.messages:  # Only show when chat is empty
-        st.markdown(f"### {_("ui.headers.quick_start")}")
+        quick_start_header = _("ui.headers.quick_start")
+        st.markdown(f"### {quick_start_header}")
         
         col1, col2, col3 = st.columns(3)
         
@@ -490,11 +505,15 @@ def quick_help_section():
 def footer():
     """Application footer"""
     st.markdown("---")
+    footer_description = _("app.footer.description")
+    footer_safety = _("app.footer.safety")
+    footer_powered = _("app.footer.powered")
+    
     st.markdown(f"""
     <div style="text-align: center; color: #666; margin-top: 2rem;">
-        <p>{_("app.footer.description")}</p>
-        <p>{_("app.footer.safety")}</p>
-        <p>{_("app.footer.powered")}</p>
+        <p>{footer_description}</p>
+        <p>{footer_safety}</p>
+        <p>{footer_powered}</p>
     </div>
     """, unsafe_allow_html=True)
 
