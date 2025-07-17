@@ -9,6 +9,8 @@ from typing import List, Dict, Optional, Union
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import logging
+import time
+from utils.logger import LoggerMixin, get_logger, log_api_call, log_api_error, log_performance
 
 try:
     import openai
@@ -27,9 +29,8 @@ try:
 except ImportError:
     HF_AVAILABLE = False
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Get logger instance
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -64,7 +65,7 @@ class RepairContext:
             self.available_tools = []
 
 
-class RepairChatbot:
+class RepairChatbot(LoggerMixin):
     """Advanced LLM chatbot for repair assistance"""
     
     def __init__(self, 
@@ -81,6 +82,8 @@ class RepairChatbot:
             huggingface_api_key: Hugging Face API key (optional)
             preferred_model: "openai", "anthropic", "huggingface", or "auto"
         """
+        self.log_info("Initializing RepairChatbot", preferred_model=preferred_model)
+        
         self.openai_client = None
         self.anthropic_client = None
         self.huggingface_api_key = huggingface_api_key or os.getenv('HUGGINGFACE_API_KEY')
@@ -92,9 +95,9 @@ class RepairChatbot:
                 self.openai_client = openai.OpenAI(
                     api_key=openai_api_key or os.getenv('OPENAI_API_KEY')
                 )
-                logger.info("OpenAI client initialized successfully")
+                self.log_info("OpenAI client initialized successfully")
             except Exception as e:
-                logger.error(f"Failed to initialize OpenAI client: {e}")
+                self.log_error(e, "Failed to initialize OpenAI client")
         
         # Initialize Anthropic client
         if anthropic and (anthropic_api_key or os.getenv('ANTHROPIC_API_KEY')):
@@ -102,9 +105,9 @@ class RepairChatbot:
                 self.anthropic_client = anthropic.Anthropic(
                     api_key=anthropic_api_key or os.getenv('ANTHROPIC_API_KEY')
                 )
-                logger.info("Anthropic client initialized successfully")
+                self.log_info("Anthropic client initialized successfully")
             except Exception as e:
-                logger.error(f"Failed to initialize Anthropic client: {e}")
+                self.log_error(e, "Failed to initialize Anthropic client")
         
         # Set working client based on availability
         if preferred_model == "anthropic" and self.anthropic_client:
@@ -120,26 +123,43 @@ class RepairChatbot:
         elif HF_AVAILABLE:
             self.active_client = "huggingface"
         else:
-            logger.warning("No LLM clients available - using enhanced fallback mode")
+            self.log_warning("No LLM clients available - using enhanced fallback mode")
             self.active_client = "enhanced_fallback"
         
         # Initialize conversation state
         self.conversation_history: List[Message] = []
         self.repair_context = RepairContext()
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        self.log_info("RepairChatbot initialization completed", 
+                     active_client=self.active_client, session_id=self.session_id)
     
     def update_context(self, **kwargs):
         """Update repair context with new information"""
+        updated_fields = {}
         for key, value in kwargs.items():
             if hasattr(self.repair_context, key):
                 setattr(self.repair_context, key, value)
-                logger.info(f"Updated context: {key} = {value}")
+                updated_fields[key] = value
+        
+        if updated_fields:
+            self.log_info("Updated repair context", **updated_fields)
     
     def add_message(self, role: str, content: str, metadata: Dict = None):
         """Add a message to conversation history"""
         message = Message(role=role, content=content, metadata=metadata or {})
         self.conversation_history.append(message)
-        logger.debug(f"Added {role} message: {content[:100]}...")
+        
+        # Log message addition with appropriate detail level
+        content_preview = content[:100] + "..." if len(content) > 100 else content
+        self.logger.debug(f"Added {role} message", extra={
+            "extra_data": {
+                "role": role,
+                "content_length": len(content),
+                "content_preview": content_preview,
+                "session_id": self.session_id
+            }
+        })
     
     def chat(self, user_message: str, include_context: bool = True) -> str:
         """
@@ -152,6 +172,14 @@ class RepairChatbot:
         Returns:
             Chatbot response
         """
+        start_time = time.time()
+        
+        # Log chat request
+        self.log_info("Processing chat request", 
+                     message_length=len(user_message),
+                     include_context=include_context,
+                     active_client=self.active_client)
+        
         # Add user message to history
         self.add_message("user", user_message)
         
@@ -169,47 +197,99 @@ class RepairChatbot:
             
             # Add response to history
             self.add_message("assistant", response)
+            
+            # Log successful completion
+            duration = time.time() - start_time
+            log_performance(self.logger, "chat_completion", duration, 
+                          client=self.active_client, response_length=len(response))
+            
             return response
             
         except Exception as e:
-            logger.error(f"Chat error: {e}")
-            return self._enhanced_fallback_response(user_message)
+            # Log the error with context
+            duration = time.time() - start_time
+            self.log_error(e, "chat_request_failed", 
+                          client=self.active_client,
+                          message_length=len(user_message),
+                          duration=duration)
+            
+            # Return enhanced fallback response
+            fallback_response = self._enhanced_fallback_response(user_message)
+            self.add_message("assistant", fallback_response)
+            return fallback_response
     
     def _chat_with_openai(self, user_message: str, include_context: bool) -> str:
         """Generate response using OpenAI"""
         if not self.openai_client:
             raise Exception("OpenAI client not available")
         
-        messages = self._build_messages(user_message, include_context)
+        # Log API call
+        log_api_call(self.logger, "openai_chat_completion", "POST",
+                    model="gpt-4", include_context=include_context)
         
-        response = self.openai_client.chat.completions.create(
-            model="gpt-4",
-            messages=messages,
-            max_tokens=800,
-            temperature=0.7,
-            presence_penalty=0.1,
-            frequency_penalty=0.1
-        )
-        
-        return response.choices[0].message.content.strip()
+        try:
+            messages = self._build_messages(user_message, include_context)
+            
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4",
+                messages=messages,
+                max_tokens=800,
+                temperature=0.7,
+                presence_penalty=0.1,
+                frequency_penalty=0.1
+            )
+            
+            result = response.choices[0].message.content.strip()
+            
+            # Log successful API response
+            self.log_info("OpenAI API call successful",
+                         tokens_used=response.usage.total_tokens if hasattr(response, 'usage') else None,
+                         response_length=len(result))
+            
+            return result
+            
+        except Exception as e:
+            # Log API error with details
+            log_api_error(self.logger, "openai_chat_completion", e,
+                         model="gpt-4", message_count=len(messages) if 'messages' in locals() else 0)
+            raise
     
     def _chat_with_anthropic(self, user_message: str, include_context: bool) -> str:
         """Generate response using Anthropic Claude"""
         if not self.anthropic_client:
             raise Exception("Anthropic client not available")
         
-        system_prompt = self._build_system_prompt(include_context)
-        conversation = self._build_conversation_for_anthropic()
+        # Log API call
+        log_api_call(self.logger, "anthropic_messages", "POST",
+                    model="claude-3-sonnet-20240229", include_context=include_context)
         
-        response = self.anthropic_client.messages.create(
-            model="claude-3-sonnet-20240229",
-            max_tokens=800,
-            temperature=0.7,
-            system=system_prompt,
-            messages=conversation + [{"role": "user", "content": user_message}]
-        )
-        
-        return response.content[0].text.strip()
+        try:
+            system_prompt = self._build_system_prompt(include_context)
+            conversation = self._build_conversation_for_anthropic()
+            
+            response = self.anthropic_client.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=800,
+                temperature=0.7,
+                system=system_prompt,
+                messages=conversation + [{"role": "user", "content": user_message}]
+            )
+            
+            result = response.content[0].text.strip()
+            
+            # Log successful API response
+            self.log_info("Anthropic API call successful",
+                         input_tokens=response.usage.input_tokens if hasattr(response, 'usage') else None,
+                         output_tokens=response.usage.output_tokens if hasattr(response, 'usage') else None,
+                         response_length=len(result))
+            
+            return result
+            
+        except Exception as e:
+            # Log API error with details
+            log_api_error(self.logger, "anthropic_messages", e,
+                         model="claude-3-sonnet-20240229")
+            raise
     
     def _chat_with_huggingface(self, user_message: str, include_context: bool) -> str:
         """Generate response using Hugging Face Inference API"""
@@ -253,10 +333,12 @@ class RepairChatbot:
                             return generated_text.split('Assistant:')[-1].strip()
                         return generated_text.strip()
                 
-                logger.warning(f"HF model {model} failed with status {response.status_code}")
+                self.log_warning(f"HF model {model} failed", 
+                               status_code=response.status_code, model=model)
                 
             except Exception as e:
-                logger.warning(f"HF model {model} failed: {e}")
+                self.log_warning(f"HF model {model} failed", 
+                               error=str(e), model=model)
                 continue
         
         # If all HF models fail, use enhanced fallback
@@ -562,7 +644,8 @@ I'm here to help when the technical issue is resolved!"""
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(conversation_data, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"Conversation saved to {filepath}")
+        self.log_info("Conversation saved", filepath=filepath, 
+                     message_count=len(self.conversation_history))
     
     def load_conversation(self, filepath: str):
         """Load conversation from JSON file"""
@@ -573,14 +656,15 @@ I'm here to help when the technical issue is resolved!"""
         self.repair_context = RepairContext(**data["context"])
         self.conversation_history = [Message(**msg) for msg in data["messages"]]
         
-        logger.info(f"Conversation loaded from {filepath}")
+        self.log_info("Conversation loaded", filepath=filepath,
+                     message_count=len(self.conversation_history))
     
     def reset_conversation(self):
         """Reset conversation history and context"""
         self.conversation_history = []
         self.repair_context = RepairContext()
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        logger.info("Conversation reset")
+        self.log_info("Conversation reset", new_session_id=self.session_id)
 
 
 # Example usage and testing

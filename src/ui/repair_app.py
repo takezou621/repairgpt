@@ -17,6 +17,7 @@ import base64
 import logging
 import requests
 import time
+from utils.logger import get_logger, log_api_call, log_api_error, log_user_action, log_performance
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -39,8 +40,8 @@ except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Get logger instance
+logger = get_logger(__name__)
 
 # FastAPI server configuration
 API_BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://localhost:8000")
@@ -49,6 +50,13 @@ API_TIMEOUT = 30
 
 def call_chat_api(message: str, device_context: Dict = None) -> str:
     """Call the FastAPI chat endpoint with security validation"""
+    start_time = time.time()
+    
+    # Log user action
+    log_user_action(logger, "chat_request", 
+                   message_length=len(message),
+                   has_device_context=bool(device_context))
+    
     try:
         # Sanitize input message
         safe_message = sanitize_input(message, max_length=settings.max_text_length)
@@ -67,6 +75,11 @@ def call_chat_api(message: str, device_context: Dict = None) -> str:
                 "skill_level": device_context.get("skill_level", "beginner")
             })
         
+        # Log API call
+        log_api_call(logger, f"{settings.api_prefix}/chat", "POST",
+                    language=st.session_state.language,
+                    message_length=len(safe_message))
+        
         response = requests.post(
             f"{API_BASE_URL}{settings.api_prefix}/chat",
             json=payload,
@@ -75,28 +88,71 @@ def call_chat_api(message: str, device_context: Dict = None) -> str:
         )
         
         if response.status_code == 200:
-            return response.json()["response"]
+            result = response.json()["response"]
+            
+            # Log successful completion
+            duration = time.time() - start_time
+            log_performance(logger, "chat_api_call", duration,
+                          response_length=len(result),
+                          status_code=response.status_code)
+            
+            logger.info("Chat API call successful", extra={
+                "extra_data": {
+                    "message_length": len(safe_message),
+                    "response_length": len(result),
+                    "duration_ms": duration * 1000,
+                    "language": st.session_state.language
+                }
+            })
+            
+            return result
         else:
             error_msg = f"API Error {response.status_code}: {response.text}"
-            logger.error(f"Chat API error: {mask_sensitive_data(error_msg)}")
-            st.error(error_msg)
-            return f"Sorry, I encountered an error: {error_msg}"
+            masked_error = mask_sensitive_data(error_msg)
+            
+            log_api_error(logger, f"{settings.api_prefix}/chat", 
+                         Exception(error_msg), status_code=response.status_code)
+            
+            st.error(f"Chat service error: {response.status_code}")
+            return f"Sorry, I encountered an error. Please try again later."
             
     except requests.exceptions.RequestException as e:
         error_msg = f"Connection error: {str(e)}"
-        logger.error(f"Chat API connection error: {mask_sensitive_data(error_msg)}")
-        st.error(error_msg)
-        return f"Sorry, I couldn't connect to the repair service: {error_msg}"
+        duration = time.time() - start_time
+        
+        log_api_error(logger, f"{settings.api_prefix}/chat", e, 
+                     connection_error=True, duration=duration)
+        
+        st.error("Unable to connect to chat service")
+        return "Sorry, I couldn't connect to the repair service. Please check your internet connection and try again."
     except Exception as e:
         error_msg = f"Unexpected error: {str(e)}"
-        logger.error(f"Chat API unexpected error: {mask_sensitive_data(error_msg)}")
-        st.error(error_msg)
-        return f"Sorry, something went wrong: {error_msg}"
+        duration = time.time() - start_time
+        
+        logger.error("Chat API unexpected error", exc_info=True, extra={
+            "extra_data": {
+                "error_type": type(e).__name__,
+                "duration": duration,
+                "message_length": len(message) if message else 0
+            }
+        })
+        
+        st.error("An unexpected error occurred")
+        return "Sorry, something went wrong. Please try again."
 
 
 def call_diagnose_api(device_type: str, issue_description: str, device_model: str = None, 
                      symptoms: List[str] = None, skill_level: str = "beginner") -> Dict:
     """Call the FastAPI diagnose endpoint with security validation"""
+    start_time = time.time()
+    
+    # Log user action
+    log_user_action(logger, "diagnosis_request",
+                   device_type=device_type,
+                   issue_length=len(issue_description),
+                   has_symptoms=bool(symptoms),
+                   skill_level=skill_level)
+    
     try:
         payload = {
             "device_type": device_type,
@@ -109,7 +165,13 @@ def call_diagnose_api(device_type: str, issue_description: str, device_model: st
             payload["device_model"] = sanitize_input(device_model, max_length=100)
         if symptoms:
             payload["symptoms"] = [sanitize_input(symptom, max_length=200) for symptom in symptoms[:10]]  # Limit to 10 symptoms
-            
+        
+        # Log API call
+        log_api_call(logger, f"{settings.api_prefix}/diagnose", "POST",
+                    device_type=device_type,
+                    language=st.session_state.language,
+                    symptoms_count=len(symptoms) if symptoms else 0)
+        
         response = requests.post(
             f"{API_BASE_URL}{settings.api_prefix}/diagnose",
             json=payload,
@@ -118,31 +180,88 @@ def call_diagnose_api(device_type: str, issue_description: str, device_model: st
         )
         
         if response.status_code == 200:
-            return response.json()
+            result = response.json()
+            
+            # Log successful completion
+            duration = time.time() - start_time
+            log_performance(logger, "diagnose_api_call", duration,
+                          status_code=response.status_code,
+                          device_type=device_type)
+            
+            logger.info("Diagnosis API call successful", extra={
+                "extra_data": {
+                    "device_type": device_type,
+                    "duration_ms": duration * 1000,
+                    "language": st.session_state.language,
+                    "has_analysis": "analysis" in result
+                }
+            })
+            
+            return result
         else:
             error_msg = f"Diagnosis API Error {response.status_code}: {response.text}"
-            logger.error(f"Diagnose API error: {mask_sensitive_data(error_msg)}")
-            st.error(error_msg)
+            
+            log_api_error(logger, f"{settings.api_prefix}/diagnose", 
+                         Exception(error_msg), 
+                         status_code=response.status_code,
+                         device_type=device_type)
+            
+            st.error(f"Diagnosis service error: {response.status_code}")
             return None
             
     except requests.exceptions.RequestException as e:
-        error_msg = f"Connection error: {str(e)}"
-        logger.error(f"Diagnose API connection error: {mask_sensitive_data(error_msg)}")
-        st.error(error_msg)
+        duration = time.time() - start_time
+        
+        log_api_error(logger, f"{settings.api_prefix}/diagnose", e,
+                     connection_error=True,
+                     duration=duration,
+                     device_type=device_type)
+        
+        st.error("Unable to connect to diagnosis service")
         return None
     except Exception as e:
-        error_msg = f"Diagnosis error: {str(e)}"
-        logger.error(f"Diagnose API unexpected error: {mask_sensitive_data(error_msg)}")
-        st.error(error_msg)
+        duration = time.time() - start_time
+        
+        logger.error("Diagnosis API unexpected error", exc_info=True, extra={
+            "extra_data": {
+                "error_type": type(e).__name__,
+                "duration": duration,
+                "device_type": device_type
+            }
+        })
+        
+        st.error("An unexpected error occurred during diagnosis")
         return None
 
 
 def check_api_health() -> bool:
     """Check if the FastAPI server is running"""
     try:
+        start_time = time.time()
         response = requests.get(f"{API_BASE_URL}{settings.api_prefix}/health", timeout=5)
-        return response.status_code == 200
-    except:
+        
+        is_healthy = response.status_code == 200
+        duration = time.time() - start_time
+        
+        logger.info("API health check completed", extra={
+            "extra_data": {
+                "healthy": is_healthy,
+                "status_code": response.status_code,
+                "duration_ms": duration * 1000,
+                "api_url": API_BASE_URL
+            }
+        })
+        
+        return is_healthy
+        
+    except Exception as e:
+        logger.warning("API health check failed", extra={
+            "extra_data": {
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "api_url": API_BASE_URL
+            }
+        })
         return False
 
 
@@ -244,6 +363,15 @@ st.markdown("""
 
 def main():
     """Main application function with security and responsive design"""
+    # Log application startup
+    logger.info("RepairGPT application starting", extra={
+        "extra_data": {
+            "language": st.session_state.get('language', 'en'),
+            "api_base_url": API_BASE_URL,
+            "debug_mode": settings.debug
+        }
+    })
+    
     # Enhanced responsive UI components
     enhance_ui_components()
     
@@ -467,7 +595,13 @@ def main():
                             st.info(_("guides.no_results"))
                     
                     except Exception as e:
-                        logger.error(f"Guide search error: {mask_sensitive_data(str(e))}")
+                        logger.error("Guide search error", exc_info=True, extra={
+                            "extra_data": {
+                                "error_type": type(e).__name__,
+                                "query": safe_query,
+                                "device_type": device_type
+                            }
+                        })
                         st.error(_("guides.search_error"))
         
         # Responsive design info
