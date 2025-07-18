@@ -2,6 +2,8 @@
 
 **Issue #88**: 基本的なユニットテストとテスト環境の構築  
 **Issue #33**: 夜間自動化システム動作確認  
+**Issue #43**: スマート自動化システムテスト  
+**Issue #113**: スマート自動化テストスイート実装  
 **実行時刻**: #午後
 
 ## 概要
@@ -10,6 +12,7 @@
 
 1. **基本的なユニットテスト環境** (Issue #88)
 2. **夜間自動化システムテスト** (Issue #33)
+3. **スマート自動化システムテスト** (Issue #43, #113)
 
 ## 基本的なユニットテスト環境 (Issue #88)
 
@@ -27,6 +30,9 @@
 tests/
 ├── conftest.py                 # pytest設定とフィクスチャ
 ├── test_basic_examples.py      # 基本的なユニットテストの例
+├── test_smart_automation.py    # スマート自動化システムテスト
+├── smart_automation_demo.py    # スマート自動化デモンストレーション
+├── run_tests.py               # スマート自動化テストランナー
 ├── pytest.ini                 # pytest設定ファイル
 ├── requirements-test.txt       # テスト依存関係
 └── README.md                   # このファイル
@@ -55,6 +61,39 @@ def test_parametrized_example(input, expected):
     assert input * 2 == expected
 ```
 
+## スマート自動化システムテスト (Issue #43, #113)
+
+### 1. Smart Automation Tests (`test_smart_automation.py`)
+
+土日昼間スマート自動化システムの包括的なテスト:
+
+- **スケジュールテスト**: 平日夜間 vs 土日昼間の実行時間検証
+- **ワークフローテスト**: 自動化ステップの完全性確認
+- **統合テスト**: エンドツーエンドの自動化フロー検証
+
+### テスト対象の自動化スケジュール
+
+#### 平日夜間実行 (月-金)
+- 23:00 JST (14:00 UTC)
+- 02:00 JST (17:00 UTC) 
+- 05:00 JST (20:00 UTC)
+
+#### 土日昼間実行 (土日)
+- 10:00 JST (01:00 UTC)
+- 14:00 JST (05:00 UTC)
+- 18:00 JST (09:00 UTC)
+- 22:00 JST (13:00 UTC)
+
+### 自動化フロー
+
+完全自動化システムの実行フロー:
+
+1. ✅ **Claude Code実装検知**: `claude-processed`ラベル付きIssue検出
+2. ✅ **自動PR作成**: 平日夜間・土日昼間スケジュール対応
+3. ✅ **自動マージ**: 即座実行・競合回避
+4. ✅ **Issue自動クローズ**: 完了コメント付きクローズ
+5. ✅ **ブランチ自動削除**: 完全クリーンアップ
+
 ## 夜間自動化システムテスト (Issue #33)
 
 ### テスト項目
@@ -74,7 +113,10 @@ tests/
 ├── conftest.py                 # pytest設定
 ├── requirements-test.txt       # テスト依存関係
 ├── run_automation_tests.py     # 独立実行可能なテストランナー
-└── test_night_automation.py    # メインテストファイル
+├── run_tests.py               # スマート自動化テストランナー
+├── test_night_automation.py    # 夜間自動化テスト
+├── test_smart_automation.py    # スマート自動化テスト
+└── smart_automation_demo.py    # スマート自動化デモ
 ```
 
 ## 実行方法
@@ -101,6 +143,16 @@ pytest -v tests/
 pytest -m "basic" tests/          # 基本テストのみ
 pytest -m "automation" tests/     # 自動化テストのみ
 pytest -m "slow" tests/           # 時間のかかるテストのみ
+```
+
+### スマート自動化テストの実行
+
+```bash
+# スマート自動化テストのみ実行
+python -m pytest tests/test_smart_automation.py -v
+
+# スマート自動化テストランナー使用
+python tests/run_tests.py
 ```
 
 ### pytest設定の特徴
@@ -163,15 +215,31 @@ python tests/run_automation_tests.py
 5. **Issue自動クローズ** で関連Issueをクローズ
 6. **ブランチ自動削除** でClaudeブランチをクリーンアップ
 
+### スマート自動化テスト実行例
+```
+🧪 スマート自動化システムテスト開始
+==================================================
+test_weekend_daytime_schedule ✅ PASS
+test_weekday_nighttime_schedule ✅ PASS  
+test_automation_workflow_steps ✅ PASS
+test_weekend_vs_weekday_scheduling ✅ PASS
+test_smart_automation_detection ✅ PASS
+test_full_automation_flow ✅ PASS
+==================================================
+🎯 土日昼間スマート自動化テスト完了
+🚀 スマート自動化成功率: 100%
+```
+
 ## 自動化ワークフロー
 
 ### 関連ワークフロー
+- `claude-smart-automation.yml`: スマート自動化メインワークフロー
 - `claude-perfect-automation.yml`: 完全自動化メインワークフロー
 - `claude-full-automation.yml`: 包括的自動化処理
 - `claude-auto-merge.yml`: 自動マージ処理
 
 ### トリガー条件
-- **schedule**: `*/1 * * * *` (毎分実行)
+- **schedule**: 平日夜間・土日昼間の最適化スケジュール
 - **workflow_run**: Claude Code完了時
 - **push**: `claude/**` ブランチ
 
@@ -193,8 +261,20 @@ python tests/run_automation_tests.py
    - GitHub Actions の repository permissions を確認
    - workflow の permissions 設定を確認
 
-## Issue #33 要件対応
+## 関連ドキュメント
 
-このテストスイートは Issue #33 の要件を満たし、夜間自動化システムの完全な動作確認を提供します。
+- [Smart Automation Workflow](../.github/workflows/claude-smart-automation.yml)
+- [Project Guidelines](../CLAUDE.md)
+- [Testing Strategy](../docs/development/testing_strategy.md)
 
+## Issue 対応
+
+- **Issue #33**: 夜間自動化システムの完全な動作確認を提供
+- **Issue #43**: 土日昼間スマート自動化システムテスト実装
+- **Issue #88**: 基本的なユニットテスト環境の構築
+- **Issue #113**: スマート自動化テストスイートの実装追跡
+
+---
+
+**最終更新**: 2025-07-18
 **実行時刻**: #午後
