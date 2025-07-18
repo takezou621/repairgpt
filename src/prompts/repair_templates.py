@@ -10,6 +10,7 @@ from enum import Enum
 
 class PromptType(Enum):
     """Types of repair prompts"""
+
     DIAGNOSTIC = "diagnostic"
     STEP_BY_STEP = "step_by_step"
     TROUBLESHOOTING = "troubleshooting"
@@ -23,6 +24,7 @@ class PromptType(Enum):
 @dataclass
 class PromptContext:
     """Context for prompt generation"""
+
     device_name: str = ""
     device_model: str = ""
     issue_description: str = ""
@@ -32,7 +34,7 @@ class PromptContext:
     budget: str = ""
     urgency: str = "normal"
     previous_attempts: List[str] = None
-    
+
     def __post_init__(self):
         if self.symptoms is None:
             self.symptoms = []
@@ -44,7 +46,7 @@ class PromptContext:
 
 class RepairPromptTemplates:
     """Collection of repair prompt templates"""
-    
+
     # Base system prompts
     SYSTEM_PROMPTS = {
         "repair_expert": """You are an expert electronics repair technician with 15+ years of experience. You specialize in consumer electronics including gaming consoles, smartphones, laptops, and other devices.
@@ -62,7 +64,6 @@ Your responses should be:
 - Appropriate for the user's skill level
 - Honest about limitations and risks
 - Well-structured with clear steps""",
-
         "diagnostic_specialist": """You are a diagnostic specialist for electronic devices. Your role is to help users identify the root cause of device issues through systematic troubleshooting.
 
 Approach:
@@ -77,7 +78,6 @@ Focus on:
 - User safety during diagnosis
 - Clear explanation of what's happening inside the device
 - Logical troubleshooting sequence""",
-
         "safety_advisor": """You are a safety advisor for electronics repair. Your primary concern is preventing injury, property damage, and further device damage.
 
 Always consider:
@@ -92,9 +92,9 @@ Provide:
 - Proper protective equipment recommendations
 - Safe work environment setup
 - Emergency procedures
-- When to stop and seek professional help"""
+- When to stop and seek professional help""",
     }
-    
+
     # Specific repair templates
     REPAIR_TEMPLATES = {
         PromptType.DIAGNOSTIC: """
@@ -119,7 +119,6 @@ Analyze the following device issue and provide diagnostic guidance:
 
 **Format your response with clear sections and safety warnings where appropriate.**
 """,
-
         PromptType.STEP_BY_STEP: """
 Create a detailed repair guide for the following issue:
 
@@ -167,7 +166,6 @@ Create a detailed repair guide for the following issue:
 
 **Adjust complexity and detail level for {user_skill_level} skill level.**
 """,
-
         PromptType.TROUBLESHOOTING: """
 Help troubleshoot an issue during repair:
 
@@ -204,7 +202,6 @@ Help troubleshoot an issue during repair:
 
 **Be honest about when the repair has become too complex or risky to continue.**
 """,
-
         PromptType.SAFETY_CHECK: """
 Perform a safety assessment for this repair:
 
@@ -244,7 +241,6 @@ Perform a safety assessment for this repair:
 
 **Recommend whether this repair should be attempted by this user.**
 """,
-
         PromptType.PARTS_RECOMMENDATION: """
 Recommend replacement parts for this repair:
 
@@ -286,7 +282,6 @@ Recommend replacement parts for this repair:
 
 **Consider the user's budget of {budget} and urgency level of {urgency}.**
 """,
-
         PromptType.TOOL_SELECTION: """
 Recommend tools for this repair:
 
@@ -327,7 +322,6 @@ Recommend tools for this repair:
 
 **Prioritize recommendations based on the {budget} budget constraint.**
 """,
-
         PromptType.DIFFICULTY_ASSESSMENT: """
 Assess the difficulty of this repair:
 
@@ -369,7 +363,6 @@ Assess the difficulty of this repair:
 
 **Be honest about whether this repair is appropriate for this user's skill level.**
 """,
-
         PromptType.SUCCESS_PREDICTION: """
 Predict the likelihood of successful repair:
 
@@ -408,7 +401,7 @@ Predict the likelihood of successful repair:
    - Alternative options to consider
 
 **Provide an honest, data-driven assessment based on the specific circumstances.**
-"""
+""",
     }
 
     @classmethod
@@ -419,7 +412,9 @@ Predict the likelihood of successful repair:
     @classmethod
     def get_system_prompt(cls, prompt_category: str = "repair_expert") -> str:
         """Get a system prompt for the AI model"""
-        return cls.SYSTEM_PROMPTS.get(prompt_category, cls.SYSTEM_PROMPTS["repair_expert"])
+        return cls.SYSTEM_PROMPTS.get(
+            prompt_category, cls.SYSTEM_PROMPTS["repair_expert"]
+        )
 
     @classmethod
     def format_template(cls, prompt_type: PromptType, context: PromptContext) -> str:
@@ -430,15 +425,25 @@ Predict the likelihood of successful repair:
 
         # Convert context to dict for formatting
         context_dict = {
-            'device_name': context.device_name,
-            'device_model': context.device_model,
-            'issue_description': context.issue_description,
-            'user_skill_level': context.user_skill_level,
-            'symptoms': ', '.join(context.symptoms) if context.symptoms else 'Not specified',
-            'available_tools': ', '.join(context.available_tools) if context.available_tools else 'Not specified',
-            'budget': context.budget or 'Not specified',
-            'urgency': context.urgency,
-            'previous_attempts': ', '.join(context.previous_attempts) if context.previous_attempts else 'None'
+            "device_name": context.device_name,
+            "device_model": context.device_model,
+            "issue_description": context.issue_description,
+            "user_skill_level": context.user_skill_level,
+            "symptoms": (
+                ", ".join(context.symptoms) if context.symptoms else "Not specified"
+            ),
+            "available_tools": (
+                ", ".join(context.available_tools)
+                if context.available_tools
+                else "Not specified"
+            ),
+            "budget": context.budget or "Not specified",
+            "urgency": context.urgency,
+            "previous_attempts": (
+                ", ".join(context.previous_attempts)
+                if context.previous_attempts
+                else "None"
+            ),
         }
 
         try:
@@ -452,59 +457,72 @@ Predict the likelihood of successful repair:
         return list(PromptType)
 
     @classmethod
-    def create_custom_prompt(cls, 
-                           base_type: PromptType,
-                           device_specific_info: str = "",
-                           additional_context: str = "") -> str:
+    def create_custom_prompt(
+        cls,
+        base_type: PromptType,
+        device_specific_info: str = "",
+        additional_context: str = "",
+    ) -> str:
         """Create a custom prompt by modifying a base template"""
         base_template = cls.get_template(base_type)
-        
+
         custom_additions = ""
         if device_specific_info:
-            custom_additions += f"\n**Device-Specific Information:**\n{device_specific_info}\n"
-        
+            custom_additions += (
+                f"\n**Device-Specific Information:**\n{device_specific_info}\n"
+            )
+
         if additional_context:
             custom_additions += f"\n**Additional Context:**\n{additional_context}\n"
-        
+
         return base_template + custom_additions
 
 
 # Example usage and testing
 if __name__ == "__main__":
     print("Testing RepairGPT Prompt Templates...")
-    
+
     # Create test context
     test_context = PromptContext(
         device_name="Nintendo Switch",
         device_model="OLED",
         issue_description="Joy-Con analog stick drift",
         user_skill_level="beginner",
-        symptoms=["Left stick moves cursor without input", "Character moves randomly in games"],
+        symptoms=[
+            "Left stick moves cursor without input",
+            "Character moves randomly in games",
+        ],
         available_tools=["Phillips screwdriver", "Plastic prying tools"],
         budget="$50",
-        urgency="normal"
+        urgency="normal",
     )
-    
+
     # Test different prompt types
     prompt_types = [
         PromptType.DIAGNOSTIC,
         PromptType.STEP_BY_STEP,
         PromptType.SAFETY_CHECK,
-        PromptType.DIFFICULTY_ASSESSMENT
+        PromptType.DIFFICULTY_ASSESSMENT,
     ]
-    
+
     for prompt_type in prompt_types:
         print(f"\n{'='*50}")
         print(f"Testing {prompt_type.value.upper()} template:")
         print(f"{'='*50}")
-        
-        formatted_prompt = RepairPromptTemplates.format_template(prompt_type, test_context)
-        print(formatted_prompt[:500] + "..." if len(formatted_prompt) > 500 else formatted_prompt)
-    
+
+        formatted_prompt = RepairPromptTemplates.format_template(
+            prompt_type, test_context
+        )
+        print(
+            formatted_prompt[:500] + "..."
+            if len(formatted_prompt) > 500
+            else formatted_prompt
+        )
+
     # Test system prompts
     print(f"\n{'='*50}")
     print("System Prompt (Repair Expert):")
     print(f"{'='*50}")
     print(RepairPromptTemplates.get_system_prompt("repair_expert"))
-    
+
     print("\nPrompt template testing completed!")

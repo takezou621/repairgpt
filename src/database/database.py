@@ -19,69 +19,73 @@ logger = logging.getLogger(__name__)
 
 # Environment configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./repairgpt.db")
-ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL", "sqlite+aiosqlite:///./repairgpt.db")
+ASYNC_DATABASE_URL = os.getenv(
+    "ASYNC_DATABASE_URL", "sqlite+aiosqlite:///./repairgpt.db"
+)
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 
 class DatabaseConfig:
     """Database configuration management"""
-    
+
     def __init__(self):
         self.database_url = DATABASE_URL
         self.async_database_url = ASYNC_DATABASE_URL
         self.is_sqlite = "sqlite" in self.database_url.lower()
         self.is_production = ENVIRONMENT.lower() == "production"
-    
+
     def get_engine_args(self) -> dict:
         """Get engine arguments based on database type"""
         args = {
             "echo": not self.is_production,  # SQL logging in development
         }
-        
+
         if self.is_sqlite:
             # SQLite-specific configuration
-            args.update({
-                "poolclass": StaticPool,
-                "connect_args": {
-                    "check_same_thread": False,
-                    "timeout": 20
+            args.update(
+                {
+                    "poolclass": StaticPool,
+                    "connect_args": {"check_same_thread": False, "timeout": 20},
                 }
-            })
+            )
         else:
             # PostgreSQL-specific configuration
-            args.update({
-                "pool_size": 20,
-                "max_overflow": 0,
-                "pool_pre_ping": True,
-                "pool_recycle": 300
-            })
-        
+            args.update(
+                {
+                    "pool_size": 20,
+                    "max_overflow": 0,
+                    "pool_pre_ping": True,
+                    "pool_recycle": 300,
+                }
+            )
+
         return args
-    
+
     def get_async_engine_args(self) -> dict:
         """Get async engine arguments based on database type"""
         args = {
             "echo": not self.is_production,
         }
-        
+
         if self.is_sqlite:
             # SQLite async configuration
-            args.update({
-                "poolclass": StaticPool,
-                "connect_args": {
-                    "check_same_thread": False,
-                    "timeout": 20
+            args.update(
+                {
+                    "poolclass": StaticPool,
+                    "connect_args": {"check_same_thread": False, "timeout": 20},
                 }
-            })
+            )
         else:
             # PostgreSQL async configuration
-            args.update({
-                "pool_size": 20,
-                "max_overflow": 0,
-                "pool_pre_ping": True,
-                "pool_recycle": 300
-            })
-        
+            args.update(
+                {
+                    "pool_size": 20,
+                    "max_overflow": 0,
+                    "pool_pre_ping": True,
+                    "pool_recycle": 300,
+                }
+            )
+
         return args
 
 
@@ -89,27 +93,17 @@ class DatabaseConfig:
 db_config = DatabaseConfig()
 
 # Synchronous engine and session factory
-engine = create_engine(
-    db_config.database_url,
-    **db_config.get_engine_args()
-)
+engine = create_engine(db_config.database_url, **db_config.get_engine_args())
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Asynchronous engine and session factory
 async_engine = create_async_engine(
-    db_config.async_database_url,
-    **db_config.get_async_engine_args()
+    db_config.async_database_url, **db_config.get_async_engine_args()
 )
 
 AsyncSessionLocal = async_sessionmaker(
-    async_engine,
-    class_=AsyncSession,
-    expire_on_commit=False
+    async_engine, class_=AsyncSession, expire_on_commit=False
 )
 
 
@@ -130,7 +124,7 @@ if db_config.is_sqlite:
 def get_db() -> Generator[Session, None, None]:
     """
     Dependency function to get database session for FastAPI endpoints
-    
+
     Example usage:
         @app.get("/users/")
         def get_users(db: Session = Depends(get_db)):
@@ -150,7 +144,7 @@ def get_db() -> Generator[Session, None, None]:
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Async dependency function to get database session for FastAPI endpoints
-    
+
     Example usage:
         @app.get("/users/")
         async def get_users(db: AsyncSession = Depends(get_async_db)):
@@ -173,7 +167,7 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
 def get_db_session() -> Generator[Session, None, None]:
     """
     Context manager for manual database session management
-    
+
     Example usage:
         with get_db_session() as db:
             user = db.query(User).first()
@@ -194,7 +188,7 @@ def get_db_session() -> Generator[Session, None, None]:
 async def get_async_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Async context manager for manual database session management
-    
+
     Example usage:
         async with get_async_db_session() as db:
             result = await db.execute(select(User))
@@ -285,35 +279,41 @@ async def check_database_health_async() -> bool:
 def get_database_info() -> dict:
     """Get database information and statistics"""
     info = {
-        "database_url": db_config.database_url.split("@")[-1] if "@" in db_config.database_url else db_config.database_url,
+        "database_url": (
+            db_config.database_url.split("@")[-1]
+            if "@" in db_config.database_url
+            else db_config.database_url
+        ),
         "database_type": "sqlite" if db_config.is_sqlite else "postgresql",
         "environment": ENVIRONMENT,
-        "tables": []
+        "tables": [],
     }
-    
+
     try:
         with get_db_session() as db:
             # Get table names
             if db_config.is_sqlite:
                 result = db.execute("SELECT name FROM sqlite_master WHERE type='table'")
             else:
-                result = db.execute("SELECT tablename FROM pg_tables WHERE schemaname='public'")
-            
+                result = db.execute(
+                    "SELECT tablename FROM pg_tables WHERE schemaname='public'"
+                )
+
             info["tables"] = [row[0] for row in result.fetchall()]
             info["health_status"] = "healthy"
-            
+
     except Exception as e:
         logger.error(f"Error getting database info: {e}")
         info["health_status"] = "unhealthy"
         info["error"] = str(e)
-    
+
     return info
 
 
 # Export commonly used items
 __all__ = [
     "engine",
-    "async_engine", 
+    "async_engine",
     "SessionLocal",
     "AsyncSessionLocal",
     "get_db",
@@ -322,10 +322,10 @@ __all__ = [
     "get_async_db_session",
     "create_tables",
     "create_tables_async",
-    "drop_tables", 
+    "drop_tables",
     "drop_tables_async",
     "check_database_health",
     "check_database_health_async",
     "get_database_info",
-    "Base"
+    "Base",
 ]

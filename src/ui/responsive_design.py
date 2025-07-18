@@ -17,19 +17,15 @@ class ResponsiveDesignManager:
     Manager class for implementing responsive design and UI/UX improvements
     in the RepairGPT Streamlit application.
     """
-    
+
     def __init__(self) -> None:
         """Initialize the ResponsiveDesignManager"""
-        self.breakpoints = {
-            'mobile': '768px',
-            'tablet': '1024px',
-            'desktop': '1200px'
-        }
-        
+        self.breakpoints = {"mobile": "768px", "tablet": "1024px", "desktop": "1200px"}
+
     def get_responsive_css(self) -> str:
         """
         Generate responsive CSS for the RepairGPT application.
-        
+
         Returns:
             str: Complete CSS string with responsive design rules
         """
@@ -303,105 +299,108 @@ class ResponsiveDesignManager:
         }
         </style>
         """
-    
+
     def apply_responsive_design(self) -> None:
         """
         Apply responsive design CSS to the current Streamlit page.
         This method should be called once per page load.
         """
         st.markdown(self.get_responsive_css(), unsafe_allow_html=True)
-    
-    def create_responsive_columns(self, mobile_ratio: List[int], tablet_ratio: List[int], 
-                                desktop_ratio: List[int]) -> List[Any]:
+
+    def create_responsive_columns(
+        self, mobile_ratio: List[int], tablet_ratio: List[int], desktop_ratio: List[int]
+    ) -> List[Any]:
         """
         Create responsive columns that adapt to different screen sizes.
-        
+
         Args:
             mobile_ratio: Column ratios for mobile devices
-            tablet_ratio: Column ratios for tablet devices  
+            tablet_ratio: Column ratios for tablet devices
             desktop_ratio: Column ratios for desktop devices
-            
+
         Returns:
             List[Any]: Streamlit column objects
         """
         # Use JavaScript to detect screen size and choose appropriate ratio
         # For now, we'll use a sensible default that works across devices
         return st.columns(desktop_ratio)
-    
-    def create_mobile_friendly_form(self, title: str, fields: List[Dict[str, Any]]) -> Dict[str, Any]:
+
+    def create_mobile_friendly_form(
+        self, title: str, fields: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Create a mobile-friendly form with proper spacing and touch targets.
-        
+
         Args:
             title: Form title
             fields: List of field configurations
-            
+
         Returns:
             Dict[str, Any]: Form field values
         """
         st.subheader(title)
-        
+
         values = {}
-        
+
         with st.form(key=f"mobile_form_{title.lower().replace(' ', '_')}"):
             for field in fields:
-                field_type = field.get('type', 'text')
-                field_key = field.get('key', '')
-                field_label = field.get('label', '')
-                field_help = field.get('help', '')
-                
-                if field_type == 'text':
+                field_type = field.get("type", "text")
+                field_key = field.get("key", "")
+                field_label = field.get("label", "")
+                field_help = field.get("help", "")
+
+                if field_type == "text":
                     values[field_key] = st.text_input(
-                        field_label, 
-                        help=field_help,
-                        key=f"mobile_{field_key}"
+                        field_label, help=field_help, key=f"mobile_{field_key}"
                     )
-                elif field_type == 'textarea':
+                elif field_type == "textarea":
                     values[field_key] = st.text_area(
                         field_label,
                         help=field_help,
                         height=100,
-                        key=f"mobile_{field_key}"
+                        key=f"mobile_{field_key}",
                     )
-                elif field_type == 'selectbox':
+                elif field_type == "selectbox":
                     values[field_key] = st.selectbox(
                         field_label,
-                        field.get('options', []),
+                        field.get("options", []),
                         help=field_help,
-                        key=f"mobile_{field_key}"
+                        key=f"mobile_{field_key}",
                     )
-                elif field_type == 'multiselect':
+                elif field_type == "multiselect":
                     values[field_key] = st.multiselect(
                         field_label,
-                        field.get('options', []),
+                        field.get("options", []),
                         help=field_help,
-                        key=f"mobile_{field_key}"
+                        key=f"mobile_{field_key}",
                     )
-            
+
             # Mobile-friendly submit button
             submitted = st.form_submit_button(
-                "Submit",
-                use_container_width=True,
-                type="primary"
+                "Submit", use_container_width=True, type="primary"
             )
-        
+
         return values if submitted else {}
-    
-    def create_responsive_image_gallery(self, images: List[Dict[str, str]], 
-                                      mobile_cols: int = 1, 
-                                      tablet_cols: int = 2, 
-                                      desktop_cols: int = 3) -> None:
+
+    def create_responsive_image_gallery(
+        self,
+        images: List[Dict[str, str]],
+        mobile_cols: int = 1,
+        tablet_cols: int = 2,
+        desktop_cols: int = 3,
+    ) -> None:
         """
         Create a responsive image gallery that adapts to screen size.
-        
+
         Args:
             images: List of image dictionaries with 'url' and 'caption' keys
             mobile_cols: Number of columns on mobile
-            tablet_cols: Number of columns on tablet  
+            tablet_cols: Number of columns on tablet
             desktop_cols: Number of columns on desktop
         """
         # Use CSS Grid for better responsive behavior
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <style>
         .responsive-gallery {{
             display: grid;
@@ -452,8 +451,10 @@ class ResponsiveDesignManager:
             }}
         }}
         </style>
-        """, unsafe_allow_html=True)
-        
+        """,
+            unsafe_allow_html=True,
+        )
+
         gallery_html = '<div class="responsive-gallery">'
         for image in images:
             gallery_html += f"""
@@ -462,21 +463,22 @@ class ResponsiveDesignManager:
                 <div class="gallery-caption">{image.get('caption', '')}</div>
             </div>
             """
-        gallery_html += '</div>'
-        
+        gallery_html += "</div>"
+
         st.markdown(gallery_html, unsafe_allow_html=True)
-    
+
     def add_touch_friendly_navigation(self, pages: Dict[str, str]) -> str:
         """
         Add touch-friendly navigation for mobile devices.
-        
+
         Args:
             pages: Dictionary mapping page names to URLs or page keys
-            
+
         Returns:
             str: Selected page key
         """
-        st.markdown("""
+        st.markdown(
+            """
         <style>
         .touch-nav {
             display: flex;
@@ -511,25 +513,28 @@ class ResponsiveDesignManager:
             background: var(--text-color);
         }
         </style>
-        """, unsafe_allow_html=True)
-        
+        """,
+            unsafe_allow_html=True,
+        )
+
         # Use Streamlit radio buttons styled with custom CSS
         selected_page = st.radio(
             "Navigation",
             options=list(pages.keys()),
             format_func=lambda x: x,
             horizontal=True,
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
-        
+
         return selected_page
-    
+
     def optimize_for_mobile_performance(self) -> None:
         """
         Apply mobile performance optimizations.
         """
         # Add lazy loading and performance hints
-        st.markdown("""
+        st.markdown(
+            """
         <style>
         /* Reduce animation complexity on mobile */
         @media (max-width: 768px) {
@@ -553,14 +558,16 @@ class ResponsiveDesignManager:
             }
         }
         </style>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
 
 def initialize_responsive_design() -> ResponsiveDesignManager:
     """
     Initialize and return a ResponsiveDesignManager instance.
     This function should be called once in the main application.
-    
+
     Returns:
         ResponsiveDesignManager: Configured responsive design manager
     """
@@ -575,7 +582,8 @@ def enhance_ui_components() -> None:
     Apply UI/UX enhancements to existing Streamlit components.
     This function improves the visual appeal and usability of standard components.
     """
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     /* Enhanced component styling */
     .stAlert {
@@ -613,4 +621,6 @@ def enhance_ui_components() -> None:
         margin-bottom: var(--padding-xs);
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )

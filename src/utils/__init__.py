@@ -11,5 +11,5 @@ __all__ = [
     "RateLimiter",
     "hash_ip_address",
     "is_safe_filename",
-    "sanitize_filename"
+    "sanitize_filename",
 ]
