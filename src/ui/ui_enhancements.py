@@ -11,11 +11,12 @@ from typing import Dict, List, Optional, Any
 from ui.responsive_design import ResponsiveDesignManager
 
 
-def create_enhanced_info_card(title: str, content: str, icon: str = "ℹ️", 
-                            card_type: str = "info") -> None:
+def create_enhanced_info_card(
+    title: str, content: str, icon: str = "ℹ️", card_type: str = "info"
+) -> None:
     """
     Create an enhanced information card with responsive design.
-    
+
     Args:
         title: Card title
         content: Card content
@@ -24,22 +25,23 @@ def create_enhanced_info_card(title: str, content: str, icon: str = "ℹ️",
     """
     color_map = {
         "info": "#e3f2fd",
-        "success": "#e8f5e8", 
+        "success": "#e8f5e8",
         "warning": "#fff3cd",
-        "error": "#ffebee"
+        "error": "#ffebee",
     }
-    
+
     border_color_map = {
         "info": "#2196f3",
         "success": "#4caf50",
-        "warning": "#ff9800", 
-        "error": "#f44336"
+        "warning": "#ff9800",
+        "error": "#f44336",
     }
-    
+
     bg_color = color_map.get(card_type, "#e3f2fd")
     border_color = border_color_map.get(card_type, "#2196f3")
-    
-    st.markdown(f"""
+
+    st.markdown(
+        f"""
     <div style="
         background: {bg_color};
         border-left: 4px solid {border_color};
@@ -57,7 +59,9 @@ def create_enhanced_info_card(title: str, content: str, icon: str = "ℹ️",
             {content}
         </p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 def create_feature_showcase() -> None:
@@ -66,79 +70,84 @@ def create_feature_showcase() -> None:
     This function demonstrates the enhancements made in Issue #89.
     """
     st.markdown("### 🎨 UI/UX Improvements Showcase")
-    
+
     # Enhanced info cards
     col1, col2 = st.columns(2)
-    
+
     with col1:
         create_enhanced_info_card(
-            "Responsive Design", 
+            "Responsive Design",
             "The interface now adapts seamlessly to mobile, tablet, and desktop screens with optimized layouts and touch-friendly controls.",
             "📱",
-            "info"
+            "info",
         )
-        
+
         create_enhanced_info_card(
             "Enhanced Accessibility",
             "Improved focus indicators, keyboard navigation, and color contrast for better accessibility compliance.",
             "♿",
-            "success"
+            "success",
         )
-    
+
     with col2:
         create_enhanced_info_card(
             "Mobile Optimization",
             "Touch-friendly buttons, optimized forms, and improved navigation for mobile devices.",
             "👆",
-            "warning"
+            "warning",
         )
-        
+
         create_enhanced_info_card(
-            "Performance Improvements", 
+            "Performance Improvements",
             "Reduced animations on mobile, lazy loading, and optimized rendering for better performance.",
             "⚡",
-            "error"
+            "error",
         )
-    
+
     # Interactive demo section
     st.markdown("### 🔧 Interactive Demo")
-    
+
     # Responsive form demo
     with st.expander("📋 Responsive Form Demo"):
         manager = ResponsiveDesignManager()
-        
+
         form_fields = [
             {
-                'type': 'text',
-                'key': 'device_name',
-                'label': 'Device Name',
-                'help': 'Enter the name of your device'
+                "type": "text",
+                "key": "device_name",
+                "label": "Device Name",
+                "help": "Enter the name of your device",
             },
             {
-                'type': 'selectbox',
-                'key': 'issue_type',
-                'label': 'Issue Type',
-                'options': ['Hardware Problem', 'Software Issue', 'Performance Problem', 'Other'],
-                'help': 'Select the type of issue you are experiencing'
+                "type": "selectbox",
+                "key": "issue_type",
+                "label": "Issue Type",
+                "options": [
+                    "Hardware Problem",
+                    "Software Issue",
+                    "Performance Problem",
+                    "Other",
+                ],
+                "help": "Select the type of issue you are experiencing",
             },
             {
-                'type': 'textarea',
-                'key': 'description',
-                'label': 'Issue Description',
-                'help': 'Provide a detailed description of the problem'
-            }
+                "type": "textarea",
+                "key": "description",
+                "label": "Issue Description",
+                "help": "Provide a detailed description of the problem",
+            },
         ]
-        
+
         form_data = manager.create_mobile_friendly_form("Repair Request", form_fields)
-        
+
         if form_data:
             st.success("✅ Form submitted successfully!")
             st.json(form_data)
-    
+
     # Responsive button demo
     with st.expander("🎯 Responsive Button Demo"):
         st.markdown("These buttons are optimized for touch interaction:")
-        
+
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("Primary Action", type="primary", use_container_width=True):
@@ -149,19 +158,22 @@ def create_feature_showcase() -> None:
         with col3:
             if st.button("Tertiary Action", use_container_width=True):
                 st.info("Tertiary action triggered!")
-    
+
     # Color scheme demo
     with st.expander("🎨 Color Scheme and Theme"):
-        st.markdown("""
+        st.markdown(
+            """
         The enhanced design includes:
         - **Consistent Color Palette**: Primary (#4ECDC4) and Secondary (#FF6B6B) colors
         - **CSS Variables**: Easily customizable theme properties
         - **Dark Mode Support**: Automatic adaptation to user's system preferences
         - **Improved Contrast**: Better readability and accessibility
-        """)
-        
+        """
+        )
+
         # Color swatches
-        st.markdown("""
+        st.markdown(
+            """
         <div style="display: flex; gap: 1rem; margin: 1rem 0;">
             <div style="background: #4ECDC4; padding: 1rem; border-radius: 8px; color: white; text-align: center; flex: 1;">
                 Primary<br>#4ECDC4
@@ -173,13 +185,15 @@ def create_feature_showcase() -> None:
                 Background<br>#f8f9fa
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
 
 def create_responsive_metrics_display(metrics: List[Dict[str, Any]]) -> None:
     """
     Create a responsive metrics display that adapts to screen size.
-    
+
     Args:
         metrics: List of metric dictionaries with 'label', 'value', and optional 'delta' keys
     """
@@ -191,14 +205,14 @@ def create_responsive_metrics_display(metrics: List[Dict[str, Any]]) -> None:
         cols = st.columns(2)
     else:
         cols = st.columns(3)
-    
+
     for i, metric in enumerate(metrics):
         col_index = i % len(cols)
         with cols[col_index]:
             st.metric(
-                label=metric.get('label', ''),
-                value=metric.get('value', ''),
-                delta=metric.get('delta')
+                label=metric.get("label", ""),
+                value=metric.get("value", ""),
+                delta=metric.get("delta"),
             )
 
 
@@ -206,7 +220,8 @@ def add_responsive_navigation_hints() -> None:
     """
     Add helpful navigation hints for different device types.
     """
-    st.markdown("""
+    st.markdown(
+        """
     <div style="
         background: linear-gradient(45deg, #e3f2fd, #f1f8e9);
         border-radius: 8px;
@@ -220,7 +235,9 @@ def add_responsive_navigation_hints() -> None:
         💻 <strong>Desktop:</strong> Use keyboard shortcuts: Tab for navigation, Enter to activate<br>
         🖥️ <strong>All devices:</strong> Long press for additional options
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 def show_responsive_design_info() -> None:
@@ -228,7 +245,8 @@ def show_responsive_design_info() -> None:
     Display information about the responsive design implementation.
     This function can be called to show users what improvements have been made.
     """
-    st.markdown("""
+    st.markdown(
+        """
     ## 🎨 Responsive Design & UI/UX Improvements
     
     ### What's New:
@@ -259,7 +277,8 @@ def show_responsive_design_info() -> None:
     - Keyboard navigation support
     - Screen reader friendly markup
     - WCAG 2.1 compliance considerations
-    """)
-    
+    """
+    )
+
     # Show the feature showcase
     create_feature_showcase()

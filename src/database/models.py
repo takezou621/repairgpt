@@ -8,8 +8,16 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Decimal, ForeignKey, Integer, 
-    String, Text, CheckConstraint, JSON
+    Boolean,
+    Column,
+    DateTime,
+    Decimal,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    CheckConstraint,
+    JSON,
 )
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
@@ -21,6 +29,7 @@ Base = declarative_base()
 
 class User(Base):
     """User information and authentication"""
+
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -43,6 +52,7 @@ class User(Base):
 
 class Device(Base):
     """Device catalog and specifications"""
+
     __tablename__ = "devices"
 
     id = Column(String(50), primary_key=True)
@@ -69,19 +79,23 @@ class Device(Base):
 
 class Issue(Base):
     """Problem categories and descriptions"""
+
     __tablename__ = "issues"
 
     id = Column(String(50), primary_key=True)
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
     category = Column(String(50), nullable=False)
-    severity = Column(String(20), default='medium')
+    severity = Column(String(20), default="medium")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
 
     # Constraints
     __table_args__ = (
-        CheckConstraint(severity.in_(['low', 'medium', 'high', 'critical']), name='chk_issue_severity'),
+        CheckConstraint(
+            severity.in_(["low", "medium", "high", "critical"]),
+            name="chk_issue_severity",
+        ),
     )
 
     # Relationships
@@ -96,16 +110,20 @@ class Issue(Base):
 
 class DeviceIssue(Base):
     """Device-Issue relationship with frequency and difficulty"""
+
     __tablename__ = "device_issues"
 
     device_id = Column(String(50), ForeignKey("devices.id"), primary_key=True)
     issue_id = Column(String(50), ForeignKey("issues.id"), primary_key=True)
     frequency = Column(Decimal(3, 2), default=0.0)
-    difficulty = Column(String(20), default='medium')
+    difficulty = Column(String(20), default="medium")
 
     # Constraints
     __table_args__ = (
-        CheckConstraint(difficulty.in_(['beginner', 'intermediate', 'advanced']), name='chk_device_issue_difficulty'),
+        CheckConstraint(
+            difficulty.in_(["beginner", "intermediate", "advanced"]),
+            name="chk_device_issue_difficulty",
+        ),
     )
 
     # Relationships
@@ -113,18 +131,21 @@ class DeviceIssue(Base):
     issue = relationship("Issue", back_populates="device_issues")
 
     def __repr__(self):
-        return f"<DeviceIssue(device_id='{self.device_id}', issue_id='{self.issue_id}')>"
+        return (
+            f"<DeviceIssue(device_id='{self.device_id}', issue_id='{self.issue_id}')>"
+        )
 
 
 class RepairGuide(Base):
     """Repair guides and instructions"""
+
     __tablename__ = "repair_guides"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(200), nullable=False)
     device_id = Column(String(50), ForeignKey("devices.id"), nullable=False)
     issue_id = Column(String(50), ForeignKey("issues.id"), nullable=False)
-    difficulty = Column(String(20), nullable=False, default='medium')
+    difficulty = Column(String(20), nullable=False, default="medium")
     estimated_time = Column(Integer, nullable=True)  # minutes
     success_rate = Column(Decimal(3, 2), default=0.0)
     tools_required = Column(JSON, nullable=True)  # JSON array
@@ -138,14 +159,19 @@ class RepairGuide(Base):
 
     # Constraints
     __table_args__ = (
-        CheckConstraint(difficulty.in_(['beginner', 'intermediate', 'advanced']), name='chk_repair_guide_difficulty'),
+        CheckConstraint(
+            difficulty.in_(["beginner", "intermediate", "advanced"]),
+            name="chk_repair_guide_difficulty",
+        ),
     )
 
     # Relationships
     device = relationship("Device", back_populates="repair_guides")
     issue = relationship("Issue", back_populates="repair_guides")
     created_by_user = relationship("User", back_populates="repair_guides")
-    repair_steps = relationship("RepairStep", back_populates="repair_guide", cascade="all, delete-orphan")
+    repair_steps = relationship(
+        "RepairStep", back_populates="repair_guide", cascade="all, delete-orphan"
+    )
     repair_attempts = relationship("RepairAttempt", back_populates="repair_guide")
 
     def __repr__(self):
@@ -154,10 +180,15 @@ class RepairGuide(Base):
 
 class RepairStep(Base):
     """Individual steps within repair guides"""
+
     __tablename__ = "repair_steps"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    repair_guide_id = Column(UUID(as_uuid=True), ForeignKey("repair_guides.id", ondelete="CASCADE"), nullable=False)
+    repair_guide_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("repair_guides.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     step_number = Column(Integer, nullable=False)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
@@ -176,6 +207,7 @@ class RepairStep(Base):
 
 class ChatSession(Base):
     """Chat sessions between users and AI"""
+
     __tablename__ = "chat_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -183,21 +215,26 @@ class ChatSession(Base):
     device_id = Column(String(50), ForeignKey("devices.id"), nullable=True)
     issue_id = Column(String(50), ForeignKey("issues.id"), nullable=True)
     session_data = Column(JSON, nullable=True)  # Session-specific data
-    status = Column(String(20), default='active')
+    status = Column(String(20), default="active")
     started_at = Column(DateTime, default=func.now())
     ended_at = Column(DateTime, nullable=True)
     last_activity_at = Column(DateTime, default=func.now())
 
     # Constraints
     __table_args__ = (
-        CheckConstraint(status.in_(['active', 'completed', 'abandoned']), name='chk_chat_session_status'),
+        CheckConstraint(
+            status.in_(["active", "completed", "abandoned"]),
+            name="chk_chat_session_status",
+        ),
     )
 
     # Relationships
     user = relationship("User", back_populates="chat_sessions")
     device = relationship("Device", back_populates="chat_sessions")
     issue = relationship("Issue", back_populates="chat_sessions")
-    chat_messages = relationship("ChatMessage", back_populates="chat_session", cascade="all, delete-orphan")
+    chat_messages = relationship(
+        "ChatMessage", back_populates="chat_session", cascade="all, delete-orphan"
+    )
     user_images = relationship("UserImage", back_populates="chat_session")
     repair_attempts = relationship("RepairAttempt", back_populates="chat_session")
 
@@ -207,19 +244,24 @@ class ChatSession(Base):
 
 class ChatMessage(Base):
     """Individual messages within chat sessions"""
+
     __tablename__ = "chat_messages"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False)
+    session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     sender = Column(String(10), nullable=False)  # 'user' or 'bot'
     content = Column(Text, nullable=False)
-    message_type = Column(String(20), default='text')  # 'text', 'image', 'repair_guide'
+    message_type = Column(String(20), default="text")  # 'text', 'image', 'repair_guide'
     metadata = Column(JSON, nullable=True)  # Additional data (image URLs, etc.)
     created_at = Column(DateTime, default=func.now())
 
     # Constraints
     __table_args__ = (
-        CheckConstraint(sender.in_(['user', 'bot']), name='chk_chat_message_sender'),
+        CheckConstraint(sender.in_(["user", "bot"]), name="chk_chat_message_sender"),
     )
 
     # Relationships
@@ -231,10 +273,13 @@ class ChatMessage(Base):
 
 class UserImage(Base):
     """User-uploaded images for analysis"""
+
     __tablename__ = "user_images"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False)
+    session_id = Column(
+        UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False
+    )
     filename = Column(String(255), nullable=False)
     original_filename = Column(String(255), nullable=True)
     file_path = Column(String(500), nullable=False)
@@ -254,15 +299,20 @@ class UserImage(Base):
 
 class RepairAttempt(Base):
     """User attempts at repairs with tracking"""
+
     __tablename__ = "repair_attempts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False)
-    repair_guide_id = Column(UUID(as_uuid=True), ForeignKey("repair_guides.id"), nullable=True)
+    session_id = Column(
+        UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False
+    )
+    repair_guide_id = Column(
+        UUID(as_uuid=True), ForeignKey("repair_guides.id"), nullable=True
+    )
     device_id = Column(String(50), ForeignKey("devices.id"), nullable=False)
     issue_id = Column(String(50), ForeignKey("issues.id"), nullable=False)
-    status = Column(String(20), default='in_progress')
+    status = Column(String(20), default="in_progress")
     success = Column(Boolean, nullable=True)
     completion_rate = Column(Decimal(3, 2), default=0.0)
     feedback = Column(Text, nullable=True)
@@ -272,8 +322,13 @@ class RepairAttempt(Base):
 
     # Constraints
     __table_args__ = (
-        CheckConstraint(status.in_(['in_progress', 'completed', 'failed', 'abandoned']), name='chk_repair_attempt_status'),
-        CheckConstraint('rating >= 1 AND rating <= 5', name='chk_repair_attempt_rating'),
+        CheckConstraint(
+            status.in_(["in_progress", "completed", "failed", "abandoned"]),
+            name="chk_repair_attempt_status",
+        ),
+        CheckConstraint(
+            "rating >= 1 AND rating <= 5", name="chk_repair_attempt_rating"
+        ),
     )
 
     # Relationships
@@ -289,6 +344,7 @@ class RepairAttempt(Base):
 
 class ExternalDataSource(Base):
     """External data sources for sync operations"""
+
     __tablename__ = "external_data_sources"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -297,7 +353,7 @@ class ExternalDataSource(Base):
     base_url = Column(String(500), nullable=True)
     api_key_name = Column(String(100), nullable=True)
     last_sync_at = Column(DateTime, nullable=True)
-    sync_status = Column(String(20), default='pending')
+    sync_status = Column(String(20), default="pending")
     config = Column(JSON, nullable=True)  # Source-specific configuration
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
@@ -311,10 +367,13 @@ class ExternalDataSource(Base):
 
 class SyncLog(Base):
     """Synchronization logs for external data sources"""
+
     __tablename__ = "sync_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source_id = Column(UUID(as_uuid=True), ForeignKey("external_data_sources.id"), nullable=False)
+    source_id = Column(
+        UUID(as_uuid=True), ForeignKey("external_data_sources.id"), nullable=False
+    )
     sync_type = Column(String(50), nullable=False)
     records_processed = Column(Integer, default=0)
     records_created = Column(Integer, default=0)
@@ -325,7 +384,9 @@ class SyncLog(Base):
     completed_at = Column(DateTime, nullable=True)
 
     # Relationships
-    external_data_source = relationship("ExternalDataSource", back_populates="sync_logs")
+    external_data_source = relationship(
+        "ExternalDataSource", back_populates="sync_logs"
+    )
 
     def __repr__(self):
         return f"<SyncLog(id={self.id}, sync_type='{self.sync_type}')>"

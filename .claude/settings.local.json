@@ -42,7 +42,12 @@
       "Bash(git merge:*)",
       "Bash(mv:*)",
       "Bash(gh pr review:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(export:*)",
+      "Bash(flake8:*)",
+      "Bash(black:*)"
     ],
     "deny": []
   }
