@@ -1,0 +1,43 @@
+# Core dependencies
+fastapi>=0.100.0
+uvicorn>=0.22.0
+sqlalchemy>=2.0.0
+alembic>=1.11.0
+redis>=4.6.0
+
+# AI/ML dependencies
+openai>=1.0.0
+anthropic>=0.3.0
+langchain>=0.0.350
+pillow>=10.0.0
+opencv-python>=4.8.0
+
+# UI dependencies
+streamlit>=1.25.0
+
+# HTTP client
+requests>=2.31.0
+httpx>=0.24.0
+
+# Data processing
+pydantic>=2.0.0
+python-multipart>=0.0.6
+
+# Development dependencies
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.7.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Environment management
+python-dotenv>=1.0.0
+
+# Security dependencies
+pydantic-settings>=2.0.0
+bleach>=6.0.0
+cryptography>=41.0.0
+passlib>=1.7.4
+
+# Monitoring and observability
+prometheus-client>=0.17.0

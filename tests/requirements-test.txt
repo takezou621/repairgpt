@@ -1,0 +1,7 @@
+# Test requirements for RepairGPT night automation system testing
+# Issue #33: 夜間自動化システム動作確認
+
+pytest>=7.0.0
+pytest-cov>=4.0.0
+PyYAML>=6.0
+pathlib

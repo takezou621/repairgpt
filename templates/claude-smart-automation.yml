@@ -58,7 +58,7 @@ jobs:
             }
             
             for (const issue of processedIssues) {
-              console.log(`\n🔍 Processing Issue #${issue.number}: ${issue.title}`);
+              console.log(`\\n🔍 Processing Issue #${issue.number}: ${issue.title}`);
               
               try {
                 // 関連ブランチを検索
@@ -156,7 +156,7 @@ ${now.toISOString()}
                       owner: context.repo.owner,
                       repo: context.repo.repo,
                       pull_number: prNumber,
-                      commit_title: `Night Auto-merge: Issue #${issue.number}`,
+                      commit_title: `Smart Auto-merge: Issue #${issue.number}`,
                       merge_method: 'squash'
                     });
                     console.log(`✅ Merged PR #${prNumber}`);
@@ -204,7 +204,7 @@ Issue #${issue.number} のスマート自動化が完了しました。
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
-                  labels: ['claude-completed', 'night-automation']
+                  labels: ['claude-completed', 'smart-automation']
                 });
                 
                 // ブランチ削除
@@ -221,7 +221,7 @@ Issue #${issue.number} のスマート自動化が完了しました。
                   console.log(`⚠️ Branch deletion failed: ${deleteError.message}`);
                 }
                 
-                console.log(`🎯 Issue #${issue.number} NIGHT AUTOMATION COMPLETED!`);
+                console.log(`🎯 Issue #${issue.number} SMART AUTOMATION COMPLETED!`);
                 
               } catch (issueError) {
                 console.log(`❌ Issue #${issue.number} processing failed: ${issueError.message}`);
@@ -229,10 +229,10 @@ Issue #${issue.number} のスマート自動化が完了しました。
               }
             }
             
-            console.log('\n🚀 SMART AUTOMATION FINISHED');
+            console.log('\\n🚀 SMART AUTOMATION FINISHED');
             
           } catch (error) {
-            console.log(`❌ Night automation error: ${error.message}`);
+            console.log(`❌ Smart automation error: ${error.message}`);
             console.log(error.stack);
             throw error;
           }
