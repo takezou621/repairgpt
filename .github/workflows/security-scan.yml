@@ -1,0 +1,204 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM UTC
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety pip-audit
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    
+    - name: Run Safety check for known vulnerabilities
+      run: |
+        if [ -f requirements.txt ]; then
+          safety check -r requirements.txt --json --output safety-report.json || true
+          safety check -r requirements.txt || true
+        else
+          echo "No requirements.txt found - skipping safety check"
+        fi
+      continue-on-error: true
+    
+    - name: Run pip-audit for vulnerability scanning
+      run: |
+        if [ -f requirements.txt ]; then
+          pip-audit --format=json --output=pip-audit-report.json || true
+          pip-audit || true
+        else
+          echo "No requirements.txt found - skipping pip-audit"
+        fi
+      continue-on-error: true
+    
+    - name: Upload security reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          safety-report.json
+          pip-audit-report.json
+
+  code-security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit semgrep
+    
+    - name: Run Bandit security linter
+      run: |
+        if [ -d "src" ] && [ "$(find src -name '*.py' | head -1)" ]; then
+          bandit -r src/ -f json -o bandit-security-report.json
+          bandit -r src/ --severity-level medium
+        else
+          echo "No Python files found in src/ - skipping bandit scan"
+        fi
+      continue-on-error: true
+    
+    - name: Run Semgrep security analysis
+      run: |
+        if [ -d "src" ] && [ "$(find src -name '*.py' | head -1)" ]; then
+          semgrep --config=auto src/ --json --output=semgrep-report.json || true
+          semgrep --config=auto src/ || true
+        else
+          echo "No Python files found in src/ - skipping semgrep scan"
+        fi
+      continue-on-error: true
+    
+    - name: Upload code security reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-security-reports
+        path: |
+          bandit-security-report.json
+          semgrep-report.json
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install TruffleHog
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+    
+    - name: Scan for secrets
+      run: |
+        trufflehog git file://. --json --no-update > trufflehog-report.json || true
+        echo "TruffleHog scan completed"
+        if [ -s trufflehog-report.json ]; then
+          echo "⚠️ Potential secrets detected - please review the report"
+          cat trufflehog-report.json | jq -r '.Raw' | head -10
+        else
+          echo "✅ No secrets detected"
+        fi
+      continue-on-error: true
+    
+    - name: Upload secrets scan report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: secrets-scan-report
+        path: trufflehog-report.json
+
+  license-compliance:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install license checker
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-licenses
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    
+    - name: Check licenses
+      run: |
+        if [ -f requirements.txt ]; then
+          pip-licenses --format=json --output-file=licenses-report.json
+          pip-licenses --format=table
+          echo "Checking for problematic licenses..."
+          pip-licenses | grep -E "GPL|AGPL|LGPL" || echo "No copyleft licenses found"
+        else
+          echo "No requirements.txt found - skipping license check"
+        fi
+      continue-on-error: true
+    
+    - name: Upload license report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-compliance-report
+        path: licenses-report.json
+
+  docker-security:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install wget apt-transport-https gnupg lsb-release
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install trivy
+    
+    - name: Scan filesystem for vulnerabilities
+      run: |
+        trivy fs --format json --output trivy-fs-report.json .
+        trivy fs .
+      continue-on-error: true
+    
+    - name: Upload Trivy scan report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: docker-security-report
+        path: trivy-fs-report.json
