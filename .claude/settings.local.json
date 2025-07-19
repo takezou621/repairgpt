@@ -52,7 +52,8 @@
       "Bash(curl:*)",
       "Bash(pgrep:*)",
       "Bash(pkill:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(gh pr:*)"
     ],
     "deny": []
   }
