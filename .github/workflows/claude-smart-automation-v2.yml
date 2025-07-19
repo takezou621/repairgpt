@@ -1,27 +1,23 @@
-name: Claude Smart Automation (DEPRECATED)
+name: Claude Smart Automation v2
 
-# DEPRECATED: This workflow has been replaced by claude-smart-automation-v2.yml
-# Kept for historical reference only - DO NOT ENABLE
+on:
+  schedule:
+    # 平日: 23:00, 02:00, 05:00 JST (14:00, 17:00, 20:00 UTC)
+    - cron: '0 14,17,20 * * 1-5'
+    # 土日: 10:00, 14:00, 18:00, 22:00 JST (01:00, 05:00, 09:00, 13:00 UTC)
+    - cron: '0 1,5,9,13 * * 0,6'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Enable dry run mode'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
-# on:
-#   schedule:
-#     # 平日: 23:00, 02:00, 05:00 JST (14:00, 17:00, 20:00 UTC)
-#     - cron: '0 14,17,20 * * 1-5'
-#     # 土日: 10:00, 14:00, 18:00, 22:00 JST (01:00, 05:00, 09:00, 13:00 UTC)
-#     - cron: '0 1,5,9,13 * * 0,6'
-# workflow_dispatch:
-#   inputs:
-#     dry_run:
-#       description: 'Enable dry run mode'
-#       required: false
-#       default: 'false'
-#       type: choice
-#       options:
-#         - 'false'
-#         - 'true'
-
-# DEPRECATED - DO NOT USE
-deprecated_jobs:
+jobs:
   automation:
     runs-on: ubuntu-latest
     permissions:
@@ -34,7 +30,7 @@ deprecated_jobs:
     - name: Checkout
       uses: actions/checkout@v4
       
-    - name: Execute Smart Automation
+    - name: Execute Smart Automation v2
       uses: actions/github-script@v7
       env:
         DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
@@ -45,7 +41,7 @@ deprecated_jobs:
           const isWeekend = day === 0 || day === 6;
           const isDryRun = process.env.DRY_RUN === 'true';
           
-          console.log('🤖 Claude Smart Automation - Started');
+          console.log('🤖 Claude Smart Automation v2 - Started');
           console.log('Current time:', now.toISOString());
           console.log('Weekend:', isWeekend, '| Dry Run:', isDryRun);
           
@@ -74,7 +70,7 @@ deprecated_jobs:
           let autoImplementedCount = 0;
           
           for (const issue of issues.data) {
-            console.log('\\n🔍 Processing Issue #' + issue.number + ':', issue.title);
+            console.log('\n🔍 Processing Issue #' + issue.number + ':', issue.title);
             
             // Skip if already being processed
             const hasProcessingLabel = issue.labels.some(label => label.name === 'claude-processing');
@@ -113,7 +109,7 @@ deprecated_jobs:
               });
               
               if (matchingBranches.length === 0) {
-                console.log('⚠️ No branch found for Issue #' + issue.number + ' - Starting auto-implementation');
+                console.log('⚠️ No branch found for Issue #' + issue.number + ' - Starting placeholder generation');
                 
                 // Auto-implementation for issues without branches
                 const newBranchName = 'claude-auto-impl-issue-' + issue.number;
@@ -141,7 +137,7 @@ deprecated_jobs:
                   // Analyze issue and determine implementation type
                   const issueBody = issue.body || '';
                   const issueTitle = issue.title || '';
-                  const combinedText = issueTitle + '\\n\\n' + issueBody;
+                  const combinedText = issueTitle + '\n\n' + issueBody;
                   
                   let implementationType = 'documentation';
                   let targetFile = 'docs/auto-generated/issue-' + issue.number + '.md';
@@ -151,69 +147,76 @@ deprecated_jobs:
                     targetFile = 'docs/workflow-improvements.md';
                   } else if (combinedText.match(/機能.*追加|feature.*add|実装|implement/i)) {
                     implementationType = 'feature';
-                    targetFile = 'src/auto_feature_' + issue.number + '.py';
+                    targetFile = 'src/auto_placeholder_' + issue.number + '.py';
                   } else if (combinedText.match(/バグ|bug|修正|fix|エラー|error/i)) {
                     implementationType = 'bugfix';
-                    targetFile = 'src/bugfix_' + issue.number + '.py';
+                    targetFile = 'src/bugfix_placeholder_' + issue.number + '.py';
                   }
                   
                   console.log('📊 Implementation type:', implementationType);
                   
-                  // Generate implementation content
+                  // Generate PLACEHOLDER content with clear indication
                   let implementationContent = '';
                   const timestamp = new Date().toISOString();
                   
-                  if (implementationType === 'feature') {
-                    implementationContent = '# Auto-Generated Feature for Issue #' + issue.number + '\\n';
-                    implementationContent += '# ' + issueTitle + '\\n\\n';
-                    implementationContent += 'def auto_feature_' + issue.number + '():\\n';
-                    implementationContent += '    """Auto-generated feature implementation"""\\n';
-                    implementationContent += '    print("Feature for Issue #' + issue.number + '")\\n';
-                    implementationContent += '    return {"status": "auto_implemented", "issue": ' + issue.number + '}\\n\\n';
-                    implementationContent += 'if __name__ == "__main__":\\n';
-                    implementationContent += '    result = auto_feature_' + issue.number + '()\\n';
-                    implementationContent += '    print("Result:", result)\\n';
-                  } else if (implementationType === 'bugfix') {
-                    implementationContent = '# Auto-Generated Bug Fix for Issue #' + issue.number + '\\n';
-                    implementationContent += '# ' + issueTitle + '\\n\\n';
-                    implementationContent += 'def auto_bugfix_' + issue.number + '():\\n';
-                    implementationContent += '    """Auto-generated bug fix"""\\n';
-                    implementationContent += '    print("Bug fix for Issue #' + issue.number + '")\\n';
-                    implementationContent += '    try:\\n';
-                    implementationContent += '        # TODO: Add bug fix implementation\\n';
-                    implementationContent += '        return True\\n';
-                    implementationContent += '    except Exception as e:\\n';
-                    implementationContent += '        print("Error:", e)\\n';
-                    implementationContent += '        return False\\n\\n';
-                    implementationContent += 'if __name__ == "__main__":\\n';
-                    implementationContent += '    success = auto_bugfix_' + issue.number + '()\\n';
-                    implementationContent += '    print("Fix", "successful" if success else "failed")\\n';
-                  } else {
-                    implementationContent = '# ' + issueTitle + '\\n\\n';
-                    implementationContent += '## Issue #' + issue.number + ' 自動対応\\n\\n';
-                    implementationContent += 'この文書は **Claude Smart Automation** により自動生成されました。\\n\\n';
-                    implementationContent += '### 📋 Issue概要\\n';
-                    implementationContent += '- **Issue番号**: #' + issue.number + '\\n';
-                    implementationContent += '- **タイトル**: ' + issueTitle + '\\n';
-                    implementationContent += '- **実装タイプ**: ' + implementationType + '\\n';
-                    implementationContent += '- **自動生成日時**: ' + timestamp + '\\n\\n';
-                    implementationContent += '### 🤖 自動実装内容\\n\\n';
+                  if (implementationType === 'feature' || implementationType === 'bugfix') {
+                    implementationContent = '#!/usr/bin/env python3\n';
+                    implementationContent += '"""\n';
+                    implementationContent += '⚠️ PLACEHOLDER IMPLEMENTATION - REQUIRES MANUAL COMPLETION ⚠️\n\n';
+                    implementationContent += 'Issue #' + issue.number + ': ' + issueTitle + '\n';
+                    implementationContent += 'Generated: ' + timestamp + '\n\n';
+                    implementationContent += 'This is a placeholder file created by Smart Automation.\n';
+                    implementationContent += 'A developer needs to implement the actual functionality.\n';
+                    implementationContent += '"""\n\n';
+                    implementationContent += '# TODO: This is a placeholder implementation\n';
+                    implementationContent += '# TODO: Please replace with actual implementation\n\n';
+                    implementationContent += 'def placeholder_' + issue.number + '():\n';
+                    implementationContent += '    """\n';
+                    implementationContent += '    Placeholder function for Issue #' + issue.number + '\n';
+                    implementationContent += '    \n';
+                    implementationContent += '    Requirements:\n';
                     if (issueBody) {
-                      implementationContent += '**Issue詳細:**\\n' + issueBody.substring(0, 500) + '\\n\\n';
+                      const lines = issueBody.split('\n').slice(0, 10);
+                      lines.forEach(line => {
+                        implementationContent += '    ' + line + '\n';
+                      });
                     }
-                    implementationContent += '### ✅ 実装項目\\n';
-                    implementationContent += '- [x] Issue内容の自動分析\\n';
-                    implementationContent += '- [x] 基本実装テンプレート生成\\n';
-                    implementationContent += '- [x] 自動ブランチ作成\\n';
-                    implementationContent += '- [ ] 詳細実装（手動調整必要）\\n\\n';
-                    implementationContent += '### 🔄 次のステップ\\n';
-                    implementationContent += '1. 生成された実装内容を確認\\n';
-                    implementationContent += '2. 必要に応じて詳細を追加\\n';
-                    implementationContent += '3. テストケースの作成\\n';
-                    implementationContent += '4. 最終動作確認\\n\\n';
-                    implementationContent += '---\\n';
-                    implementationContent += '🚀 **Claude Smart Automation** - 未着手Issue自動実装システム\\n\\n';
-                    implementationContent += 'Generated with [Claude Code](https://claude.ai/code)\\n';
+                    implementationContent += '    """\n';
+                    implementationContent += '    raise NotImplementedError(\n';
+                    implementationContent += '        "This is a placeholder. "\n';
+                    implementationContent += '        "Please implement the actual functionality for Issue #' + issue.number + '"\n';
+                    implementationContent += '    )\n\n\n';
+                    implementationContent += 'if __name__ == "__main__":\n';
+                    implementationContent += '    print("⚠️  This is a PLACEHOLDER implementation")\n';
+                    implementationContent += '    print("📝 Issue #' + issue.number + ': ' + issueTitle + '")\n';
+                    implementationContent += '    print("🔧 Manual implementation required!")\n';
+                    implementationContent += '    try:\n';
+                    implementationContent += '        placeholder_' + issue.number + '()\n';
+                    implementationContent += '    except NotImplementedError as e:\n';
+                    implementationContent += '        print(f"❌ {e}")\n';
+                  } else {
+                    implementationContent = '# ' + issueTitle + '\n\n';
+                    implementationContent += '## ⚠️ PLACEHOLDER DOCUMENT - REQUIRES COMPLETION ⚠️\n\n';
+                    implementationContent += 'この文書は **Claude Smart Automation** により自動生成されたプレースホルダーです。\n\n';
+                    implementationContent += '### 📋 Issue概要\n';
+                    implementationContent += '- **Issue番号**: #' + issue.number + '\n';
+                    implementationContent += '- **タイトル**: ' + issueTitle + '\n';
+                    implementationContent += '- **実装タイプ**: ' + implementationType + '\n';
+                    implementationContent += '- **自動生成日時**: ' + timestamp + '\n\n';
+                    implementationContent += '### ⚠️ 重要な注意事項\n\n';
+                    implementationContent += '**これはプレースホルダーファイルです。実際の実装が必要です。**\n\n';
+                    implementationContent += '### 📝 Issue詳細\n\n';
+                    if (issueBody) {
+                      implementationContent += issueBody + '\n\n';
+                    }
+                    implementationContent += '### 🔧 必要な作業\n\n';
+                    implementationContent += '1. このプレースホルダーを実際の実装に置き換える\n';
+                    implementationContent += '2. Issue要件を満たす機能を実装\n';
+                    implementationContent += '3. テストコードを作成\n';
+                    implementationContent += '4. ドキュメントを更新\n\n';
+                    implementationContent += '---\n';
+                    implementationContent += '🚀 **Claude Smart Automation v2** - プレースホルダー生成システム\n\n';
+                    implementationContent += 'Generated with [Claude Code](https://claude.ai/code)\n';
                   }
                   
                   // Create file in the new branch
@@ -224,24 +227,27 @@ deprecated_jobs:
                       owner: context.repo.owner,
                       repo: context.repo.repo,
                       path: targetFile,
-                      message: 'Auto-implementation: ' + implementationType + ' for Issue #' + issue.number,
+                      message: 'placeholder: Add placeholder for Issue #' + issue.number + '\n\nThis is a placeholder that requires manual implementation',
                       content: encodedContent,
                       branch: newBranchName
                     });
                   }
                   
-                  console.log('📝 Created file:', targetFile);
+                  console.log('📝 Created placeholder file:', targetFile);
                   
                   // Add comment to issue
-                  const commentBody = '🚀 **未着手Issue自動実装開始！**\\n\\n' +
-                    '✅ **新ブランチ**: `' + newBranchName + '`\\n' +
-                    '🤖 **実装タイプ**: ' + implementationType + '\\n' +
-                    '📝 **対象ファイル**: ' + targetFile + '\\n\\n' +
-                    '**次のステップ:**\\n' +
-                    '- 🔄 PR自動作成予定\\n' +
-                    '- 📊 基本実装テンプレート生成済み\\n\\n' +
-                    '---\\n' +
-                    '🤖 **Claude Smart Automation**';
+                  const commentBody = '🤖 **プレースホルダー作成完了**\n\n' +
+                    '⚠️ **注意**: これはプレースホルダーです。実際の実装が必要です。\n\n' +
+                    '✅ **新ブランチ**: `' + newBranchName + '`\n' +
+                    '📝 **プレースホルダーファイル**: ' + targetFile + '\n' +
+                    '🤖 **実装タイプ**: ' + implementationType + '\n\n' +
+                    '**次のステップ:**\n' +
+                    '1. 🔧 プレースホルダーを実際の実装に置き換える\n' +
+                    '2. 📊 Issue要件を満たす機能を実装\n' +
+                    '3. 🧪 テストコードを作成\n' +
+                    '4. 📄 PRを作成して詳細レビュー\n\n' +
+                    '---\n' +
+                    '🤖 **Claude Smart Automation v2** - プレースホルダー生成システム';
                   
                   if (!isDryRun) {
                     await github.rest.issues.createComment({
@@ -253,17 +259,17 @@ deprecated_jobs:
                   }
                   
                   autoImplementedCount++;
-                  console.log('🎉 Auto-implementation completed for Issue #' + issue.number);
+                  console.log('🎉 Placeholder generation completed for Issue #' + issue.number);
                   
                 } catch (autoError) {
-                  console.log('❌ Auto-implementation failed:', autoError.message);
+                  console.log('❌ Placeholder generation failed:', autoError.message);
                   
                   if (!isDryRun) {
                     await github.rest.issues.createComment({
                       owner: context.repo.owner,
                       repo: context.repo.repo,
                       issue_number: issue.number,
-                      body: '❌ **自動実装エラー**\\n\\nエラー: ' + autoError.message + '\\n\\n手動対応をお願いします。'
+                      body: '❌ **プレースホルダー生成エラー**\n\nエラー: ' + autoError.message + '\n\n手動対応をお願いします。'
                     });
                   }
                 }
@@ -293,14 +299,14 @@ deprecated_jobs:
                       title: 'fix: ' + issue.title + ' (closes #' + issue.number + ')',
                       head: targetBranch.name,
                       base: 'main',
-                      body: '## 🤖 ' + timeContext + '自動化\\n\\n' +
-                        '**Issue**: #' + issue.number + '\\n' +
-                        '**ブランチ**: ' + targetBranch.name + '\\n' +
-                        '**実行時刻**: ' + now.toISOString() + '\\n\\n' +
-                        '### 📋 変更内容\\n' +
-                        issue.title + 'の実装・修正\\n\\n' +
-                        '---\\n' +
-                        '🚀 Generated with [Claude Code](https://claude.ai/code)\\n\\n' +
+                      body: '## 🤖 ' + timeContext + '自動化\n\n' +
+                        '**Issue**: #' + issue.number + '\n' +
+                        '**ブランチ**: ' + targetBranch.name + '\n' +
+                        '**実行時刻**: ' + now.toISOString() + '\n\n' +
+                        '### 📋 変更内容\n' +
+                        issue.title + 'の実装・修正\n\n' +
+                        '---\n' +
+                        '🚀 Generated with [Claude Code](https://claude.ai/code)\n\n' +
                         'Co-Authored-By: Claude <noreply@anthropic.com>'
                     });
                     
@@ -330,8 +336,8 @@ deprecated_jobs:
           
           // Print execution summary
           const timeContext = isWeekend ? '土日昼間' : '平日夜間';
-          console.log('\\n📊 **実行完了** - ' + timeContext + '自動実行');
+          console.log('\n📊 **実行完了** - ' + timeContext + '自動実行');
           console.log('- 処理対象Issues:', issues.data.length + '個');
           console.log('- 処理完了:', processedCount + '個');
-          console.log('- 自動実装開始:', autoImplementedCount + '個');
+          console.log('- プレースホルダー生成:', autoImplementedCount + '個');
           console.log('- 実行モード:', isDryRun ? 'ドライラン' : '本番実行');
