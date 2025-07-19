@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 class PromptType(Enum):
     """Types of prompts for different use cases"""
+
     DIAGNOSIS = "diagnosis"
     REPAIR_GUIDE = "repair_guide"
     TROUBLESHOOTING = "troubleshooting"
@@ -19,6 +20,7 @@ class PromptType(Enum):
 @dataclass
 class PromptContext:
     """Context information for prompt generation"""
+
     device_type: str
     device_model: str
     issue_description: str
@@ -34,48 +36,48 @@ class PromptContext:
 
 class PromptTemplateManager:
     """Manages prompt templates for different repair scenarios"""
-    
+
     def __init__(self):
         self.templates = self._load_templates()
         self.system_prompts = self._load_system_prompts()
-    
+
     def _load_templates(self) -> Dict[PromptType, Dict]:
         """Load prompt templates for each use case"""
         return {
             PromptType.DIAGNOSIS: {
                 "base": self._diagnosis_template(),
                 "followup": self._diagnosis_followup_template(),
-                "detailed": self._diagnosis_detailed_template()
+                "detailed": self._diagnosis_detailed_template(),
             },
             PromptType.REPAIR_GUIDE: {
                 "step_by_step": self._repair_guide_template(),
                 "quick_fix": self._quick_fix_template(),
-                "comprehensive": self._comprehensive_repair_template()
+                "comprehensive": self._comprehensive_repair_template(),
             },
             PromptType.TROUBLESHOOTING: {
                 "systematic": self._systematic_troubleshooting_template(),
-                "quick": self._quick_troubleshooting_template()
+                "quick": self._quick_troubleshooting_template(),
             },
             PromptType.SAFETY_CHECK: {
                 "general": self._safety_check_template(),
                 "electrical": self._electrical_safety_template(),
-                "mechanical": self._mechanical_safety_template()
+                "mechanical": self._mechanical_safety_template(),
             },
             PromptType.PARTS_IDENTIFICATION: {
                 "visual": self._parts_identification_template(),
-                "functional": self._functional_parts_template()
+                "functional": self._functional_parts_template(),
             },
             PromptType.TOOL_RECOMMENDATION: {
                 "basic": self._basic_tools_template(),
-                "advanced": self._advanced_tools_template()
+                "advanced": self._advanced_tools_template(),
             },
             PromptType.SKILL_ASSESSMENT: {
                 "beginner": self._beginner_assessment_template(),
                 "intermediate": self._intermediate_assessment_template(),
-                "advanced": self._advanced_assessment_template()
-            }
+                "advanced": self._advanced_assessment_template(),
+            },
         }
-    
+
     def _load_system_prompts(self) -> Dict[str, str]:
         """Load system prompts for different scenarios"""
         return {
@@ -104,7 +106,6 @@ Always consider:
 - Alternative solutions if primary approach fails
 - When to recommend professional repair instead
 """,
-            
             "diagnosis_specialist": """
 You are a diagnostic specialist for electronic device troubleshooting. Your role is to help users systematically identify the root cause of device problems through careful questioning and logical analysis.
 
@@ -122,7 +123,6 @@ Key Skills:
 - Ability to guide users through diagnostic procedures
 - Risk assessment for different failure scenarios
 """,
-            
             "safety_advisor": """
 You are a safety advisor specializing in electronics repair. Your primary responsibility is ensuring user safety during repair procedures.
 
@@ -139,42 +139,65 @@ Always:
 - Explain emergency procedures for accidents
 - Identify when to stop and seek professional help
 - Consider environmental factors (ventilation, workspace)
-"""
+""",
         }
-    
-    def generate_prompt(self, prompt_type: PromptType, context: PromptContext, 
-                       template_variant: str = "base", custom_instructions: str = "") -> str:
+
+    def generate_prompt(
+        self,
+        prompt_type: PromptType,
+        context: PromptContext,
+        template_variant: str = "base",
+        custom_instructions: str = "",
+    ) -> str:
         """Generate a complete prompt based on type and context"""
-        
+
         # Get base template
         template_dict = self.templates.get(prompt_type, {})
         template = template_dict.get(template_variant, template_dict.get("base", ""))
-        
+
         if not template:
-            raise ValueError(f"No template found for {prompt_type.value}/{template_variant}")
-        
+            raise ValueError(
+                f"No template found for {prompt_type.value}/{template_variant}"
+            )
+
         # Format template with context
         formatted_prompt = template.format(
             device_type=context.device_type,
             device_model=context.device_model,
             issue_description=context.issue_description,
             user_skill_level=context.user_skill_level,
-            available_tools=", ".join(context.available_tools) if context.available_tools else "Not specified",
-            safety_concerns=", ".join(context.safety_concerns) if context.safety_concerns else "None identified",
-            previous_attempts=", ".join(context.previous_attempts) if context.previous_attempts else "None",
-            symptoms=", ".join(context.symptoms) if context.symptoms else "Not detailed",
+            available_tools=(
+                ", ".join(context.available_tools)
+                if context.available_tools
+                else "Not specified"
+            ),
+            safety_concerns=(
+                ", ".join(context.safety_concerns)
+                if context.safety_concerns
+                else "None identified"
+            ),
+            previous_attempts=(
+                ", ".join(context.previous_attempts)
+                if context.previous_attempts
+                else "None"
+            ),
+            symptoms=(
+                ", ".join(context.symptoms) if context.symptoms else "Not detailed"
+            ),
             environment=context.environment,
             urgency=context.urgency,
             budget_constraint=context.budget_constraint,
-            custom_instructions=custom_instructions
+            custom_instructions=custom_instructions,
         )
-        
+
         return formatted_prompt
-    
+
     def get_system_prompt(self, specialist_type: str = "repair_expert") -> str:
         """Get system prompt for specific specialist type"""
-        return self.system_prompts.get(specialist_type, self.system_prompts["repair_expert"])
-    
+        return self.system_prompts.get(
+            specialist_type, self.system_prompts["repair_expert"]
+        )
+
     # Template definitions
     def _diagnosis_template(self) -> str:
         return """
@@ -210,7 +233,7 @@ Please provide:
 
 {custom_instructions}
 """
-    
+
     def _diagnosis_followup_template(self) -> str:
         return """
 Based on the initial diagnosis, I need more specific guidance:
@@ -232,7 +255,7 @@ Please provide:
 
 {custom_instructions}
 """
-    
+
     def _repair_guide_template(self) -> str:
         return """
 Please provide a comprehensive repair guide for:
@@ -280,7 +303,7 @@ Please provide a comprehensive repair guide for:
 
 {custom_instructions}
 """
-    
+
     def _safety_check_template(self) -> str:
         return """
 Please perform a comprehensive safety analysis for this repair:
@@ -326,7 +349,7 @@ Please perform a comprehensive safety analysis for this repair:
 
 {custom_instructions}
 """
-    
+
     def _parts_identification_template(self) -> str:
         return """
 Help identify the correct parts needed for this repair:
@@ -370,7 +393,7 @@ Help identify the correct parts needed for this repair:
 
 {custom_instructions}
 """
-    
+
     def _systematic_troubleshooting_template(self) -> str:
         return """
 Let's systematically troubleshoot this issue:
@@ -417,7 +440,7 @@ Let's systematically troubleshoot this issue:
 
 {custom_instructions}
 """
-    
+
     def _diagnosis_detailed_template(self) -> str:
         return """
 Provide detailed diagnostic analysis:
@@ -459,7 +482,7 @@ Provide detailed diagnostic analysis:
 
 {custom_instructions}
 """
-    
+
     def _quick_fix_template(self) -> str:
         return """
 Provide quick fix options for immediate relief:
@@ -498,7 +521,7 @@ Provide quick fix options for immediate relief:
 
 {custom_instructions}
 """
-    
+
     def _comprehensive_repair_template(self) -> str:
         return """
 Provide comprehensive repair documentation:
@@ -551,7 +574,7 @@ Provide comprehensive repair documentation:
 
 {custom_instructions}
 """
-    
+
     def _beginner_assessment_template(self) -> str:
         return """
 Assess if this repair is appropriate for a beginner:
@@ -594,7 +617,7 @@ Assess if this repair is appropriate for a beginner:
 
 {custom_instructions}
 """
-    
+
     def _basic_tools_template(self) -> str:
         return """
 Recommend basic tools for this repair:
@@ -638,7 +661,7 @@ Recommend basic tools for this repair:
 
 {custom_instructions}
 """
-    
+
     def _advanced_tools_template(self) -> str:
         return """
 Recommend advanced tools for professional-quality repair:
@@ -683,7 +706,7 @@ Recommend advanced tools for professional-quality repair:
 
 {custom_instructions}
 """
-    
+
     def _intermediate_assessment_template(self) -> str:
         return """
 Assess intermediate-level repair feasibility:
@@ -728,7 +751,7 @@ Assess intermediate-level repair feasibility:
 
 {custom_instructions}
 """
-    
+
     def _advanced_assessment_template(self) -> str:
         return """
 Advanced repair analysis and optimization:
@@ -773,7 +796,7 @@ Advanced repair analysis and optimization:
 
 {custom_instructions}
 """
-    
+
     def _quick_troubleshooting_template(self) -> str:
         return """
 Quick troubleshooting for immediate issues:
@@ -817,7 +840,7 @@ Quick troubleshooting for immediate issues:
 
 {custom_instructions}
 """
-    
+
     def _electrical_safety_template(self) -> str:
         return """
 Electrical safety analysis for this repair:
@@ -862,7 +885,7 @@ Electrical safety analysis for this repair:
 
 {custom_instructions}
 """
-    
+
     def _mechanical_safety_template(self) -> str:
         return """
 Mechanical safety analysis for this repair:
@@ -907,7 +930,7 @@ Mechanical safety analysis for this repair:
 
 {custom_instructions}
 """
-    
+
     def _functional_parts_template(self) -> str:
         return """
 Identify parts by function and symptoms:

@@ -59,6 +59,7 @@ jobs:
         path: |
           safety-report.json
           pip-audit-report.json
+        if-no-files-found: ignore
 
   code-security:
     runs-on: ubuntu-latest
@@ -105,6 +106,7 @@ jobs:
         path: |
           bandit-security-report.json
           semgrep-report.json
+        if-no-files-found: ignore
 
   secrets-scan:
     runs-on: ubuntu-latest
@@ -135,6 +137,7 @@ jobs:
       with:
         name: secrets-scan-report
         path: trufflehog-report.json
+        if-no-files-found: ignore
 
   license-compliance:
     runs-on: ubuntu-latest
@@ -172,6 +175,7 @@ jobs:
       with:
         name: license-compliance-report
         path: licenses-report.json
+        if-no-files-found: ignore
 
   docker-security:
     runs-on: ubuntu-latest
@@ -202,3 +206,4 @@ jobs:
       with:
         name: docker-security-report
         path: trivy-fs-report.json
+        if-no-files-found: ignore

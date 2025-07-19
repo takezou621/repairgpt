@@ -74,6 +74,7 @@ jobs:
           htmlcov/
           coverage.xml
           pytest.log
+        if-no-files-found: ignore
 
   integration-test:
     runs-on: ubuntu-latest

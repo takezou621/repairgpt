@@ -99,6 +99,7 @@ jobs:
       with:
         name: bandit-security-report
         path: bandit-report.json
+        if-no-files-found: ignore
 
   documentation:
     runs-on: ubuntu-latest
