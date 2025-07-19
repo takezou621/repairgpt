@@ -3,13 +3,41 @@
 import pytest
 from unittest.mock import Mock, patch
 from datetime import timedelta
-from jose import JWTError
+
+try:
+    from jose import JWTError
+except ImportError:
+    # Mock JWTError if jose is not available
+    class JWTError(Exception):
+        pass
 
 try:
     from src.utils.security import create_access_token, verify_password, get_password_hash, verify_token
+    SECURITY_MODULE_AVAILABLE = True
 except ImportError:
     # Fallback for missing security module
-    pytest.skip("Security module not implemented yet", allow_module_level=True)
+    SECURITY_MODULE_AVAILABLE = False
+    
+    # Mock functions for testing
+    def create_access_token(data, expires_delta=None):
+        return "mock.jwt.token"
+    
+    def verify_password(plain_password, hashed_password):
+        return plain_password == "correct_password"
+    
+    def get_password_hash(password):
+        if not password:
+            raise ValueError("Empty password")
+        return f"hashed_{password}"
+    
+    def verify_token(token):
+        if token == "mock.jwt.token":
+            return {"sub": "testuser", "exp": 9999999999, "iat": 1234567890}
+        raise JWTError("Invalid token")
+
+# Skip entire module if security functionality is not implemented
+if not SECURITY_MODULE_AVAILABLE:
+    pytest.skip("Security module not fully implemented yet", allow_module_level=True)
 
 
 class TestPasswordHashing:

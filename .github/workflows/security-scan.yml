@@ -53,12 +53,13 @@ jobs:
     
     - name: Upload security reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
           safety-report.json
           pip-audit-report.json
+        if-no-files-found: ignore
 
   code-security:
     runs-on: ubuntu-latest
@@ -99,12 +100,13 @@ jobs:
     
     - name: Upload code security reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: code-security-reports
         path: |
           bandit-security-report.json
           semgrep-report.json
+        if-no-files-found: ignore
 
   secrets-scan:
     runs-on: ubuntu-latest
@@ -131,10 +133,11 @@ jobs:
     
     - name: Upload secrets scan report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: secrets-scan-report
         path: trufflehog-report.json
+        if-no-files-found: ignore
 
   license-compliance:
     runs-on: ubuntu-latest
@@ -168,10 +171,11 @@ jobs:
     
     - name: Upload license report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: license-compliance-report
         path: licenses-report.json
+        if-no-files-found: ignore
 
   docker-security:
     runs-on: ubuntu-latest
@@ -198,7 +202,8 @@ jobs:
     
     - name: Upload Trivy scan report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docker-security-report
         path: trivy-fs-report.json
+        if-no-files-found: ignore

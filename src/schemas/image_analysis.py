@@ -2,9 +2,10 @@
 Pydantic models for image analysis API
 """
 
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class DamageTypeEnum(str, Enum):

@@ -5,49 +5,52 @@ Enhanced with Issue #90: 🔒 設定管理とセキュリティ強化
 Enhanced with Issue #89: レスポンシブデザインとUI/UX改善
 """
 
-import streamlit as st
-import sys
-import os
-from datetime import datetime
-from typing import Optional, List, Dict
-import json
-import io
-from PIL import Image
 import base64
+import io
+import json
 import logging
-import requests
+import os
+import sys
 import time
-from utils.logger import (
-    get_logger,
-    log_api_call,
-    log_api_error,
-    log_user_action,
-    log_performance,
-)
+from datetime import datetime
+from typing import Dict, List, Optional
+
+import requests
+import streamlit as st
+from PIL import Image
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from utils.logger import (
+    get_logger,
+    log_api_call,
+    log_api_error,
+    log_performance,
+    log_user_action,
+)
+
 try:
     from chat.llm_chatbot import RepairChatbot, RepairContext
-    from clients.ifixit_client import IFixitClient, Guide
-    from data.offline_repair_database import OfflineRepairDatabase
-    from i18n import i18n, _
-    from ui.language_selector import (
-        language_selector,
-        get_localized_device_categories,
-        get_localized_skill_levels,
-    )
+    from clients.ifixit_client import Guide, IFixitClient
 
     # Import security and configuration
     from config.settings import settings
-    from utils.security import sanitize_input, sanitize_filename, mask_sensitive_data
+    from data.offline_repair_database import OfflineRepairDatabase
+    from i18n import _, i18n
+    from utils.security import mask_sensitive_data, sanitize_filename, sanitize_input
+
+    from .language_selector import (
+        get_localized_device_categories,
+        get_localized_skill_levels,
+        language_selector,
+    )
 
     # Import responsive design components
-    from ui.responsive_design import initialize_responsive_design, enhance_ui_components
-    from ui.ui_enhancements import (
-        show_responsive_design_info,
+    from .responsive_design import enhance_ui_components, initialize_responsive_design
+    from .ui_enhancements import (
         add_responsive_navigation_hints,
+        show_responsive_design_info,
     )
 except ImportError as e:
     st.error(f"Import error: {e}")

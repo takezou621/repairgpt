@@ -7,28 +7,28 @@ import logging
 import sys
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 # Add src to path for imports
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
-from database.database import (
-    create_tables,
-    get_db_session,
-    check_database_health,
-    get_database_info,
-    engine,
-)
-from database.models import User, Device, Issue, RepairGuide, ChatSession, RepairAttempt
 from database.crud import (
-    UserCRUD,
-    DeviceCRUD,
-    RepairGuideCRUD,
     ChatSessionCRUD,
+    DeviceCRUD,
     RepairAttemptCRUD,
+    RepairGuideCRUD,
     StatisticsCRUD,
+    UserCRUD,
 )
+from database.database import (
+    check_database_health,
+    create_tables,
+    engine,
+    get_database_info,
+    get_db_session,
+)
+from database.models import ChatSession, Device, Issue, RepairAttempt, RepairGuide, User
 
 # Configure logging
 logging.basicConfig(

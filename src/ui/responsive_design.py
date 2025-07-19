@@ -6,10 +6,11 @@ This module provides responsive design components and enhanced CSS styling
 for the RepairGPT Streamlit application to improve mobile and desktop user experience.
 """
 
-import streamlit as st
-from typing import Dict, List, Optional, Any
 import json
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import streamlit as st
 
 
 class ResponsiveDesignManager:

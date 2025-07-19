@@ -1,14 +1,14 @@
 # RepairGPT i18n Feature Implementation for Issue #94
 # 🌐 国際化（i18n）機能の完成と日本語対応強化
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add src directory to path to import i18n module
 sys.path.insert(0, str(Path(__file__).parent))
 
-from i18n import i18n, _
+from i18n import _, i18n
 
 
 def demo_i18n_functionality():

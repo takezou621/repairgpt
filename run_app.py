@@ -33,8 +33,9 @@ def main():
             sys.executable, "-m", "streamlit", "run", 
             str(app_path),
             "--server.port=8501",
-            "--server.address=localhost",
-            "--browser.gatherUsageStats=false"
+            "--server.address=0.0.0.0",
+            "--browser.gatherUsageStats=false",
+            "--server.headless=false"
         ], cwd=project_root)
         
     except KeyboardInterrupt:

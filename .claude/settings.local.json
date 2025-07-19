@@ -48,7 +48,12 @@
       "Bash(export:*)",
       "Bash(flake8:*)",
       "Bash(black:*)",
-      "Bash(python -m pytest tests/unit/test_auth/test_security.py -v)"
+      "Bash(python -m pytest tests/unit/test_auth/test_security.py -v)",
+      "Bash(curl:*)",
+      "Bash(pgrep:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(gh pr:*)"
     ],
     "deny": []
   }

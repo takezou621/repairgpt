@@ -4,20 +4,21 @@ Supports multiple AI providers and comprehensive device analysis
 """
 
 import base64
-import io
-import logging
 import hashlib
+import io
 import json
+import logging
 import os
 import time
-from typing import List, Optional, Dict, Any, Union
-from dataclasses import dataclass, asdict
-from enum import Enum
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 try:
     import cv2
     import numpy as np
+
     CV2_AVAILABLE = True
 except ImportError:
     CV2_AVAILABLE = False
@@ -26,6 +27,7 @@ except ImportError:
 
 try:
     from PIL import Image, ImageEnhance, ImageFilter
+
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -34,6 +36,7 @@ except ImportError:
 try:
     import openai
     from openai import OpenAI
+
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -42,6 +45,7 @@ except ImportError:
 
 try:
     import redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -51,9 +55,10 @@ try:
     from ..utils.logger import get_logger
 except ImportError:
     # Fallback for direct execution
-    import sys
     import os
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    import sys
+
+    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
     from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -132,17 +137,16 @@ class AnalysisResult:
 
 class AnalysisCache:
     """Cache for image analysis results"""
-    
+
     def __init__(self, redis_url: Optional[str] = None, ttl: int = 86400):
         self.ttl = ttl  # 24 hours default
         self.redis_client = None
         self.memory_cache = {}
-        
-        if REDIS_AVAILABLE and (redis_url or os.getenv('REDIS_URL')):
+
+        if REDIS_AVAILABLE and (redis_url or os.getenv("REDIS_URL")):
             try:
                 self.redis_client = redis.from_url(
-                    redis_url or os.getenv('REDIS_URL'),
-                    decode_responses=True
+                    redis_url or os.getenv("REDIS_URL"), decode_responses=True
                 )
                 self.redis_client.ping()
                 logger.info("Analysis cache initialized with Redis")
@@ -151,15 +155,15 @@ class AnalysisCache:
                 self.redis_client = None
         else:
             logger.info("Using memory cache for image analysis")
-    
+
     def _make_image_hash(self, image_data: bytes) -> str:
         """Create hash from image data"""
         return hashlib.md5(image_data).hexdigest()
-    
+
     def get(self, image_hash: str, language: str = "en") -> Optional[AnalysisResult]:
         """Get cached analysis result"""
         cache_key = f"analysis:{image_hash}:{language}"
-        
+
         if self.redis_client:
             try:
                 data = self.redis_client.get(cache_key)
@@ -168,80 +172,84 @@ class AnalysisCache:
                     return self._dict_to_analysis_result(result_dict)
             except Exception as e:
                 logger.warning(f"Redis get failed: {e}")
-        
+
         # Memory cache fallback
         cached_item = self.memory_cache.get(cache_key)
         if cached_item:
-            if datetime.now() - cached_item['timestamp'] < timedelta(seconds=self.ttl):
-                return self._dict_to_analysis_result(cached_item['data'])
+            if datetime.now() - cached_item["timestamp"] < timedelta(seconds=self.ttl):
+                return self._dict_to_analysis_result(cached_item["data"])
             else:
                 del self.memory_cache[cache_key]
-        
+
         return None
-    
+
     def set(self, image_hash: str, result: AnalysisResult, language: str = "en"):
         """Cache analysis result"""
         cache_key = f"analysis:{image_hash}:{language}"
         result_dict = self._analysis_result_to_dict(result)
-        
+
         if self.redis_client:
             try:
                 self.redis_client.setex(
-                    cache_key, 
-                    self.ttl, 
-                    json.dumps(result_dict, default=str)
+                    cache_key, self.ttl, json.dumps(result_dict, default=str)
                 )
                 return
             except Exception as e:
                 logger.warning(f"Redis set failed: {e}")
-        
+
         # Memory cache fallback
         self.memory_cache[cache_key] = {
-            'data': result_dict,
-            'timestamp': datetime.now()
+            "data": result_dict,
+            "timestamp": datetime.now(),
         }
-    
+
     def _analysis_result_to_dict(self, result: AnalysisResult) -> Dict[str, Any]:
         """Convert AnalysisResult to dict for caching"""
         result_dict = asdict(result)
         # Convert enums to strings
-        result_dict['device_info']['device_type'] = result.device_info.device_type.value
-        for damage in result_dict['damage_detected']:
-            damage['damage_type'] = damage['damage_type'].value if hasattr(damage['damage_type'], 'value') else damage['damage_type']
+        result_dict["device_info"]["device_type"] = result.device_info.device_type.value
+        for damage in result_dict["damage_detected"]:
+            damage["damage_type"] = (
+                damage["damage_type"].value
+                if hasattr(damage["damage_type"], "value")
+                else damage["damage_type"]
+            )
         return result_dict
-    
+
     def _dict_to_analysis_result(self, data: Dict[str, Any]) -> AnalysisResult:
         """Convert cached dict back to AnalysisResult"""
         # Reconstruct device info
         device_info = DeviceInfo(
-            device_type=DeviceType(data['device_info']['device_type']),
-            brand=data['device_info']['brand'],
-            model=data['device_info']['model'],
-            confidence=data['device_info']['confidence']
+            device_type=DeviceType(data["device_info"]["device_type"]),
+            brand=data["device_info"]["brand"],
+            model=data["device_info"]["model"],
+            confidence=data["device_info"]["confidence"],
         )
-        
+
         # Reconstruct damage assessments
         damage_list = []
-        for damage_data in data['damage_detected']:
-            damage_list.append(DamageAssessment(
-                damage_type=DamageType(damage_data['damage_type']),
-                confidence=damage_data['confidence'],
-                severity=damage_data['severity'],
-                location=damage_data['location'],
-                description=damage_data['description']
-            ))
-        
+        for damage_data in data["damage_detected"]:
+            damage_list.append(
+                DamageAssessment(
+                    damage_type=DamageType(damage_data["damage_type"]),
+                    confidence=damage_data["confidence"],
+                    severity=damage_data["severity"],
+                    location=damage_data["location"],
+                    description=damage_data["description"],
+                )
+            )
+
         return AnalysisResult(
             device_info=device_info,
             damage_detected=damage_list,
-            overall_condition=data['overall_condition'],
-            repair_urgency=data['repair_urgency'],
-            estimated_repair_cost=data.get('estimated_repair_cost'),
-            repair_difficulty=data.get('repair_difficulty'),
-            analysis_confidence=data['analysis_confidence'],
-            recommended_actions=data['recommended_actions'],
-            warnings=data['warnings'],
-            language=data['language']
+            overall_condition=data["overall_condition"],
+            repair_urgency=data["repair_urgency"],
+            estimated_repair_cost=data.get("estimated_repair_cost"),
+            repair_difficulty=data.get("repair_difficulty"),
+            analysis_confidence=data["analysis_confidence"],
+            recommended_actions=data["recommended_actions"],
+            warnings=data["warnings"],
+            language=data["language"],
         )
 
 
@@ -249,11 +257,11 @@ class ImageAnalysisService:
     """AI-powered image analysis service for device diagnosis"""
 
     def __init__(
-        self, 
-        provider: str = "openai", 
+        self,
+        provider: str = "openai",
         api_key: Optional[str] = None,
         redis_url: Optional[str] = None,
-        enable_caching: bool = True
+        enable_caching: bool = True,
     ):
         """
         Initialize the image analysis service
@@ -265,38 +273,40 @@ class ImageAnalysisService:
             enable_caching: Whether to enable result caching
         """
         self.provider = provider
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+
         # Initialize providers
         self.client = None
         if provider == "openai" and OPENAI_AVAILABLE:
             if not self.api_key:
-                logger.warning("OpenAI API key not provided - analysis will use fallback methods")
+                logger.warning(
+                    "OpenAI API key not provided - analysis will use fallback methods"
+                )
             else:
                 try:
                     self.client = OpenAI(api_key=self.api_key)
                     logger.info("OpenAI Vision API client initialized")
                 except Exception as e:
                     logger.error(f"Failed to initialize OpenAI client: {e}")
-        
+
         # Initialize caching
         self.cache = AnalysisCache(redis_url) if enable_caching else None
-        
+
         # Image processing parameters
         self.max_image_size = (1024, 1024)
         self.supported_formats = [".jpg", ".jpeg", ".png", ".webp", ".gif"]
         self.max_file_size = 10 * 1024 * 1024  # 10MB
-        
+
         # Analysis statistics
         self.analysis_count = 0
         self.cache_hits = 0
         self.last_analysis_time = None
-        
+
         logger.info(
             "ImageAnalysisService initialized",
             provider=provider,
             has_api_key=bool(self.api_key),
-            caching_enabled=bool(self.cache)
+            caching_enabled=bool(self.cache),
         )
 
     def preprocess_image(self, image_data: bytes) -> Image.Image:
@@ -338,24 +348,24 @@ class ImageAnalysisService:
         if not PIL_AVAILABLE:
             logger.warning("PIL not available - skipping image enhancement")
             return image
-        
+
         try:
             # Apply basic PIL enhancements
             enhancer = ImageEnhance.Contrast(image)
             enhanced = enhancer.enhance(1.2)  # Increase contrast slightly
-            
+
             enhancer = ImageEnhance.Sharpness(enhanced)
             enhanced = enhancer.enhance(1.1)  # Slight sharpening
-            
+
             # If OpenCV is available, apply advanced enhancement
             if CV2_AVAILABLE:
                 enhanced = self._advanced_enhancement(enhanced)
-            
+
             return enhanced
         except Exception as e:
             logger.warning(f"Image enhancement failed: {e}")
             return image
-    
+
     def _advanced_enhancement(self, image: Image.Image) -> Image.Image:
         """Apply advanced OpenCV enhancement"""
         try:
@@ -551,11 +561,13 @@ Please respond in JSON format."""
         """
         start_time = time.time()
         self.analysis_count += 1
-        
+
         try:
             # Validate image
             if len(image_data) > self.max_file_size:
-                raise ValueError(f"Image file too large: {len(image_data)} bytes (max: {self.max_file_size})")
+                raise ValueError(
+                    f"Image file too large: {len(image_data)} bytes (max: {self.max_file_size})"
+                )
 
             # Check cache first
             image_hash = hashlib.md5(image_data).hexdigest()
@@ -567,14 +579,14 @@ Please respond in JSON format."""
                         "Retrieved analysis from cache",
                         image_hash=image_hash[:8],
                         language=language,
-                        cache_hit_rate=f"{self.cache_hits/self.analysis_count:.2%}"
+                        cache_hit_rate=f"{self.cache_hits/self.analysis_count:.2%}",
                     )
                     return cached_result
 
             # Validate and preprocess image
             if not PIL_AVAILABLE:
                 raise RuntimeError("PIL (Pillow) is required for image processing")
-                
+
             processed_image = self.preprocess_image(image_data)
 
             # Perform analysis based on provider
@@ -588,7 +600,7 @@ Please respond in JSON format."""
 
             # Post-process results
             result = self._post_process_results(result, language)
-            
+
             # Cache the result
             if use_cache and self.cache:
                 self.cache.set(image_hash, result, language)
@@ -596,14 +608,14 @@ Please respond in JSON format."""
             # Update statistics
             analysis_time = time.time() - start_time
             self.last_analysis_time = analysis_time
-            
+
             logger.info(
                 "Image analysis completed",
                 provider=self.provider,
                 language=language,
                 analysis_time=f"{analysis_time:.2f}s",
                 confidence=result.analysis_confidence,
-                damage_count=len(result.damage_detected)
+                damage_count=len(result.damage_detected),
             )
 
             return result
@@ -611,63 +623,73 @@ Please respond in JSON format."""
         except Exception as e:
             logger.error(f"Image analysis failed: {e}")
             return self._create_fallback_result(language)
-    
-    async def analyze_with_local_model(self, image: Image.Image, language: str = "en") -> AnalysisResult:
+
+    async def analyze_with_local_model(
+        self, image: Image.Image, language: str = "en"
+    ) -> AnalysisResult:
         """Analyze image using local computer vision models"""
         logger.info("Using local model analysis (basic computer vision)")
-        
+
         # This is a placeholder for local model analysis
         # In a real implementation, you might use:
         # - OpenCV feature detection
         # - Traditional computer vision algorithms
         # - Local neural networks (ONNX, TensorFlow Lite)
-        
+
         return self._create_basic_analysis_result(image, language)
-    
-    async def analyze_with_fallback(self, image: Image.Image, language: str = "en") -> AnalysisResult:
+
+    async def analyze_with_fallback(
+        self, image: Image.Image, language: str = "en"
+    ) -> AnalysisResult:
         """Fallback analysis using image metadata and basic processing"""
         logger.info("Using fallback analysis method")
-        
+
         try:
             # Get basic image information
             width, height = image.size
             mode = image.mode
-            
+
             # Basic heuristics based on image properties
             device_type = self._guess_device_type_from_image(image)
             condition = self._assess_basic_condition(image)
-            
+
             return AnalysisResult(
-                device_info=DeviceInfo(
-                    device_type=device_type,
-                    confidence=0.3
-                ),
+                device_info=DeviceInfo(device_type=device_type, confidence=0.3),
                 damage_detected=[],
                 overall_condition=condition,
                 repair_urgency="medium",
                 analysis_confidence=0.3,
                 recommended_actions=[
-                    "Upload a clearer image for better analysis" if language == "en" 
-                    else "より鮮明な画像をアップロードしてください",
-                    "Consider professional diagnosis" if language == "en"
-                    else "専門家による診断をご検討ください"
+                    (
+                        "Upload a clearer image for better analysis"
+                        if language == "en"
+                        else "より鮮明な画像をアップロードしてください"
+                    ),
+                    (
+                        "Consider professional diagnosis"
+                        if language == "en"
+                        else "専門家による診断をご検討ください"
+                    ),
                 ],
                 warnings=[
-                    "Analysis performed without AI assistance" if language == "en"
-                    else "AI支援なしでの分析を実行しました"
+                    (
+                        "Analysis performed without AI assistance"
+                        if language == "en"
+                        else "AI支援なしでの分析を実行しました"
+                    )
                 ],
-                language=language
+                language=language,
             )
-        
+
         except Exception as e:
             logger.error(f"Fallback analysis failed: {e}")
             return self._create_fallback_result(language)
-    
+
     def _guess_device_type_from_image(self, image: Image.Image) -> DeviceType:
         """Guess device type from image dimensions and properties"""
         width, height = image.size
         aspect_ratio = width / height if height > 0 else 1.0
-        
+
         # Simple heuristics based on aspect ratio
         if 0.5 <= aspect_ratio <= 0.7:  # Portrait phone-like
             return DeviceType.SMARTPHONE
@@ -677,21 +699,21 @@ Please respond in JSON format."""
             return DeviceType.LAPTOP
         else:
             return DeviceType.OTHER
-    
+
     def _assess_basic_condition(self, image: Image.Image) -> str:
         """Basic condition assessment using image statistics"""
         try:
             if not PIL_AVAILABLE:
                 return "unknown"
-            
+
             # Convert to grayscale for analysis
-            gray = image.convert('L')
-            
+            gray = image.convert("L")
+
             # Calculate image statistics
             extrema = gray.getextrema()
             min_val, max_val = extrema
             contrast = max_val - min_val
-            
+
             # Basic heuristics
             if contrast < 50:
                 return "poor"  # Low contrast might indicate damage
@@ -699,35 +721,40 @@ Please respond in JSON format."""
                 return "good"  # High contrast suggests clear image
             else:
                 return "fair"
-                
+
         except Exception:
             return "unknown"
-    
-    def _create_basic_analysis_result(self, image: Image.Image, language: str) -> AnalysisResult:
+
+    def _create_basic_analysis_result(
+        self, image: Image.Image, language: str
+    ) -> AnalysisResult:
         """Create basic analysis result when advanced analysis isn't available"""
         device_type = self._guess_device_type_from_image(image)
         condition = self._assess_basic_condition(image)
-        
+
         return AnalysisResult(
-            device_info=DeviceInfo(
-                device_type=device_type,
-                confidence=0.5
-            ),
+            device_info=DeviceInfo(device_type=device_type, confidence=0.5),
             damage_detected=[],
             overall_condition=condition,
             repair_urgency="medium",
             analysis_confidence=0.5,
             recommended_actions=[
-                "Consider professional analysis for detailed diagnosis" if language == "en"
-                else "詳細な診断には専門的な分析をご検討ください"
+                (
+                    "Consider professional analysis for detailed diagnosis"
+                    if language == "en"
+                    else "詳細な診断には専門的な分析をご検討ください"
+                )
             ],
             warnings=[
-                "Basic analysis only - limited accuracy" if language == "en"
-                else "基本分析のみ - 精度は限定的です"
+                (
+                    "Basic analysis only - limited accuracy"
+                    if language == "en"
+                    else "基本分析のみ - 精度は限定的です"
+                )
             ],
-            language=language
+            language=language,
         )
-    
+
     def get_analysis_stats(self) -> Dict[str, Any]:
         """Get analysis service statistics"""
         return {
@@ -739,29 +766,31 @@ Please respond in JSON format."""
             "has_api_key": bool(self.api_key),
             "cache_enabled": bool(self.cache),
             "supported_formats": self.supported_formats,
-            "max_file_size_mb": self.max_file_size / (1024 * 1024)
+            "max_file_size_mb": self.max_file_size / (1024 * 1024),
         }
-    
-    def validate_image_format(self, image_data: bytes, filename: Optional[str] = None) -> bool:
+
+    def validate_image_format(
+        self, image_data: bytes, filename: Optional[str] = None
+    ) -> bool:
         """Validate if image format is supported"""
         try:
             if not PIL_AVAILABLE:
                 return False
-                
+
             image = Image.open(io.BytesIO(image_data))
             format_name = image.format.lower() if image.format else None
-            
+
             # Check by format
-            if format_name in ['jpeg', 'jpg', 'png', 'webp', 'gif']:
+            if format_name in ["jpeg", "jpg", "png", "webp", "gif"]:
                 return True
-            
+
             # Check by filename extension if provided
             if filename:
                 ext = os.path.splitext(filename.lower())[1]
                 return ext in self.supported_formats
-            
+
             return False
-            
+
         except Exception as e:
             logger.warning(f"Image format validation failed: {e}")
             return False
@@ -807,9 +836,9 @@ def get_image_analysis_service() -> ImageAnalysisService:
     if _image_analysis_service is None:
         _image_analysis_service = ImageAnalysisService(
             provider="openai",
-            api_key=os.getenv('OPENAI_API_KEY'),
-            redis_url=os.getenv('REDIS_URL'),
-            enable_caching=True
+            api_key=os.getenv("OPENAI_API_KEY"),
+            redis_url=os.getenv("REDIS_URL"),
+            enable_caching=True,
         )
     return _image_analysis_service
 
@@ -822,22 +851,18 @@ def reset_image_analysis_service():
 
 # Utility functions for common use cases
 async def quick_analyze_image(
-    image_data: bytes, 
-    language: str = "en",
-    provider: str = "openai"
+    image_data: bytes, language: str = "en", provider: str = "openai"
 ) -> AnalysisResult:
     """Quick image analysis without using global service"""
     service = ImageAnalysisService(
         provider=provider,
-        api_key=os.getenv('OPENAI_API_KEY') if provider == "openai" else None
+        api_key=os.getenv("OPENAI_API_KEY") if provider == "openai" else None,
     )
     return await service.analyze_device_image(image_data, language)
 
 
 def create_mock_analysis_result(
-    device_type: str = "smartphone",
-    condition: str = "fair",
-    language: str = "en"
+    device_type: str = "smartphone", condition: str = "fair", language: str = "en"
 ) -> AnalysisResult:
     """Create mock analysis result for testing/demo purposes"""
     return AnalysisResult(
@@ -845,7 +870,7 @@ def create_mock_analysis_result(
             device_type=DeviceType(device_type.lower()),
             brand="Mock Brand",
             model="Demo Model",
-            confidence=0.8
+            confidence=0.8,
         ),
         damage_detected=[
             DamageAssessment(
@@ -853,7 +878,11 @@ def create_mock_analysis_result(
                 confidence=0.7,
                 severity="medium",
                 location="Top left corner",
-                description="Visible crack in display" if language == "en" else "ディスプレイに亀裂が見られます"
+                description=(
+                    "Visible crack in display"
+                    if language == "en"
+                    else "ディスプレイに亀裂が見られます"
+                ),
             )
         ],
         overall_condition=condition,
@@ -862,14 +891,23 @@ def create_mock_analysis_result(
         repair_difficulty="Moderate",
         analysis_confidence=0.8,
         recommended_actions=[
-            "Avoid using the device until repaired" if language == "en" 
-            else "修理するまで使用を控えてください",
-            "Seek professional repair service" if language == "en"
-            else "専門的な修理サービスをお求めください"
+            (
+                "Avoid using the device until repaired"
+                if language == "en"
+                else "修理するまで使用を控えてください"
+            ),
+            (
+                "Seek professional repair service"
+                if language == "en"
+                else "専門的な修理サービスをお求めください"
+            ),
         ],
         warnings=[
-            "This is a mock result for demonstration" if language == "en"
-            else "これはデモンストレーション用の模擬結果です"
+            (
+                "This is a mock result for demonstration"
+                if language == "en"
+                else "これはデモンストレーション用の模擬結果です"
+            )
         ],
-        language=language
+        language=language,
     )

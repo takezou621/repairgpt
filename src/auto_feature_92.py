@@ -4,7 +4,7 @@
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def check_docker_environment() -> Dict[str, Any]:
