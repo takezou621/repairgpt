@@ -24,7 +24,7 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
     
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-lint-${{ hashFiles('**/requirements*.txt') }}
@@ -95,7 +95,7 @@ jobs:
     
     - name: Upload bandit report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: bandit-security-report
         path: bandit-report.json

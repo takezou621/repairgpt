@@ -53,7 +53,7 @@ jobs:
     
     - name: Upload security reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
@@ -99,7 +99,7 @@ jobs:
     
     - name: Upload code security reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: code-security-reports
         path: |
@@ -131,7 +131,7 @@ jobs:
     
     - name: Upload secrets scan report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: secrets-scan-report
         path: trufflehog-report.json
@@ -168,7 +168,7 @@ jobs:
     
     - name: Upload license report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: license-compliance-report
         path: licenses-report.json
@@ -198,7 +198,7 @@ jobs:
     
     - name: Upload Trivy scan report
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docker-security-report
         path: trivy-fs-report.json
