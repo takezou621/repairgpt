@@ -17,6 +17,9 @@ import base64
 import logging
 import requests
 import time
+# Add src directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 from utils.logger import (
     get_logger,
     log_api_call,
@@ -25,15 +28,12 @@ from utils.logger import (
     log_performance,
 )
 
-# Add src directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 try:
     from chat.llm_chatbot import RepairChatbot, RepairContext
     from clients.ifixit_client import IFixitClient, Guide
     from data.offline_repair_database import OfflineRepairDatabase
     from i18n import i18n, _
-    from ui.language_selector import (
+    from .language_selector import (
         language_selector,
         get_localized_device_categories,
         get_localized_skill_levels,
@@ -44,8 +44,8 @@ try:
     from utils.security import sanitize_input, sanitize_filename, mask_sensitive_data
 
     # Import responsive design components
-    from ui.responsive_design import initialize_responsive_design, enhance_ui_components
-    from ui.ui_enhancements import (
+    from .responsive_design import initialize_responsive_design, enhance_ui_components
+    from .ui_enhancements import (
         show_responsive_design_info,
         add_responsive_navigation_hints,
     )
