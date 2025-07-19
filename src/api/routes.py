@@ -8,14 +8,18 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import (APIRouter, Depends, File, HTTPException, Request,
-                     UploadFile)
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, validator
 
 from ..config.settings import settings
-from ..utils.security import (create_audit_log, get_client_ip,
-                              sanitize_filename, sanitize_input,
-                              validate_content_type, validate_image_content)
+from ..utils.security import (
+    create_audit_log,
+    get_client_ip,
+    sanitize_filename,
+    sanitize_input,
+    validate_content_type,
+    validate_image_content,
+)
 from . import get_localized_error, get_localized_response
 
 logger = logging.getLogger(__name__)
@@ -301,10 +305,12 @@ async def analyze_device_image(
     """
     try:
         # Import analysis models and service
-        from ..schemas.image_analysis import (DamageAssessmentResponse,
-                                              DeviceInfoResponse,
-                                              ImageAnalysisError,
-                                              ImageAnalysisResponse)
+        from ..schemas.image_analysis import (
+            DamageAssessmentResponse,
+            DeviceInfoResponse,
+            ImageAnalysisError,
+            ImageAnalysisResponse,
+        )
         from ..services.image_analysis import ImageAnalysisService
 
         # Sanitize filename

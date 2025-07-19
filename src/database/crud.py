@@ -11,9 +11,20 @@ from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, selectinload
 
-from .models import (ChatMessage, ChatSession, Device, DeviceIssue,
-                     ExternalDataSource, Issue, RepairAttempt, RepairGuide,
-                     RepairStep, SyncLog, User, UserImage)
+from .models import (
+    ChatMessage,
+    ChatSession,
+    Device,
+    DeviceIssue,
+    ExternalDataSource,
+    Issue,
+    RepairAttempt,
+    RepairGuide,
+    RepairStep,
+    SyncLog,
+    User,
+    UserImage,
+)
 
 
 class UserCRUD:

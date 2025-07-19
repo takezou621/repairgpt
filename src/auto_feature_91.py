@@ -13,12 +13,22 @@ from typing import Any, Dict, List, Optional
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
-from database.crud import (ChatSessionCRUD, DeviceCRUD, RepairAttemptCRUD,
-                           RepairGuideCRUD, StatisticsCRUD, UserCRUD)
-from database.database import (check_database_health, create_tables, engine,
-                               get_database_info, get_db_session)
-from database.models import (ChatSession, Device, Issue, RepairAttempt,
-                             RepairGuide, User)
+from database.crud import (
+    ChatSessionCRUD,
+    DeviceCRUD,
+    RepairAttemptCRUD,
+    RepairGuideCRUD,
+    StatisticsCRUD,
+    UserCRUD,
+)
+from database.database import (
+    check_database_health,
+    create_tables,
+    engine,
+    get_database_info,
+    get_db_session,
+)
+from database.models import ChatSession, Device, Issue, RepairAttempt, RepairGuide, User
 
 # Configure logging
 logging.basicConfig(

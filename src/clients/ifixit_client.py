@@ -12,8 +12,13 @@ from urllib.parse import quote, urljoin
 
 import requests
 
-from utils.logger import (LoggerMixin, get_logger, log_api_call, log_api_error,
-                          log_performance)
+from utils.logger import (
+    LoggerMixin,
+    get_logger,
+    log_api_call,
+    log_api_error,
+    log_performance,
+)
 
 # Get logger instance
 logger = get_logger(__name__)

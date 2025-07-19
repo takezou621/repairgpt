@@ -14,9 +14,13 @@ from fastapi.responses import JSONResponse
 
 # Import security and configuration
 from ..config.settings import settings, validate_api_keys
-from ..utils.security import (RateLimiter, RateLimitMiddleware,
-                              SecurityHeaders, create_audit_log,
-                              sanitize_log_data)
+from ..utils.security import (
+    RateLimiter,
+    RateLimitMiddleware,
+    SecurityHeaders,
+    create_audit_log,
+    sanitize_log_data,
+)
 
 
 class I18nMiddleware:

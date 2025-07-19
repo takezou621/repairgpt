@@ -7,8 +7,18 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import (JSON, Boolean, CheckConstraint, Column, DateTime,
-                        Decimal, ForeignKey, Integer, String, Text)
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Decimal,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship

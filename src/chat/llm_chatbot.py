@@ -11,8 +11,13 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 
-from utils.logger import (LoggerMixin, get_logger, log_api_call, log_api_error,
-                          log_performance)
+from utils.logger import (
+    LoggerMixin,
+    get_logger,
+    log_api_call,
+    log_api_error,
+    log_performance,
+)
 
 try:
     import openai

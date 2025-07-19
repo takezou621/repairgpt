@@ -22,27 +22,36 @@ from PIL import Image
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils.logger import (get_logger, log_api_call, log_api_error,
-                          log_performance, log_user_action)
+from utils.logger import (
+    get_logger,
+    log_api_call,
+    log_api_error,
+    log_performance,
+    log_user_action,
+)
 
 try:
     from chat.llm_chatbot import RepairChatbot, RepairContext
     from clients.ifixit_client import Guide, IFixitClient
+
     # Import security and configuration
     from config.settings import settings
     from data.offline_repair_database import OfflineRepairDatabase
     from i18n import _, i18n
-    from utils.security import (mask_sensitive_data, sanitize_filename,
-                                sanitize_input)
+    from utils.security import mask_sensitive_data, sanitize_filename, sanitize_input
 
-    from .language_selector import (get_localized_device_categories,
-                                    get_localized_skill_levels,
-                                    language_selector)
+    from .language_selector import (
+        get_localized_device_categories,
+        get_localized_skill_levels,
+        language_selector,
+    )
+
     # Import responsive design components
-    from .responsive_design import (enhance_ui_components,
-                                    initialize_responsive_design)
-    from .ui_enhancements import (add_responsive_navigation_hints,
-                                  show_responsive_design_info)
+    from .responsive_design import enhance_ui_components, initialize_responsive_design
+    from .ui_enhancements import (
+        add_responsive_navigation_hints,
+        show_responsive_design_info,
+    )
 except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
