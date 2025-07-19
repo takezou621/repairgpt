@@ -53,7 +53,8 @@
       "Bash(pgrep:*)",
       "Bash(pkill:*)",
       "Bash(lsof:*)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "Bash(gh run watch:*)"
     ],
     "deny": []
   }
