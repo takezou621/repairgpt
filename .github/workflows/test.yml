@@ -84,7 +84,7 @@ jobs:
       postgres:
         image: postgres:14
         env:
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'test_password_12345' }}
           POSTGRES_DB: repairgpt_test
         options: >-
           --health-cmd pg_isready
@@ -120,13 +120,15 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     
     - name: Wait for services
+      env:
+        PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'test_password_12345' }}
       run: |
-        until pg_isready -h localhost -p 5432; do sleep 1; done
+        until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
         until redis-cli -h localhost -p 6379 ping; do sleep 1; done
     
     - name: Run integration tests
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/repairgpt_test
+        DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD || 'test_password_12345' }}@localhost:5432/repairgpt_test
         REDIS_URL: redis://localhost:6379
       run: |
         if [ -d "tests/integration" ] && [ "$(ls -A tests/integration)" ]; then
