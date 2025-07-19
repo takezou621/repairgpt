@@ -1,13 +1,13 @@
 """Repair Guide Service - Integrates iFixit API with RepairGPT"""
 
 import asyncio
-import json
-import os
-from typing import Dict, List, Optional, Tuple, Any, Union
-from datetime import datetime, timedelta
-from dataclasses import dataclass, asdict
 import hashlib
+import json
 import logging
+import os
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 try:
     import redis
@@ -18,16 +18,16 @@ except ImportError:
     redis = None
 
 try:
-    from ..clients.ifixit_client import IFixitClient, Guide
+    from ..clients.ifixit_client import Guide, IFixitClient
     from ..data.offline_repair_database import OfflineRepairDatabase
     from ..utils.logger import get_logger
 except ImportError:
     # Fallback for direct execution
-    import sys
     import os
+    import sys
 
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-    from clients.ifixit_client import IFixitClient, Guide
+    from clients.ifixit_client import Guide, IFixitClient
     from data.offline_repair_database import OfflineRepairDatabase
     from utils.logger import get_logger
 

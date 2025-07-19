@@ -1,8 +1,8 @@
 """Advanced prompt templates for RepairGPT LLM interactions"""
 
-from typing import Dict, List, Optional
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, List, Optional
 
 
 class PromptType(Enum):

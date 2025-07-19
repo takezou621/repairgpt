@@ -2,10 +2,10 @@
 
 import asyncio
 import json
-from typing import AsyncGenerator, Dict, Optional, List, Any
-from datetime import datetime
 import logging
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 try:
     import openai
@@ -22,15 +22,15 @@ except ImportError:
     AsyncAnthropic = None
 
 try:
-    from .llm_chatbot import RepairChatbot, Message, RepairContext
     from ..utils.logger import get_logger
+    from .llm_chatbot import Message, RepairChatbot, RepairContext
 except ImportError:
     # Fallback for direct execution
-    import sys
     import os
+    import sys
 
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-    from chat.llm_chatbot import RepairChatbot, Message, RepairContext
+    from chat.llm_chatbot import Message, RepairChatbot, RepairContext
     from utils.logger import get_logger
 
 logger = get_logger(__name__)

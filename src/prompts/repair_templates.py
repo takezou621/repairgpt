@@ -3,9 +3,9 @@ Repair Prompt Templates for RepairGPT
 Implements Issue #10: 修理用プロンプトテンプレートの作成
 """
 
-from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Dict, List, Optional
 
 
 class PromptType(Enum):

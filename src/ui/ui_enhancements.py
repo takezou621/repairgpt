@@ -6,8 +6,10 @@ This module provides enhanced UI components that complement the responsive desig
 and improve the overall user experience of the RepairGPT application.
 """
 
+from typing import Any, Dict, List, Optional
+
 import streamlit as st
-from typing import Dict, List, Optional, Any
+
 from ui.responsive_design import ResponsiveDesignManager
 
 

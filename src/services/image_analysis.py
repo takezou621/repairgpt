@@ -4,16 +4,16 @@ Supports multiple AI providers and comprehensive device analysis
 """
 
 import base64
-import io
-import logging
 import hashlib
+import io
 import json
+import logging
 import os
 import time
-from typing import List, Optional, Dict, Any, Union
-from dataclasses import dataclass, asdict
-from enum import Enum
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 try:
     import cv2
@@ -55,8 +55,8 @@ try:
     from ..utils.logger import get_logger
 except ImportError:
     # Fallback for direct execution
-    import sys
     import os
+    import sys
 
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
     from utils.logger import get_logger

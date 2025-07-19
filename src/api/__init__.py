@@ -3,23 +3,20 @@ FastAPI backend for RepairGPT with internationalization support
 Implements Issue #90: 🔒 設定管理とセキュリティ強化
 """
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from typing import Optional
 import json
 import os
 from pathlib import Path
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # Import security and configuration
 from ..config.settings import settings, validate_api_keys
-from ..utils.security import (
-    SecurityHeaders,
-    RateLimitMiddleware,
-    RateLimiter,
-    sanitize_log_data,
-    create_audit_log,
-)
+from ..utils.security import (RateLimiter, RateLimitMiddleware,
+                              SecurityHeaders, create_audit_log,
+                              sanitize_log_data)
 
 
 class I18nMiddleware:

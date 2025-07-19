@@ -4,9 +4,10 @@ Implements Issue #90: 🔒 設定管理とセキュリティ強化
 """
 
 from fastapi import FastAPI, Request
+
+from ..config.settings import settings
 from . import create_app, get_localized_response
 from .routes import router
-from ..config.settings import settings
 
 # Create FastAPI app with i18n and security support
 app = create_app()
@@ -45,8 +46,9 @@ async def health_check(request: Request):
 
 
 if __name__ == "__main__":
-    import uvicorn
     import logging
+
+    import uvicorn
 
     # Configure logging
     logging.basicConfig(

@@ -5,8 +5,8 @@ Supports Japanese and English languages
 
 import json
 import os
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class I18n:

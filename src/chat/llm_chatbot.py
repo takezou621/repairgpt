@@ -3,20 +3,16 @@ LLM Chatbot for RepairGPT
 Implements Issue #9: 基本的なLLMチャットボットの実装
 """
 
-import os
 import json
-from typing import List, Dict, Optional, Union
-from dataclasses import dataclass, asdict
-from datetime import datetime
 import logging
+import os
 import time
-from utils.logger import (
-    LoggerMixin,
-    get_logger,
-    log_api_call,
-    log_api_error,
-    log_performance,
-)
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from typing import Dict, List, Optional, Union
+
+from utils.logger import (LoggerMixin, get_logger, log_api_call, log_api_error,
+                          log_performance)
 
 try:
     import openai
@@ -33,9 +29,9 @@ except ImportError:
     Anthropic = None
 
 try:
+    from langchain.chat_models import ChatAnthropic, ChatOpenAI
     from langchain.llms import OpenAI as LangChainOpenAI
-    from langchain.chat_models import ChatOpenAI, ChatAnthropic
-    from langchain.schema import HumanMessage, SystemMessage, AIMessage
+    from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
     LANGCHAIN_AVAILABLE = True
 except ImportError:

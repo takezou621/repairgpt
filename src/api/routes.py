@@ -3,23 +3,20 @@ API routes for RepairGPT with internationalization and security support
 Implements Issue #90: 🔒 設定管理とセキュリティ強化
 """
 
-from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File
-from pydantic import BaseModel, validator
-from typing import List, Optional, Dict, Any
 import json
-import os
 import logging
+import os
+from typing import Any, Dict, List, Optional
 
-from . import get_localized_response, get_localized_error
+from fastapi import (APIRouter, Depends, File, HTTPException, Request,
+                     UploadFile)
+from pydantic import BaseModel, validator
+
 from ..config.settings import settings
-from ..utils.security import (
-    sanitize_input,
-    sanitize_filename,
-    validate_content_type,
-    validate_image_content,
-    create_audit_log,
-    get_client_ip,
-)
+from ..utils.security import (create_audit_log, get_client_ip,
+                              sanitize_filename, sanitize_input,
+                              validate_content_type, validate_image_content)
+from . import get_localized_error, get_localized_response
 
 logger = logging.getLogger(__name__)
 
@@ -234,8 +231,8 @@ async def search_repair_guides(
     """Search for repair guides"""
     try:
         # Import here to avoid circular imports
-        from ..data.offline_repair_database import OfflineRepairDatabase
         from ..clients.ifixit_client import IFixitClient
+        from ..data.offline_repair_database import OfflineRepairDatabase
 
         # Initialize clients
         offline_db = OfflineRepairDatabase()
@@ -304,12 +301,10 @@ async def analyze_device_image(
     """
     try:
         # Import analysis models and service
-        from ..schemas.image_analysis import (
-            ImageAnalysisResponse,
-            ImageAnalysisError,
-            DeviceInfoResponse,
-            DamageAssessmentResponse,
-        )
+        from ..schemas.image_analysis import (DamageAssessmentResponse,
+                                              DeviceInfoResponse,
+                                              ImageAnalysisError,
+                                              ImageAnalysisResponse)
         from ..services.image_analysis import ImageAnalysisService
 
         # Sanitize filename

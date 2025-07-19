@@ -5,26 +5,15 @@ Provides high-level database operations for all models
 
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict, Any, Union
+from typing import Any, Dict, List, Optional, Union
 
-from sqlalchemy import select, update, delete, func, and_, or_
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, selectinload
 
-from .models import (
-    User,
-    Device,
-    Issue,
-    DeviceIssue,
-    RepairGuide,
-    RepairStep,
-    ChatSession,
-    ChatMessage,
-    UserImage,
-    RepairAttempt,
-    ExternalDataSource,
-    SyncLog,
-)
+from .models import (ChatMessage, ChatSession, Device, DeviceIssue,
+                     ExternalDataSource, Issue, RepairAttempt, RepairGuide,
+                     RepairStep, SyncLog, User, UserImage)
 
 
 class UserCRUD:

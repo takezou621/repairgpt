@@ -3,20 +3,17 @@ iFixit API Client for RepairGPT
 Implements Issue #8: iFixit APIクライアントの基本実装
 """
 
-import requests
 import json
-from typing import Dict, List, Optional, Union
 import logging
 import time
 from dataclasses import dataclass
-from urllib.parse import urljoin, quote
-from utils.logger import (
-    LoggerMixin,
-    get_logger,
-    log_api_call,
-    log_api_error,
-    log_performance,
-)
+from typing import Dict, List, Optional, Union
+from urllib.parse import quote, urljoin
+
+import requests
+
+from utils.logger import (LoggerMixin, get_logger, log_api_call, log_api_error,
+                          log_performance)
 
 # Get logger instance
 logger = get_logger(__name__)
