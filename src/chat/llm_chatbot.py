@@ -20,13 +20,25 @@ from utils.logger import (
 
 try:
     import openai
+    from openai import OpenAI
 except ImportError:
     openai = None
+    OpenAI = None
 
 try:
     import anthropic
+    from anthropic import Anthropic
 except ImportError:
     anthropic = None
+    Anthropic = None
+
+try:
+    from langchain.llms import OpenAI as LangChainOpenAI
+    from langchain.chat_models import ChatOpenAI, ChatAnthropic
+    from langchain.schema import HumanMessage, SystemMessage, AIMessage
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
 
 # Try to import requests for Hugging Face API
 try:

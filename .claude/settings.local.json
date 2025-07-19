@@ -47,7 +47,8 @@
       "Bash(pip3 install:*)",
       "Bash(export:*)",
       "Bash(flake8:*)",
-      "Bash(black:*)"
+      "Bash(black:*)",
+      "Bash(python -m pytest tests/unit/test_auth/test_security.py -v)"
     ],
     "deny": []
   }

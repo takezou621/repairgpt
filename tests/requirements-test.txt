@@ -1,7 +1,49 @@
-# Test requirements for RepairGPT night automation system testing
+# Test requirements for RepairGPT comprehensive testing suite
 # Issue #33: 夜間自動化システム動作確認
+# Issue #61: 包括的テストスイート実装
 
+# Core testing framework
 pytest>=7.0.0
 pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+pytest-xdist>=3.0.0
+
+# Web testing
+fastapi[all]>=0.100.0
+httpx>=0.24.0
+
+# JWT and security testing
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+
+# Database testing
+SQLAlchemy>=2.0.0
+alembic>=1.10.0
+
+# Mocking and fixtures
+factory-boy>=3.2.0
+Faker>=18.0.0
+
+# Load testing
+locust>=2.14.0
+
+# Coverage and reporting
+coverage[toml]>=7.0.0
+pytest-html>=3.1.0
+pytest-json-report>=1.5.0
+
+# Configuration and utilities
 PyYAML>=6.0
+python-dotenv>=1.0.0
 pathlib
+
+# Security testing
+bandit>=1.7.0
+
+# Performance monitoring
+pytest-benchmark>=4.0.0
+
+# Async testing utilities
+pytest-asyncio>=0.21.0
