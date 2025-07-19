@@ -1,0 +1,343 @@
+name: Claude Smart Automation v2
+
+on:
+  schedule:
+    # 平日: 23:00, 02:00, 05:00 JST (14:00, 17:00, 20:00 UTC)
+    - cron: '0 14,17,20 * * 1-5'
+    # 土日: 10:00, 14:00, 18:00, 22:00 JST (01:00, 05:00, 09:00, 13:00 UTC)
+    - cron: '0 1,5,9,13 * * 0,6'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Enable dry run mode'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  automation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Execute Smart Automation v2
+      uses: actions/github-script@v7
+      env:
+        DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+      with:
+        script: |
+          const now = new Date();
+          const day = now.getUTCDay();
+          const isWeekend = day === 0 || day === 6;
+          const isDryRun = process.env.DRY_RUN === 'true';
+          
+          console.log('🤖 Claude Smart Automation v2 - Started');
+          console.log('Current time:', now.toISOString());
+          console.log('Weekend:', isWeekend, '| Dry Run:', isDryRun);
+          
+          // API rate limit check
+          const rateLimit = await github.rest.rateLimit.get();
+          const remaining = rateLimit.data.rate.remaining;
+          console.log('📊 API Rate Limit:', remaining, 'remaining');
+          
+          if (remaining < 100) {
+            console.log('⏳ API rate limit low. Exiting to preserve quota.');
+            return;
+          }
+          
+          // Search for issues with claude-processed label
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'claude-processed',
+            state: 'open',
+            per_page: 10
+          });
+          
+          console.log('📋 Found', issues.data.length, 'issues with claude-processed label');
+          
+          let processedCount = 0;
+          let autoImplementedCount = 0;
+          
+          for (const issue of issues.data) {
+            console.log('\n🔍 Processing Issue #' + issue.number + ':', issue.title);
+            
+            // Skip if already being processed
+            const hasProcessingLabel = issue.labels.some(label => label.name === 'claude-processing');
+            if (hasProcessingLabel) {
+              console.log('⚠️ Issue #' + issue.number + ' is already being processed. Skipping...');
+              continue;
+            }
+            
+            try {
+              // Add processing label
+              if (!isDryRun) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['claude-processing']
+                });
+              }
+              
+              // Search for existing branches
+              const branches = await github.rest.repos.listBranches({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100
+              });
+              
+              const issueNum = issue.number.toString();
+              const matchingBranches = branches.data.filter(branch => {
+                const branchLower = branch.name.toLowerCase();
+                return (
+                  branchLower.includes('issue-' + issueNum) ||
+                  (branchLower.includes('claude') && branchLower.includes(issueNum)) ||
+                  branchLower.includes('fix-' + issueNum) ||
+                  branchLower.includes('feature-' + issueNum)
+                );
+              });
+              
+              if (matchingBranches.length === 0) {
+                console.log('⚠️ No branch found for Issue #' + issue.number + ' - Starting placeholder generation');
+                
+                // Auto-implementation for issues without branches
+                const newBranchName = 'claude-auto-impl-issue-' + issue.number;
+                
+                try {
+                  // Get main branch reference
+                  const mainBranch = await github.rest.repos.getBranch({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    branch: 'main'
+                  });
+                  
+                  // Create new branch
+                  if (!isDryRun) {
+                    await github.rest.git.createRef({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      ref: 'refs/heads/' + newBranchName,
+                      sha: mainBranch.data.commit.sha
+                    });
+                  }
+                  
+                  console.log('✅ Created branch:', newBranchName);
+                  
+                  // Analyze issue and determine implementation type
+                  const issueBody = issue.body || '';
+                  const issueTitle = issue.title || '';
+                  const combinedText = issueTitle + '\n\n' + issueBody;
+                  
+                  let implementationType = 'documentation';
+                  let targetFile = 'docs/auto-generated/issue-' + issue.number + '.md';
+                  
+                  if (combinedText.match(/ワークフロー|workflow|github.*action/i)) {
+                    implementationType = 'workflow';
+                    targetFile = 'docs/workflow-improvements.md';
+                  } else if (combinedText.match(/機能.*追加|feature.*add|実装|implement/i)) {
+                    implementationType = 'feature';
+                    targetFile = 'src/auto_placeholder_' + issue.number + '.py';
+                  } else if (combinedText.match(/バグ|bug|修正|fix|エラー|error/i)) {
+                    implementationType = 'bugfix';
+                    targetFile = 'src/bugfix_placeholder_' + issue.number + '.py';
+                  }
+                  
+                  console.log('📊 Implementation type:', implementationType);
+                  
+                  // Generate PLACEHOLDER content with clear indication
+                  let implementationContent = '';
+                  const timestamp = new Date().toISOString();
+                  
+                  if (implementationType === 'feature' || implementationType === 'bugfix') {
+                    implementationContent = '#!/usr/bin/env python3\n';
+                    implementationContent += '"""\n';
+                    implementationContent += '⚠️ PLACEHOLDER IMPLEMENTATION - REQUIRES MANUAL COMPLETION ⚠️\n\n';
+                    implementationContent += 'Issue #' + issue.number + ': ' + issueTitle + '\n';
+                    implementationContent += 'Generated: ' + timestamp + '\n\n';
+                    implementationContent += 'This is a placeholder file created by Smart Automation.\n';
+                    implementationContent += 'A developer needs to implement the actual functionality.\n';
+                    implementationContent += '"""\n\n';
+                    implementationContent += '# TODO: This is a placeholder implementation\n';
+                    implementationContent += '# TODO: Please replace with actual implementation\n\n';
+                    implementationContent += 'def placeholder_' + issue.number + '():\n';
+                    implementationContent += '    """\n';
+                    implementationContent += '    Placeholder function for Issue #' + issue.number + '\n';
+                    implementationContent += '    \n';
+                    implementationContent += '    Requirements:\n';
+                    if (issueBody) {
+                      const lines = issueBody.split('\n').slice(0, 10);
+                      lines.forEach(line => {
+                        implementationContent += '    ' + line + '\n';
+                      });
+                    }
+                    implementationContent += '    """\n';
+                    implementationContent += '    raise NotImplementedError(\n';
+                    implementationContent += '        "This is a placeholder. "\n';
+                    implementationContent += '        "Please implement the actual functionality for Issue #' + issue.number + '"\n';
+                    implementationContent += '    )\n\n\n';
+                    implementationContent += 'if __name__ == "__main__":\n';
+                    implementationContent += '    print("⚠️  This is a PLACEHOLDER implementation")\n';
+                    implementationContent += '    print("📝 Issue #' + issue.number + ': ' + issueTitle + '")\n';
+                    implementationContent += '    print("🔧 Manual implementation required!")\n';
+                    implementationContent += '    try:\n';
+                    implementationContent += '        placeholder_' + issue.number + '()\n';
+                    implementationContent += '    except NotImplementedError as e:\n';
+                    implementationContent += '        print(f"❌ {e}")\n';
+                  } else {
+                    implementationContent = '# ' + issueTitle + '\n\n';
+                    implementationContent += '## ⚠️ PLACEHOLDER DOCUMENT - REQUIRES COMPLETION ⚠️\n\n';
+                    implementationContent += 'この文書は **Claude Smart Automation** により自動生成されたプレースホルダーです。\n\n';
+                    implementationContent += '### 📋 Issue概要\n';
+                    implementationContent += '- **Issue番号**: #' + issue.number + '\n';
+                    implementationContent += '- **タイトル**: ' + issueTitle + '\n';
+                    implementationContent += '- **実装タイプ**: ' + implementationType + '\n';
+                    implementationContent += '- **自動生成日時**: ' + timestamp + '\n\n';
+                    implementationContent += '### ⚠️ 重要な注意事項\n\n';
+                    implementationContent += '**これはプレースホルダーファイルです。実際の実装が必要です。**\n\n';
+                    implementationContent += '### 📝 Issue詳細\n\n';
+                    if (issueBody) {
+                      implementationContent += issueBody + '\n\n';
+                    }
+                    implementationContent += '### 🔧 必要な作業\n\n';
+                    implementationContent += '1. このプレースホルダーを実際の実装に置き換える\n';
+                    implementationContent += '2. Issue要件を満たす機能を実装\n';
+                    implementationContent += '3. テストコードを作成\n';
+                    implementationContent += '4. ドキュメントを更新\n\n';
+                    implementationContent += '---\n';
+                    implementationContent += '🚀 **Claude Smart Automation v2** - プレースホルダー生成システム\n\n';
+                    implementationContent += 'Generated with [Claude Code](https://claude.ai/code)\n';
+                  }
+                  
+                  // Create file in the new branch
+                  if (!isDryRun) {
+                    const encodedContent = Buffer.from(implementationContent).toString('base64');
+                    
+                    await github.rest.repos.createOrUpdateFileContents({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      path: targetFile,
+                      message: 'placeholder: Add placeholder for Issue #' + issue.number + '\n\nThis is a placeholder that requires manual implementation',
+                      content: encodedContent,
+                      branch: newBranchName
+                    });
+                  }
+                  
+                  console.log('📝 Created placeholder file:', targetFile);
+                  
+                  // Add comment to issue
+                  const commentBody = '🤖 **プレースホルダー作成完了**\n\n' +
+                    '⚠️ **注意**: これはプレースホルダーです。実際の実装が必要です。\n\n' +
+                    '✅ **新ブランチ**: `' + newBranchName + '`\n' +
+                    '📝 **プレースホルダーファイル**: ' + targetFile + '\n' +
+                    '🤖 **実装タイプ**: ' + implementationType + '\n\n' +
+                    '**次のステップ:**\n' +
+                    '1. 🔧 プレースホルダーを実際の実装に置き換える\n' +
+                    '2. 📊 Issue要件を満たす機能を実装\n' +
+                    '3. 🧪 テストコードを作成\n' +
+                    '4. 📄 PRを作成して詳細レビュー\n\n' +
+                    '---\n' +
+                    '🤖 **Claude Smart Automation v2** - プレースホルダー生成システム';
+                  
+                  if (!isDryRun) {
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      body: commentBody
+                    });
+                  }
+                  
+                  autoImplementedCount++;
+                  console.log('🎉 Placeholder generation completed for Issue #' + issue.number);
+                  
+                } catch (autoError) {
+                  console.log('❌ Placeholder generation failed:', autoError.message);
+                  
+                  if (!isDryRun) {
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      body: '❌ **プレースホルダー生成エラー**\n\nエラー: ' + autoError.message + '\n\n手動対応をお願いします。'
+                    });
+                  }
+                }
+              } else {
+                console.log('✅ Found', matchingBranches.length, 'branch(es) for Issue #' + issue.number);
+                
+                // Handle existing branches - create PR if needed
+                const targetBranch = matchingBranches[0];
+                
+                // Check for existing PRs
+                const existingPRs = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: context.repo.owner + ':' + targetBranch.name,
+                  state: 'open'
+                });
+                
+                if (existingPRs.data.length === 0) {
+                  console.log('🚀 Creating PR for Issue #' + issue.number + '...');
+                  
+                  const timeContext = isWeekend ? '土日昼間' : '平日夜間';
+                  
+                  if (!isDryRun) {
+                    const pr = await github.rest.pulls.create({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      title: 'fix: ' + issue.title + ' (closes #' + issue.number + ')',
+                      head: targetBranch.name,
+                      base: 'main',
+                      body: '## 🤖 ' + timeContext + '自動化\n\n' +
+                        '**Issue**: #' + issue.number + '\n' +
+                        '**ブランチ**: ' + targetBranch.name + '\n' +
+                        '**実行時刻**: ' + now.toISOString() + '\n\n' +
+                        '### 📋 変更内容\n' +
+                        issue.title + 'の実装・修正\n\n' +
+                        '---\n' +
+                        '🚀 Generated with [Claude Code](https://claude.ai/code)\n\n' +
+                        'Co-Authored-By: Claude <noreply@anthropic.com>'
+                    });
+                    
+                    console.log('✅ Created PR #' + pr.data.number);
+                  }
+                } else {
+                  console.log('ℹ️ PR already exists for Issue #' + issue.number);
+                }
+              }
+              
+              // Remove processing label
+              if (!isDryRun) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  name: 'claude-processing'
+                }).catch(() => {}); // Ignore if label doesn't exist
+              }
+              
+              processedCount++;
+              
+            } catch (error) {
+              console.log('❌ Error processing Issue #' + issue.number + ':', error.message);
+            }
+          }
+          
+          // Print execution summary
+          const timeContext = isWeekend ? '土日昼間' : '平日夜間';
+          console.log('\n📊 **実行完了** - ' + timeContext + '自動実行');
+          console.log('- 処理対象Issues:', issues.data.length + '個');
+          console.log('- 処理完了:', processedCount + '個');
+          console.log('- プレースホルダー生成:', autoImplementedCount + '個');
+          console.log('- 実行モード:', isDryRun ? 'ドライラン' : '本番実行');
