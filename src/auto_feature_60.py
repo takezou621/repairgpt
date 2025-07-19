@@ -327,4 +327,4 @@ if __name__ == "__main__":
     print(f"\n✅ Feature implementation complete!")
     print(f"   Issue: #{result['issue']}")
     print(f"   Status: {result['status']}")
-    print(f"   Features: {len(result['features'])} capabilities")\n
+    print(f"   Features: {len(result['features'])} capabilities")

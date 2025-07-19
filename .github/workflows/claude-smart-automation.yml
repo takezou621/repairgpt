@@ -1,23 +1,27 @@
-name: Claude Smart Automation
+name: Claude Smart Automation (DEPRECATED)
 
-on:
-  schedule:
-    # 平日: 23:00, 02:00, 05:00 JST (14:00, 17:00, 20:00 UTC)
-    - cron: '0 14,17,20 * * 1-5'
-    # 土日: 10:00, 14:00, 18:00, 22:00 JST (01:00, 05:00, 09:00, 13:00 UTC)
-    - cron: '0 1,5,9,13 * * 0,6'
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Enable dry run mode'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
+# DEPRECATED: This workflow has been replaced by claude-smart-automation-v2.yml
+# Kept for historical reference only - DO NOT ENABLE
 
-jobs:
+# on:
+#   schedule:
+#     # 平日: 23:00, 02:00, 05:00 JST (14:00, 17:00, 20:00 UTC)
+#     - cron: '0 14,17,20 * * 1-5'
+#     # 土日: 10:00, 14:00, 18:00, 22:00 JST (01:00, 05:00, 09:00, 13:00 UTC)
+#     - cron: '0 1,5,9,13 * * 0,6'
+# workflow_dispatch:
+#   inputs:
+#     dry_run:
+#       description: 'Enable dry run mode'
+#       required: false
+#       default: 'false'
+#       type: choice
+#       options:
+#         - 'false'
+#         - 'true'
+
+# DEPRECATED - DO NOT USE
+deprecated_jobs:
   automation:
     runs-on: ubuntu-latest
     permissions:

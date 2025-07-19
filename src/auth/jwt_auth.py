@@ -12,7 +12,10 @@ import jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
 
-from ..utils.logger import get_logger
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
