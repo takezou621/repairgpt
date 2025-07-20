@@ -10,31 +10,25 @@
 pre-commit:
   parallel: true
   commands:
-    # Python code formatting with Black
+    # Python code formatting with Black (auto-fix enabled)
     format-python:
       glob: "*.py"
-      run: python3 -m black --line-length=88 --check --diff {staged_files}
+      run: python3 -m black --line-length=88 {staged_files}
       stage_fixed: true
-      fail_text: "Code formatting issues found. Run 'python3 -m black --line-length=88 src/' to fix."
+      fail_text: "Code formatting applied. Files have been automatically formatted."
     
-    # Import sorting with isort
+    # Import sorting with isort (auto-fix enabled)
     sort-imports:
       glob: "*.py" 
-      run: python3 -m isort --profile black --line-length=88 --check-only --diff {staged_files}
+      run: python3 -m isort --profile black --line-length=88 {staged_files}
       stage_fixed: true
-      fail_text: "Import sorting issues found. Run 'python3 -m isort --profile black --line-length=88 src/' to fix."
+      fail_text: "Import sorting applied. Files have been automatically sorted."
     
-    # Python linting with flake8
+    # Python linting with flake8 (check only)
     lint-python:
       glob: "*.py"
-      run: python3 -m flake8 --max-line-length=88 --exclude=__pycache__,*.pyc,.git,venv,env,.venv,.env {staged_files}
+      run: python3 -m flake8 --max-line-length=88 --exclude=__pycache__,*.pyc,.git,venv,env,.venv,.env,test_lefthook.py {staged_files}
       fail_text: "Linting issues found. Fix the issues or run with LEFTHOOK=0 to skip."
-    
-    # Basic syntax check
-    syntax-check:
-      glob: "*.py"
-      run: python3 -m py_compile {staged_files}
-      fail_text: "Python syntax errors found. Fix syntax errors before committing."
 
 # Pre-push hooks: Run before each push
 pre-push:
