@@ -1,53 +1,38 @@
 """
-FastAPI main application with i18n and security support
-Implements Issue #90: 🔒 設定管理とセキュリティ強化
+FastAPI main application - Refactored for better maintainability
 """
+
+import logging
 
 from fastapi import Request
 
-from ..config.settings import settings
-from . import create_app, get_localized_response
-from .routes import router
+from ..config.settings_simple import settings
+from . import create_app
+from .routes import auth_router, chat_router, devices_router, health_router
 
-# Create FastAPI app with i18n and security support
+# Create FastAPI app
 app = create_app()
 
-# Include API routes with configured prefix
-app.include_router(router, prefix=settings.api_prefix)
+# Include all route modules
+app.include_router(health_router)
+app.include_router(auth_router, prefix=settings.api_prefix)
+app.include_router(chat_router, prefix=settings.api_prefix)
+app.include_router(devices_router, prefix=settings.api_prefix)
 
 
-# Root endpoint with secure configuration
 @app.get("/")
 async def root(request: Request):
-    """Root endpoint with localized response"""
-    return get_localized_response(
-        request,
-        "api.root.message",
-        app_name=settings.app_name,
-        version=settings.app_version,
-        docs="/docs",
-        environment=settings.environment.value,
-        security_enabled=settings.enable_security_headers,
-        supported_languages=settings.supported_languages,
-    )
-
-
-# Health check endpoint
-@app.get("/health")
-async def health_check(request: Request):
-    """Health check endpoint"""
-    return get_localized_response(
-        request,
-        "api.health.message",
-        status="healthy",
-        environment=settings.environment.value,
-        version=settings.app_version,
-    )
+    """Root endpoint"""
+    return {
+        "app_name": settings.app_name,
+        "version": settings.app_version,
+        "environment": settings.environment.value,
+        "docs": "/docs",
+        "supported_languages": settings.supported_languages,
+    }
 
 
 if __name__ == "__main__":
-    import logging
-
     import uvicorn
 
     # Configure logging

@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import security and configuration
-from ..config.settings import settings, validate_api_keys
+from ..config.settings_simple import settings, validate_api_keys
 from ..utils.security import (
     RateLimiter,
     RateLimitMiddleware,
@@ -148,7 +148,7 @@ def create_app() -> FastAPI:
 
         # Validate production configuration
         if settings.is_production():
-            from ..config.settings import validate_production_config
+            from ..config.settings_simple import validate_production_config
 
             issues = validate_production_config()
             if issues:

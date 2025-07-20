@@ -8,7 +8,12 @@ from enum import Enum
 from typing import List, Optional, Set
 
 from pydantic import Field, validator
-from pydantic_settings import BaseSettings
+
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    # Fallback for older pydantic versions
+    from pydantic import BaseSettings
 
 
 class Environment(str, Enum):
@@ -31,35 +36,22 @@ class LogLevel(str, Enum):
 
 
 class Settings(BaseSettings):
-    """
-    Application settings with environment-based configuration
-    """
+    """Application settings with environment-based configuration"""
 
-    # ============================================================================
     # Environment Configuration
-    # ============================================================================
-    environment: Environment = Field(
-        default=Environment.DEVELOPMENT, description="Application environment"
-    )
-    debug: bool = Field(default=False, description="Enable debug mode")
-    log_level: LogLevel = Field(default=LogLevel.INFO, description="Logging level")
+    environment: Environment = Field(default=Environment.DEVELOPMENT)
+    debug: bool = Field(default=False)
+    log_level: LogLevel = Field(default=LogLevel.INFO)
 
-    # ============================================================================
     # Application Configuration
-    # ============================================================================
-    app_name: str = Field(default="RepairGPT", description="Application name")
-    app_version: str = Field(default="1.0.0", description="Application version")
-    app_description: str = Field(
-        default="AI-powered device repair assistant",
-        description="Application description",
-    )
+    app_name: str = Field(default="RepairGPT")
+    app_version: str = Field(default="1.0.0")
+    app_description: str = Field(default="AI-powered device repair assistant")
 
-    # ============================================================================
     # API Configuration
-    # ============================================================================
-    api_host: str = Field(default="0.0.0.0", description="API host address")
-    api_port: int = Field(default=8000, description="API port number")
-    api_prefix: str = Field(default="/api/v1", description="API URL prefix")
+    api_host: str = Field(default="0.0.0.0")
+    api_port: int = Field(default=8000)
+    api_prefix: str = Field(default="/api/v1")
 
     # ============================================================================
     # Security Configuration
