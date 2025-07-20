@@ -25,6 +25,48 @@ from . import get_localized_error, get_localized_response
 logger = logging.getLogger(__name__)
 
 
+# Auth Models
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    language: Optional[str] = "en"
+
+    @validator("username")
+    def validate_username(cls, v):
+        if not v or len(v) < 3:
+            raise ValueError("Username must be at least 3 characters")
+        return sanitize_input(v, max_length=50)
+
+    @validator("email")
+    def validate_email(cls, v):
+        import re
+
+        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        if not re.match(email_regex, v):
+            raise ValueError("Invalid email format")
+        return v
+
+    @validator("password")
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    username: str
+    expires_in: int
+
+
 # Request/Response models with security validation
 class ChatRequest(BaseModel):
     message: str
@@ -102,6 +144,79 @@ class HealthResponse(BaseModel):
 
 # Create router
 router = APIRouter()
+
+
+# Auth endpoints
+@router.post("/auth/register", response_model=AuthResponse)
+async def register_user(register_request: RegisterRequest, request: Request):
+    """Register a new user"""
+    try:
+        from ..auto_feature_60 import AuthenticationFeature
+
+        auth_feature = AuthenticationFeature()
+        result = await auth_feature.register_user(
+            email=register_request.email,
+            password=register_request.password,
+            language=register_request.language,
+            username=register_request.username,
+        )
+
+        if result["success"]:
+            return AuthResponse(
+                access_token=result["token"]["access_token"],
+                user_id=result["user"]["user_id"],
+                username=result["user"]["username"],
+                expires_in=3600,
+            )
+        else:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/auth/login", response_model=AuthResponse)
+async def login_user(login_request: LoginRequest, request: Request):
+    """Login user"""
+    try:
+        from ..auto_feature_60 import AuthenticationFeature
+
+        auth_feature = AuthenticationFeature()
+        result = await auth_feature.login_user(
+            email=login_request.username,  # Use username as email for now
+            password=login_request.password,
+        )
+
+        if result["success"]:
+            return AuthResponse(
+                access_token=result["token"]["access_token"],
+                user_id=result["user"]["user_id"],
+                username=result["user"]["username"],
+                expires_in=3600,
+            )
+        else:
+            raise HTTPException(status_code=401, detail=result["error"])
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/auth/me")
+async def get_current_user(request: Request, token: str = Depends()):
+    """Get current user information"""
+    try:
+        from ..auto_feature_60 import AuthenticationFeature
+
+        auth_feature = AuthenticationFeature()
+        result = await auth_feature.verify_token(token)
+
+        if result["success"]:
+            return {"user": result["user"]}
+        else:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/health", response_model=HealthResponse)
