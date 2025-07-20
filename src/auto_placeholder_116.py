@@ -269,7 +269,7 @@ async def demo_ifixit_integration():
             if tools:
                 print(f"      Tools: {', '.join(tools[:3])}")
             else:
-                print(f"      Tools: Not specified")
+                print("      Tools: Not specified")
     else:
         print(f"❌ Search failed: {results['error']}")
 
@@ -321,7 +321,7 @@ def auto_feature_116():
 
 if __name__ == "__main__":
     result = auto_feature_116()
-    print(f"\n✅ Feature implementation complete!")
+    print("\n✅ Feature implementation complete!")
     print(f"   Issue: #{result['issue']}")
     print(f"   Status: {result['status']}")
     print(f"   Features: {len(result['features'])} capabilities")

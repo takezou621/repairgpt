@@ -373,10 +373,10 @@ class ImageAnalysisService:
 
             # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
             lab = cv2.cvtColor(cv_image, cv2.COLOR_BGR2LAB)
-            l, a, b = cv2.split(lab)
+            light, a, b = cv2.split(lab)
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l = clahe.apply(l)
-            enhanced = cv2.merge([l, a, b])
+            light = clahe.apply(light)
+            enhanced = cv2.merge([light, a, b])
             enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
 
             # Convert back to PIL
