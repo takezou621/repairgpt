@@ -13,9 +13,7 @@ import streamlit as st
 from ui.responsive_design import ResponsiveDesignManager
 
 
-def create_enhanced_info_card(
-    title: str, content: str, icon: str = "ℹ️", card_type: str = "info"
-) -> None:
+def create_enhanced_info_card(title: str, content: str, icon: str = "ℹ️", card_type: str = "info") -> None:
     """
     Create an enhanced information card with responsive design.
 

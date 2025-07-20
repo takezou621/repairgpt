@@ -31,18 +31,14 @@ class Settings:
 
     def __init__(self):
         # Environment Configuration
-        self.environment = Environment(
-            os.getenv("REPAIRGPT_ENVIRONMENT", "development")
-        )
+        self.environment = Environment(os.getenv("REPAIRGPT_ENVIRONMENT", "development"))
         self.debug = os.getenv("REPAIRGPT_DEBUG", "false").lower() == "true"
         self.log_level = LogLevel(os.getenv("REPAIRGPT_LOG_LEVEL", "INFO"))
 
         # Application Configuration
         self.app_name = os.getenv("REPAIRGPT_APP_NAME", "RepairGPT")
         self.app_version = os.getenv("REPAIRGPT_APP_VERSION", "1.0.0")
-        self.app_description = os.getenv(
-            "REPAIRGPT_APP_DESCRIPTION", "AI-powered device repair assistant"
-        )
+        self.app_description = os.getenv("REPAIRGPT_APP_DESCRIPTION", "AI-powered device repair assistant")
 
         # API Configuration
         self.api_host = os.getenv("REPAIRGPT_API_HOST", "0.0.0.0")
@@ -53,25 +49,17 @@ class Settings:
         self.secret_key = os.getenv("REPAIRGPT_SECRET_KEY", "")
         self.allowed_hosts = self._parse_list(os.getenv("REPAIRGPT_ALLOWED_HOSTS", "*"))
         self.cors_origins = self._parse_list(
-            os.getenv(
-                "REPAIRGPT_CORS_ORIGINS", "http://localhost:3000,http://localhost:8501"
-            )
+            os.getenv("REPAIRGPT_CORS_ORIGINS", "http://localhost:3000,http://localhost:8501")
         )
-        self.cors_methods = self._parse_list(
-            os.getenv("REPAIRGPT_CORS_METHODS", "GET,POST,PUT,DELETE")
-        )
+        self.cors_methods = self._parse_list(os.getenv("REPAIRGPT_CORS_METHODS", "GET,POST,PUT,DELETE"))
         self.cors_headers = self._parse_list(os.getenv("REPAIRGPT_CORS_HEADERS", "*"))
 
         # Rate limiting
-        self.rate_limit_requests_per_minute = int(
-            os.getenv("REPAIRGPT_RATE_LIMIT_REQUESTS_PER_MINUTE", "60")
-        )
+        self.rate_limit_requests_per_minute = int(os.getenv("REPAIRGPT_RATE_LIMIT_REQUESTS_PER_MINUTE", "60"))
         self.rate_limit_burst = int(os.getenv("REPAIRGPT_RATE_LIMIT_BURST", "10"))
 
         # Security headers
-        self.enable_security_headers = (
-            os.getenv("REPAIRGPT_ENABLE_SECURITY_HEADERS", "true").lower() == "true"
-        )
+        self.enable_security_headers = os.getenv("REPAIRGPT_ENABLE_SECURITY_HEADERS", "true").lower() == "true"
         self.hsts_max_age = int(os.getenv("REPAIRGPT_HSTS_MAX_AGE", "31536000"))
 
         # API Keys and External Services
@@ -80,15 +68,9 @@ class Settings:
         self.ifixit_api_key = os.getenv("REPAIRGPT_IFIXIT_API_KEY")
 
         # API endpoints
-        self.openai_api_base = os.getenv(
-            "REPAIRGPT_OPENAI_API_BASE", "https://api.openai.com/v1"
-        )
-        self.claude_api_base = os.getenv(
-            "REPAIRGPT_CLAUDE_API_BASE", "https://api.anthropic.com"
-        )
-        self.ifixit_api_base = os.getenv(
-            "REPAIRGPT_IFIXIT_API_BASE", "https://www.ifixit.com/api/2.0"
-        )
+        self.openai_api_base = os.getenv("REPAIRGPT_OPENAI_API_BASE", "https://api.openai.com/v1")
+        self.claude_api_base = os.getenv("REPAIRGPT_CLAUDE_API_BASE", "https://api.anthropic.com")
+        self.ifixit_api_base = os.getenv("REPAIRGPT_IFIXIT_API_BASE", "https://www.ifixit.com/api/2.0")
 
         # API timeouts and limits
         self.api_timeout_seconds = int(os.getenv("REPAIRGPT_API_TIMEOUT_SECONDS", "30"))
@@ -96,36 +78,24 @@ class Settings:
         self.max_text_length = int(os.getenv("REPAIRGPT_MAX_TEXT_LENGTH", "10000"))
 
         # Database Configuration
-        self.database_url = os.getenv(
-            "REPAIRGPT_DATABASE_URL", "sqlite:///./repairgpt.db"
-        )
-        self.database_echo = (
-            os.getenv("REPAIRGPT_DATABASE_ECHO", "false").lower() == "true"
-        )
+        self.database_url = os.getenv("REPAIRGPT_DATABASE_URL", "sqlite:///./repairgpt.db")
+        self.database_echo = os.getenv("REPAIRGPT_DATABASE_ECHO", "false").lower() == "true"
         self.database_pool_size = int(os.getenv("REPAIRGPT_DATABASE_POOL_SIZE", "5"))
-        self.database_max_overflow = int(
-            os.getenv("REPAIRGPT_DATABASE_MAX_OVERFLOW", "10")
-        )
+        self.database_max_overflow = int(os.getenv("REPAIRGPT_DATABASE_MAX_OVERFLOW", "10"))
 
         # Cache Configuration (Redis)
         self.redis_url = os.getenv("REPAIRGPT_REDIS_URL", "redis://localhost:6379/0")
         self.cache_ttl_seconds = int(os.getenv("REPAIRGPT_CACHE_TTL_SECONDS", "3600"))
-        self.cache_enabled = (
-            os.getenv("REPAIRGPT_CACHE_ENABLED", "true").lower() == "true"
-        )
+        self.cache_enabled = os.getenv("REPAIRGPT_CACHE_ENABLED", "true").lower() == "true"
 
         # File Storage Configuration
         self.upload_dir = os.getenv("REPAIRGPT_UPLOAD_DIR", "./uploads")
         self.temp_dir = os.getenv("REPAIRGPT_TEMP_DIR", "./temp")
-        self.allowed_file_types = self._parse_set(
-            os.getenv("REPAIRGPT_ALLOWED_FILE_TYPES", "jpg,jpeg,png,webp")
-        )
+        self.allowed_file_types = self._parse_set(os.getenv("REPAIRGPT_ALLOWED_FILE_TYPES", "jpg,jpeg,png,webp"))
 
         # Internationalization
         self.default_language = os.getenv("REPAIRGPT_DEFAULT_LANGUAGE", "en")
-        self.supported_languages = self._parse_list(
-            os.getenv("REPAIRGPT_SUPPORTED_LANGUAGES", "en,ja")
-        )
+        self.supported_languages = self._parse_list(os.getenv("REPAIRGPT_SUPPORTED_LANGUAGES", "en,ja"))
 
         # Ensure directories exist
         os.makedirs(self.upload_dir, exist_ok=True)

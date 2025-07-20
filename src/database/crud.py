@@ -34,9 +34,7 @@ class UserCRUD:
         return user
 
     @staticmethod
-    async def create_user_async(
-        db: AsyncSession, username: str, email: str, password_hash: str
-    ) -> User:
+    async def create_user_async(db: AsyncSession, username: str, email: str, password_hash: str) -> User:
         """Create a new user asynchronously"""
         user = User(username=username, email=email, password_hash=password_hash)
         db.add(user)
@@ -62,11 +60,7 @@ class UserCRUD:
     @staticmethod
     def update_last_login(db: Session, user_id: Union[str, uuid.UUID]) -> bool:
         """Update user's last login timestamp"""
-        result = (
-            db.query(User)
-            .filter(User.id == user_id)
-            .update({"last_login_at": datetime.utcnow()})
-        )
+        result = db.query(User).filter(User.id == user_id).update({"last_login_at": datetime.utcnow()})
         db.commit()
         return result > 0
 
@@ -75,9 +69,7 @@ class DeviceCRUD:
     """CRUD operations for Device model"""
 
     @staticmethod
-    def create_device(
-        db: Session, device_id: str, name: str, category: str, **kwargs
-    ) -> Device:
+    def create_device(db: Session, device_id: str, name: str, category: str, **kwargs) -> Device:
         """Create a new device"""
         device = Device(id=device_id, name=name, category=category, **kwargs)
         db.add(device)
@@ -91,16 +83,9 @@ class DeviceCRUD:
         return db.query(Device).filter(Device.id == device_id).first()
 
     @staticmethod
-    def get_devices_by_category(
-        db: Session, category: str, limit: int = 10
-    ) -> List[Device]:
+    def get_devices_by_category(db: Session, category: str, limit: int = 10) -> List[Device]:
         """Get devices by category"""
-        return (
-            db.query(Device)
-            .filter(Device.category == category, Device.is_active)
-            .limit(limit)
-            .all()
-        )
+        return db.query(Device).filter(Device.category == category, Device.is_active).limit(limit).all()
 
     @staticmethod
     def search_devices(db: Session, query: str, limit: int = 10) -> List[Device]:
@@ -146,9 +131,7 @@ class RepairGuideCRUD:
         return guide
 
     @staticmethod
-    def get_repair_guide_by_id(
-        db: Session, guide_id: Union[str, uuid.UUID]
-    ) -> Optional[RepairGuide]:
+    def get_repair_guide_by_id(db: Session, guide_id: Union[str, uuid.UUID]) -> Optional[RepairGuide]:
         """Get repair guide by ID with steps"""
         return (
             db.query(RepairGuide)
@@ -241,9 +224,7 @@ class ChatSessionCRUD:
         return session
 
     @staticmethod
-    def get_chat_session_by_id(
-        db: Session, session_id: Union[str, uuid.UUID]
-    ) -> Optional[ChatSession]:
+    def get_chat_session_by_id(db: Session, session_id: Union[str, uuid.UUID]) -> Optional[ChatSession]:
         """Get chat session by ID with messages"""
         return (
             db.query(ChatSession)
@@ -272,9 +253,7 @@ class ChatSessionCRUD:
         db.add(message)
 
         # Update session activity
-        db.query(ChatSession).filter(ChatSession.id == session_id).update(
-            {"last_activity_at": datetime.utcnow()}
-        )
+        db.query(ChatSession).filter(ChatSession.id == session_id).update({"last_activity_at": datetime.utcnow()})
 
         db.commit()
         db.refresh(message)
@@ -329,11 +308,7 @@ class RepairAttemptCRUD:
         if status:
             update_data["status"] = status
 
-        result = (
-            db.query(RepairAttempt)
-            .filter(RepairAttempt.id == attempt_id)
-            .update(update_data)
-        )
+        result = db.query(RepairAttempt).filter(RepairAttempt.id == attempt_id).update(update_data)
         db.commit()
         return result > 0
 
@@ -358,18 +333,12 @@ class RepairAttemptCRUD:
         if rating and 1 <= rating <= 5:
             update_data["rating"] = rating
 
-        result = (
-            db.query(RepairAttempt)
-            .filter(RepairAttempt.id == attempt_id)
-            .update(update_data)
-        )
+        result = db.query(RepairAttempt).filter(RepairAttempt.id == attempt_id).update(update_data)
         db.commit()
         return result > 0
 
     @staticmethod
-    def get_user_repair_history(
-        db: Session, user_id: Union[str, uuid.UUID], limit: int = 10
-    ) -> List[RepairAttempt]:
+    def get_user_repair_history(db: Session, user_id: Union[str, uuid.UUID], limit: int = 10) -> List[RepairAttempt]:
         """Get user's repair attempt history"""
         return (
             db.query(RepairAttempt)
@@ -390,9 +359,7 @@ class StatisticsCRUD:
             db.query(
                 RepairAttempt.device_id,
                 Device.name.label("device_name"),
-                func.avg(func.cast(RepairAttempt.success, func.Float)).label(
-                    "success_rate"
-                ),
+                func.avg(func.cast(RepairAttempt.success, func.Float)).label("success_rate"),
                 func.count(RepairAttempt.id).label("total_attempts"),
             )
             .join(Device)
@@ -443,17 +410,11 @@ class StatisticsCRUD:
         return {
             "total_users": db.query(User).count(),
             "total_devices": db.query(Device).filter(Device.is_active).count(),
-            "total_repair_guides": db.query(RepairGuide)
-            .filter(RepairGuide.is_active)
-            .count(),
+            "total_repair_guides": db.query(RepairGuide).filter(RepairGuide.is_active).count(),
             "total_chat_sessions": db.query(ChatSession).count(),
-            "active_sessions": db.query(ChatSession)
-            .filter(ChatSession.status == "active")
-            .count(),
+            "active_sessions": db.query(ChatSession).filter(ChatSession.status == "active").count(),
             "total_repair_attempts": db.query(RepairAttempt).count(),
-            "successful_repairs": db.query(RepairAttempt)
-            .filter(RepairAttempt.success)
-            .count(),
+            "successful_repairs": db.query(RepairAttempt).filter(RepairAttempt.success).count(),
         }
 
 

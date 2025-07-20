@@ -78,9 +78,7 @@ class JWTAuthManager:
 
         # Warn if using default secret key
         if secret_key == SECRET_KEY and not os.getenv("JWT_SECRET_KEY"):
-            logger.warning(
-                "Using default JWT secret key. Set JWT_SECRET_KEY environment variable in production!"
-            )
+            logger.warning("Using default JWT secret key. Set JWT_SECRET_KEY environment variable in production!")
 
     def hash_password(self, password: str) -> str:
         """
@@ -190,9 +188,7 @@ class JWTAuthManager:
             exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
             iat = datetime.fromtimestamp(payload["iat"], tz=timezone.utc)
 
-            return TokenData(
-                sub=payload["sub"], exp=exp, iat=iat, type=payload.get("type", "access")
-            )
+            return TokenData(sub=payload["sub"], exp=exp, iat=iat, type=payload.get("type", "access"))
 
         except jwt.ExpiredSignatureError:
             logger.warning("Token has expired")

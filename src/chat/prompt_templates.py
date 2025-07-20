@@ -156,9 +156,7 @@ Always:
         template = template_dict.get(template_variant, template_dict.get("base", ""))
 
         if not template:
-            raise ValueError(
-                f"No template found for {prompt_type.value}/{template_variant}"
-            )
+            raise ValueError(f"No template found for {prompt_type.value}/{template_variant}")
 
         # Format template with context
         formatted_prompt = template.format(
@@ -166,24 +164,10 @@ Always:
             device_model=context.device_model,
             issue_description=context.issue_description,
             user_skill_level=context.user_skill_level,
-            available_tools=(
-                ", ".join(context.available_tools)
-                if context.available_tools
-                else "Not specified"
-            ),
-            safety_concerns=(
-                ", ".join(context.safety_concerns)
-                if context.safety_concerns
-                else "None identified"
-            ),
-            previous_attempts=(
-                ", ".join(context.previous_attempts)
-                if context.previous_attempts
-                else "None"
-            ),
-            symptoms=(
-                ", ".join(context.symptoms) if context.symptoms else "Not detailed"
-            ),
+            available_tools=(", ".join(context.available_tools) if context.available_tools else "Not specified"),
+            safety_concerns=(", ".join(context.safety_concerns) if context.safety_concerns else "None identified"),
+            previous_attempts=(", ".join(context.previous_attempts) if context.previous_attempts else "None"),
+            symptoms=(", ".join(context.symptoms) if context.symptoms else "Not detailed"),
             environment=context.environment,
             urgency=context.urgency,
             budget_constraint=context.budget_constraint,
@@ -194,9 +178,7 @@ Always:
 
     def get_system_prompt(self, specialist_type: str = "repair_expert") -> str:
         """Get system prompt for specific specialist type"""
-        return self.system_prompts.get(
-            specialist_type, self.system_prompts["repair_expert"]
-        )
+        return self.system_prompts.get(specialist_type, self.system_prompts["repair_expert"])
 
     # Template definitions
     def _diagnosis_template(self) -> str:

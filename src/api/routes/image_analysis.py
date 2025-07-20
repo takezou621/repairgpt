@@ -42,9 +42,7 @@ async def analyze_device_image(
 
         # Validate file type
         allowed_types = [f"image/{ext}" for ext in settings.allowed_file_types]
-        if not file.content_type or not validate_content_type(
-            file.content_type, allowed_types
-        ):
+        if not file.content_type or not validate_content_type(file.content_type, allowed_types):
             logger.warning(f"Invalid file type uploaded: {file.content_type}")
             raise HTTPException(
                 status_code=400,
@@ -91,9 +89,7 @@ async def analyze_device_image(
         # Initialize image analysis service
         if not settings.openai_api_key:
             logger.error("OpenAI API key not configured")
-            raise HTTPException(
-                status_code=503, detail="Image analysis service unavailable"
-            )
+            raise HTTPException(status_code=503, detail="Image analysis service unavailable")
 
         # Create audit log
         client_ip = get_client_ip(request)

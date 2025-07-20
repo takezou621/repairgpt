@@ -194,9 +194,7 @@ class LoggerMixin:
     @property
     def logger(self) -> logging.Logger:
         """Get logger for this class"""
-        return logging.getLogger(
-            f"{self.__class__.__module__}.{self.__class__.__name__}"
-        )
+        return logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
 
     def log_method_call(self, method_name: str, **kwargs):
         """Log method call with parameters"""
@@ -220,9 +218,7 @@ class LoggerMixin:
         self.logger.info(message, extra={"extra_data": kwargs})
 
 
-def setup_logging(
-    log_dir: str = "logs", log_level: str = None, json_format: bool = None
-) -> RepairGPTLogger:
+def setup_logging(log_dir: str = "logs", log_level: str = None, json_format: bool = None) -> RepairGPTLogger:
     """
     Setup RepairGPT logging system
 
@@ -242,9 +238,7 @@ def setup_logging(
         json_format = os.getenv("LOG_FORMAT", "text").lower() == "json"
 
     # Create and return logger
-    logger_config = RepairGPTLogger(
-        log_dir=log_dir, log_level=log_level, json_format=json_format
-    )
+    logger_config = RepairGPTLogger(log_dir=log_dir, log_level=log_level, json_format=json_format)
 
     # Log initialization
     init_logger = logger_config.get_logger("repairgpt.logger")

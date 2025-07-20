@@ -27,9 +27,7 @@ class AuthenticationFeature:
         self.users_db = {}  # In-memory user storage for demo
         logger.info("Authentication Feature initialized")
 
-    async def register_user(
-        self, email: str, password: str, username: str, language: str = "en"
-    ) -> Dict[str, any]:
+    async def register_user(self, email: str, password: str, username: str, language: str = "en") -> Dict[str, any]:
         """
         Register new user
 

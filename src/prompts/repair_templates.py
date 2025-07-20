@@ -412,9 +412,7 @@ Predict the likelihood of successful repair:
     @classmethod
     def get_system_prompt(cls, prompt_category: str = "repair_expert") -> str:
         """Get a system prompt for the AI model"""
-        return cls.SYSTEM_PROMPTS.get(
-            prompt_category, cls.SYSTEM_PROMPTS["repair_expert"]
-        )
+        return cls.SYSTEM_PROMPTS.get(prompt_category, cls.SYSTEM_PROMPTS["repair_expert"])
 
     @classmethod
     def format_template(cls, prompt_type: PromptType, context: PromptContext) -> str:
@@ -429,21 +427,11 @@ Predict the likelihood of successful repair:
             "device_model": context.device_model,
             "issue_description": context.issue_description,
             "user_skill_level": context.user_skill_level,
-            "symptoms": (
-                ", ".join(context.symptoms) if context.symptoms else "Not specified"
-            ),
-            "available_tools": (
-                ", ".join(context.available_tools)
-                if context.available_tools
-                else "Not specified"
-            ),
+            "symptoms": (", ".join(context.symptoms) if context.symptoms else "Not specified"),
+            "available_tools": (", ".join(context.available_tools) if context.available_tools else "Not specified"),
             "budget": context.budget or "Not specified",
             "urgency": context.urgency,
-            "previous_attempts": (
-                ", ".join(context.previous_attempts)
-                if context.previous_attempts
-                else "None"
-            ),
+            "previous_attempts": (", ".join(context.previous_attempts) if context.previous_attempts else "None"),
         }
 
         try:
@@ -468,9 +456,7 @@ Predict the likelihood of successful repair:
 
         custom_additions = ""
         if device_specific_info:
-            custom_additions += (
-                f"\n**Device-Specific Information:**\n{device_specific_info}\n"
-            )
+            custom_additions += f"\n**Device-Specific Information:**\n{device_specific_info}\n"
 
         if additional_context:
             custom_additions += f"\n**Additional Context:**\n{additional_context}\n"
@@ -510,14 +496,8 @@ if __name__ == "__main__":
         print(f"Testing {prompt_type.value.upper()} template:")
         print(f"{'='*50}")
 
-        formatted_prompt = RepairPromptTemplates.format_template(
-            prompt_type, test_context
-        )
-        print(
-            formatted_prompt[:500] + "..."
-            if len(formatted_prompt) > 500
-            else formatted_prompt
-        )
+        formatted_prompt = RepairPromptTemplates.format_template(prompt_type, test_context)
+        print(formatted_prompt[:500] + "..." if len(formatted_prompt) > 500 else formatted_prompt)
 
     # Test system prompts
     print(f"\n{'='*50}")

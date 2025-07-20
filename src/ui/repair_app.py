@@ -83,16 +83,12 @@ def call_chat_api(message: str, device_context: Dict = None) -> str:
                 {
                     "device_type": device_context.get("device_type"),
                     "device_model": (
-                        sanitize_input(
-                            device_context.get("device_model", ""), max_length=100
-                        )
+                        sanitize_input(device_context.get("device_model", ""), max_length=100)
                         if device_context.get("device_model")
                         else None
                     ),
                     "issue_description": (
-                        sanitize_input(
-                            device_context.get("issue_description", ""), max_length=500
-                        )
+                        sanitize_input(device_context.get("issue_description", ""), max_length=500)
                         if device_context.get("issue_description")
                         else None
                     ),
@@ -319,9 +315,7 @@ def check_api_health() -> bool:
     """Check if the FastAPI server is running"""
     try:
         start_time = time.time()
-        response = requests.get(
-            f"{API_BASE_URL}{settings.api_prefix}/health", timeout=5
-        )
+        response = requests.get(f"{API_BASE_URL}{settings.api_prefix}/health", timeout=5)
 
         is_healthy = response.status_code == 200
         duration = time.time() - start_time
@@ -536,9 +530,7 @@ def main():
             st.markdown("---")
             st.subheader("🔒 Security Info")
             st.info(f"Environment: {settings.environment.value}")
-            st.info(
-                f"Security Headers: {'✅' if settings.enable_security_headers else '❌'}"
-            )
+            st.info(f"Security Headers: {'✅' if settings.enable_security_headers else '❌'}")
 
     # Main content area with responsive layout
     col1, col2 = st.columns([2, 1])
@@ -553,20 +545,14 @@ def main():
                 st.session_state.chat_history = []
 
             # Chat input with security validation
-            user_message = st.chat_input(
-                _("chat.input_placeholder"), max_chars=settings.max_text_length
-            )
+            user_message = st.chat_input(_("chat.input_placeholder"), max_chars=settings.max_text_length)
 
             if user_message:
                 # Sanitize and validate input
-                safe_message = sanitize_input(
-                    user_message, max_length=settings.max_text_length
-                )
+                safe_message = sanitize_input(user_message, max_length=settings.max_text_length)
 
                 # Add to chat history
-                st.session_state.chat_history.append(
-                    {"role": "user", "content": safe_message}
-                )
+                st.session_state.chat_history.append({"role": "user", "content": safe_message})
 
                 # Get device context
                 device_context = {
@@ -581,9 +567,7 @@ def main():
                     ai_response = call_chat_api(safe_message, device_context)
 
                 # Add AI response to history
-                st.session_state.chat_history.append(
-                    {"role": "assistant", "content": ai_response}
-                )
+                st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
 
             # Display chat history
             for message in st.session_state.chat_history:
@@ -610,11 +594,7 @@ def main():
 
             if st.button(_("diagnosis.start_button")):
                 with st.spinner(_("diagnosis.analyzing")):
-                    symptoms = (
-                        issue_description.split(",")
-                        if "," in issue_description
-                        else [issue_description]
-                    )
+                    symptoms = issue_description.split(",") if "," in issue_description else [issue_description]
                     diagnosis_result = call_diagnose_api(
                         device_type=device_type,
                         issue_description=issue_description,
@@ -632,9 +612,7 @@ def main():
 
                         # Primary issue
                         if "primary_issue" in analysis:
-                            st.markdown(
-                                f"**{_('diagnosis.primary_issue')}:** {analysis['primary_issue']}"
-                            )
+                            st.markdown(f"**{_('diagnosis.primary_issue')}:** {analysis['primary_issue']}")
 
                         # Severity
                         if "severity" in analysis:
@@ -643,17 +621,13 @@ def main():
                                 "MEDIUM": "🟡",
                                 "HIGH": "🔴",
                             }.get(analysis["severity"], "⚪")
-                            st.markdown(
-                                f"**{_('diagnosis.severity')}:** {severity_color} {analysis['severity']}"
-                            )
+                            st.markdown(f"**{_('diagnosis.severity')}:** {severity_color} {analysis['severity']}")
 
                         # Confidence
                         if "confidence" in analysis:
                             confidence_percent = int(analysis["confidence"] * 100)
                             st.progress(analysis["confidence"])
-                            st.caption(
-                                f"{_('diagnosis.confidence')}: {confidence_percent}%"
-                            )
+                            st.caption(f"{_('diagnosis.confidence')}: {confidence_percent}%")
 
         # Image analysis feature
         if show_image_analysis:
@@ -668,9 +642,7 @@ def main():
             if uploaded_file:
                 # Validate file size
                 if uploaded_file.size > settings.max_image_size_mb * 1024 * 1024:
-                    st.error(
-                        f"{_('image_analysis.file_too_large')} ({settings.max_image_size_mb}MB)"
-                    )
+                    st.error(f"{_('image_analysis.file_too_large')} ({settings.max_image_size_mb}MB)")
                 else:
                     # Display image
                     image = Image.open(uploaded_file)
@@ -700,29 +672,19 @@ def main():
                         offline_db = OfflineRepairDatabase()
 
                         # Search offline guides
-                        guides = offline_db.search_guides(
-                            safe_query, device_type, limit=5
-                        )
+                        guides = offline_db.search_guides(safe_query, device_type, limit=5)
 
                         if guides:
                             for guide in guides:
                                 with st.expander(f"🔧 {guide.title}"):
-                                    st.markdown(
-                                        f"**{_('guides.difficulty')}:** {guide.difficulty}"
-                                    )
-                                    st.markdown(
-                                        f"**{_('guides.time_estimate')}:** {guide.time_estimate}"
-                                    )
+                                    st.markdown(f"**{_('guides.difficulty')}:** {guide.difficulty}")
+                                    st.markdown(f"**{_('guides.time_estimate')}:** {guide.time_estimate}")
 
                                     if guide.summary:
-                                        st.markdown(
-                                            f"**{_('guides.summary')}:** {guide.summary}"
-                                        )
+                                        st.markdown(f"**{_('guides.summary')}:** {guide.summary}")
 
                                     if guide.tools_required:
-                                        st.markdown(
-                                            f"**{_('guides.tools_required')}:**"
-                                        )
+                                        st.markdown(f"**{_('guides.tools_required')}:**")
                                         for tool in guide.tools_required:
                                             st.markdown(f"- {tool}")
 

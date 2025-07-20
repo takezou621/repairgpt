@@ -347,16 +347,12 @@ class OfflineRepairDatabase:
                 guide = OfflineGuide(**guide_data)
                 guides.append(guide)
             except Exception as e:
-                logger.error(
-                    f"Error loading guide {guide_data.get('id', 'unknown')}: {e}"
-                )
+                logger.error(f"Error loading guide {guide_data.get('id', 'unknown')}: {e}")
 
         logger.info(f"Loaded {len(guides)} offline repair guides")
         return guides
 
-    def search_guides(
-        self, query: str, device_type: str = "", limit: int = 10
-    ) -> List[OfflineGuide]:
+    def search_guides(self, query: str, device_type: str = "", limit: int = 10) -> List[OfflineGuide]:
         """Search offline repair guides"""
         query_lower = query.lower()
         device_lower = device_type.lower()
@@ -377,9 +373,7 @@ class OfflineRepairDatabase:
 
         # Sort by relevance (exact device matches first)
         if device_lower:
-            matching_guides.sort(
-                key=lambda g: device_lower in g.device.lower(), reverse=True
-            )
+            matching_guides.sort(key=lambda g: device_lower in g.device.lower(), reverse=True)
 
         return matching_guides[:limit]
 
@@ -390,15 +384,11 @@ class OfflineRepairDatabase:
                 return guide
         return None
 
-    def get_guides_by_device(
-        self, device_type: str, limit: int = 10
-    ) -> List[OfflineGuide]:
+    def get_guides_by_device(self, device_type: str, limit: int = 10) -> List[OfflineGuide]:
         """Get guides for specific device type"""
         device_lower = device_type.lower()
 
-        matching_guides = [
-            guide for guide in self.guides if device_lower in guide.device.lower()
-        ]
+        matching_guides = [guide for guide in self.guides if device_lower in guide.device.lower()]
 
         return matching_guides[:limit]
 

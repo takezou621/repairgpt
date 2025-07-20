@@ -56,83 +56,47 @@ class Settings(BaseSettings):
     # ============================================================================
     # Security Configuration
     # ============================================================================
-    secret_key: str = Field(
-        default="", description="Secret key for JWT and other cryptographic operations"
-    )
-    allowed_hosts: List[str] = Field(
-        default=["*"], description="Allowed hosts for CORS"
-    )
+    secret_key: str = Field(default="", description="Secret key for JWT and other cryptographic operations")
+    allowed_hosts: List[str] = Field(default=["*"], description="Allowed hosts for CORS")
     cors_origins: List[str] = Field(
         default=["http://localhost:3000", "http://localhost:8501"],
         description="CORS allowed origins",
     )
-    cors_methods: List[str] = Field(
-        default=["GET", "POST", "PUT", "DELETE"], description="CORS allowed methods"
-    )
+    cors_methods: List[str] = Field(default=["GET", "POST", "PUT", "DELETE"], description="CORS allowed methods")
     cors_headers: List[str] = Field(default=["*"], description="CORS allowed headers")
 
     # Rate limiting
-    rate_limit_requests_per_minute: int = Field(
-        default=60, description="Rate limit: requests per minute per IP"
-    )
+    rate_limit_requests_per_minute: int = Field(default=60, description="Rate limit: requests per minute per IP")
     rate_limit_burst: int = Field(default=10, description="Rate limit: burst size")
 
     # Security headers
-    enable_security_headers: bool = Field(
-        default=True, description="Enable security headers"
-    )
-    hsts_max_age: int = Field(
-        default=31536000, description="HSTS max age in seconds"  # 1 year
-    )
+    enable_security_headers: bool = Field(default=True, description="Enable security headers")
+    hsts_max_age: int = Field(default=31536000, description="HSTS max age in seconds")  # 1 year
 
     # ============================================================================
     # API Keys and External Services
     # ============================================================================
-    openai_api_key: Optional[str] = Field(
-        default=None, description="OpenAI API key for GPT models"
-    )
-    claude_api_key: Optional[str] = Field(
-        default=None, description="Claude API key for Anthropic models"
-    )
-    ifixit_api_key: Optional[str] = Field(
-        default=None, description="iFixit API key for repair guides"
-    )
+    openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key for GPT models")
+    claude_api_key: Optional[str] = Field(default=None, description="Claude API key for Anthropic models")
+    ifixit_api_key: Optional[str] = Field(default=None, description="iFixit API key for repair guides")
 
     # API endpoints
-    openai_api_base: str = Field(
-        default="https://api.openai.com/v1", description="OpenAI API base URL"
-    )
-    claude_api_base: str = Field(
-        default="https://api.anthropic.com", description="Claude API base URL"
-    )
-    ifixit_api_base: str = Field(
-        default="https://www.ifixit.com/api/2.0", description="iFixit API base URL"
-    )
+    openai_api_base: str = Field(default="https://api.openai.com/v1", description="OpenAI API base URL")
+    claude_api_base: str = Field(default="https://api.anthropic.com", description="Claude API base URL")
+    ifixit_api_base: str = Field(default="https://www.ifixit.com/api/2.0", description="iFixit API base URL")
 
     # API timeouts and limits
-    api_timeout_seconds: int = Field(
-        default=30, description="API request timeout in seconds"
-    )
-    max_image_size_mb: int = Field(
-        default=10, description="Maximum image upload size in MB"
-    )
+    api_timeout_seconds: int = Field(default=30, description="API request timeout in seconds")
+    max_image_size_mb: int = Field(default=10, description="Maximum image upload size in MB")
     max_text_length: int = Field(default=10000, description="Maximum text input length")
 
     # ============================================================================
     # Database Configuration
     # ============================================================================
-    database_url: str = Field(
-        default="sqlite:///./repairgpt.db", description="Database connection URL"
-    )
-    database_echo: bool = Field(
-        default=False, description="Enable SQLAlchemy query logging"
-    )
-    database_pool_size: int = Field(
-        default=5, description="Database connection pool size"
-    )
-    database_max_overflow: int = Field(
-        default=10, description="Database connection pool max overflow"
-    )
+    database_url: str = Field(default="sqlite:///./repairgpt.db", description="Database connection URL")
+    database_echo: bool = Field(default=False, description="Enable SQLAlchemy query logging")
+    database_pool_size: int = Field(default=5, description="Database connection pool size")
+    database_max_overflow: int = Field(default=10, description="Database connection pool max overflow")
 
     # ============================================================================
     # Cache Configuration (Redis)
@@ -141,17 +105,13 @@ class Settings(BaseSettings):
         default="redis://localhost:6379/0",
         description="Redis connection URL for caching",
     )
-    cache_ttl_seconds: int = Field(
-        default=3600, description="Default cache TTL in seconds"  # 1 hour
-    )
+    cache_ttl_seconds: int = Field(default=3600, description="Default cache TTL in seconds")  # 1 hour
     cache_enabled: bool = Field(default=True, description="Enable caching")
 
     # ============================================================================
     # File Storage Configuration
     # ============================================================================
-    upload_dir: str = Field(
-        default="./uploads", description="Directory for file uploads"
-    )
+    upload_dir: str = Field(default="./uploads", description="Directory for file uploads")
     temp_dir: str = Field(default="./temp", description="Directory for temporary files")
     allowed_file_types: Set[str] = Field(
         default={"jpg", "jpeg", "png", "webp"}, description="Allowed file upload types"
@@ -160,12 +120,8 @@ class Settings(BaseSettings):
     # ============================================================================
     # Internationalization
     # ============================================================================
-    default_language: str = Field(
-        default="en", description="Default application language"
-    )
-    supported_languages: List[str] = Field(
-        default=["en", "ja"], description="Supported languages"
-    )
+    default_language: str = Field(default="en", description="Default application language")
+    supported_languages: List[str] = Field(default=["en", "ja"], description="Supported languages")
 
     # ============================================================================
     # Monitoring and Observability
@@ -173,12 +129,8 @@ class Settings(BaseSettings):
     enable_metrics: bool = Field(default=False, description="Enable Prometheus metrics")
     metrics_port: int = Field(default=9090, description="Metrics server port")
 
-    enable_tracing: bool = Field(
-        default=False, description="Enable distributed tracing"
-    )
-    jaeger_endpoint: Optional[str] = Field(
-        default=None, description="Jaeger tracing endpoint"
-    )
+    enable_tracing: bool = Field(default=False, description="Enable distributed tracing")
+    jaeger_endpoint: Optional[str] = Field(default=None, description="Jaeger tracing endpoint")
 
     # ============================================================================
     # Validators
@@ -243,9 +195,7 @@ class Settings(BaseSettings):
     @validator("database_url")
     def validate_database_url(cls, v, values):
         """Validate database URL"""
-        if values.get("environment") == Environment.PRODUCTION and v.startswith(
-            "sqlite"
-        ):
+        if values.get("environment") == Environment.PRODUCTION and v.startswith("sqlite"):
             raise ValueError("SQLite not recommended for production")
         return v
 

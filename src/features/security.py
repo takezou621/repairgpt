@@ -28,9 +28,7 @@ class SecurityConfigurationManager:
     def __init__(self):
         """Initialize the security configuration manager"""
         self.settings = get_settings()
-        self.rate_limiter = RateLimiter(
-            max_requests=self.settings.rate_limit_requests_per_minute, window_seconds=60
-        )
+        self.rate_limiter = RateLimiter(max_requests=self.settings.rate_limit_requests_per_minute, window_seconds=60)
         logger.info("Security Configuration Manager initialized")
 
     def validate_configuration(self) -> Dict[str, Any]:
@@ -50,19 +48,11 @@ class SecurityConfigurationManager:
         validation_results["configuration"] = self._validate_basic_config()
         validation_results["security"] = self._validate_security_config()
         validation_results["api_keys"] = self._validate_all_api_keys()
-        validation_results["production_readiness"] = (
-            self._validate_production_readiness()
-        )
-        validation_results["recommendations"] = self._generate_recommendations(
-            validation_results
-        )
-        validation_results["overall_status"] = self._determine_overall_status(
-            validation_results
-        )
+        validation_results["production_readiness"] = self._validate_production_readiness()
+        validation_results["recommendations"] = self._generate_recommendations(validation_results)
+        validation_results["overall_status"] = self._determine_overall_status(validation_results)
 
-        logger.info(
-            f"Configuration validation completed: {validation_results['overall_status']}"
-        )
+        logger.info(f"Configuration validation completed: {validation_results['overall_status']}")
         return validation_results
 
     def _validate_basic_config(self) -> Dict[str, Any]:
@@ -83,9 +73,7 @@ class SecurityConfigurationManager:
         for dir_name in ["upload_dir", "temp_dir"]:
             dir_path = getattr(self.settings, dir_name)
             if not Path(dir_path).exists():
-                config_status["issues"].append(
-                    f"Directory {dir_name} does not exist: {dir_path}"
-                )
+                config_status["issues"].append(f"Directory {dir_name} does not exist: {dir_path}")
                 config_status["valid"] = False
 
         return config_status
@@ -110,9 +98,7 @@ class SecurityConfigurationManager:
             security_status["issues"].append("Secret key not configured")
             security_status["valid"] = False
         elif len(self.settings.secret_key) < 32:
-            security_status["issues"].append(
-                "Secret key too short (minimum 32 characters)"
-            )
+            security_status["issues"].append("Secret key too short (minimum 32 characters)")
             security_status["valid"] = False
 
         return security_status
@@ -184,9 +170,7 @@ class SecurityConfigurationManager:
 
         return production_status
 
-    def _generate_recommendations(
-        self, validation_results: Dict[str, Any]
-    ) -> List[str]:
+    def _generate_recommendations(self, validation_results: Dict[str, Any]) -> List[str]:
         """Generate recommendations based on validation results"""
         recommendations = []
 
@@ -197,21 +181,15 @@ class SecurityConfigurationManager:
         # Security recommendations
         security = validation_results["security"]
         if not security["features"]["secret_key_set"]:
-            recommendations.append(
-                "Set a strong secret key for cryptographic operations"
-            )
+            recommendations.append("Set a strong secret key for cryptographic operations")
 
         # API key recommendations
         api_keys = validation_results["api_keys"]
         if api_keys["missing_services"]:
-            recommendations.append(
-                f"Configure API keys for: {', '.join(api_keys['missing_services'])}"
-            )
+            recommendations.append(f"Configure API keys for: {', '.join(api_keys['missing_services'])}")
 
         if not recommendations:
-            recommendations.append(
-                "Configuration looks good! No immediate issues found."
-            )
+            recommendations.append("Configuration looks good! No immediate issues found.")
 
         return recommendations
 
@@ -253,9 +231,7 @@ class SecurityConfigurationManager:
         report["summary"] = {
             "overall_status": config_status,
             "configuration_status": config_status,
-            "total_recommendations": len(
-                report["configuration_validation"]["recommendations"]
-            ),
+            "total_recommendations": len(report["configuration_validation"]["recommendations"]),
             "critical_issues": self._count_critical_issues(report),
         }
 
@@ -267,14 +243,10 @@ class SecurityConfigurationManager:
 
         # Count configuration issues
         if not report["configuration_validation"]["configuration"]["valid"]:
-            critical_count += len(
-                report["configuration_validation"]["configuration"]["issues"]
-            )
+            critical_count += len(report["configuration_validation"]["configuration"]["issues"])
 
         # Count security issues
         if not report["configuration_validation"]["security"]["valid"]:
-            critical_count += len(
-                report["configuration_validation"]["security"]["issues"]
-            )
+            critical_count += len(report["configuration_validation"]["security"]["issues"])
 
         return critical_count

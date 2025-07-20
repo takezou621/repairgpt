@@ -164,18 +164,14 @@ class IFixitClient(LoggerMixin):
                 limit=limit,
             )
 
-            self.log_info(
-                "Guide search completed", query=query, results_count=len(result_guides)
-            )
+            self.log_info("Guide search completed", query=query, results_count=len(result_guides))
 
             return result_guides
 
         except requests.RequestException as e:
             # Log API error and try fallback
             log_api_error(self.logger, "guides/search", e, query=query, limit=limit)
-            self.log_warning(
-                "Primary search failed, trying fallback method", query=query
-            )
+            self.log_warning("Primary search failed, trying fallback method", query=query)
             return self._fallback_search(query, limit)
         except Exception as e:
             # Log unexpected error and try fallback
@@ -216,9 +212,7 @@ class IFixitClient(LoggerMixin):
                 results_found=len(guides),
             )
 
-            self.log_info(
-                "Fallback search completed", query=query, results_count=len(guides)
-            )
+            self.log_info("Fallback search completed", query=query, results_count=len(guides))
 
             return guides
 
@@ -315,9 +309,7 @@ class IFixitClient(LoggerMixin):
                 limit=limit,
             )
 
-            self.log_info(
-                "Successfully retrieved trending guides", count=len(result_guides)
-            )
+            self.log_info("Successfully retrieved trending guides", count=len(result_guides))
 
             return result_guides
 
@@ -341,9 +333,7 @@ class IFixitClient(LoggerMixin):
                 category=data.get("category", ""),
                 device=data.get("subject", ""),
                 time_required=data.get("time_required"),
-                image_url=(
-                    data.get("image", {}).get("standard") if data.get("image") else None
-                ),
+                image_url=(data.get("image", {}).get("standard") if data.get("image") else None),
             )
 
             self.logger.debug(
@@ -383,11 +373,7 @@ class IFixitClient(LoggerMixin):
                 parts=[],  # Parts not available in search results
                 category=result.get("category", ""),
                 device=result.get("subject", ""),
-                image_url=(
-                    result.get("image", {}).get("thumbnail")
-                    if result.get("image")
-                    else None
-                ),
+                image_url=(result.get("image", {}).get("thumbnail") if result.get("image") else None),
             )
 
             self.logger.debug(

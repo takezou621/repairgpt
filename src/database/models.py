@@ -129,9 +129,7 @@ class DeviceIssue(Base):
     issue = relationship("Issue", back_populates="device_issues")
 
     def __repr__(self):
-        return (
-            f"<DeviceIssue(device_id='{self.device_id}', issue_id='{self.issue_id}')>"
-        )
+        return f"<DeviceIssue(device_id='{self.device_id}', issue_id='{self.issue_id}')>"
 
 
 class RepairGuide(Base):
@@ -167,9 +165,7 @@ class RepairGuide(Base):
     device = relationship("Device", back_populates="repair_guides")
     issue = relationship("Issue", back_populates="repair_guides")
     created_by_user = relationship("User", back_populates="repair_guides")
-    repair_steps = relationship(
-        "RepairStep", back_populates="repair_guide", cascade="all, delete-orphan"
-    )
+    repair_steps = relationship("RepairStep", back_populates="repair_guide", cascade="all, delete-orphan")
     repair_attempts = relationship("RepairAttempt", back_populates="repair_guide")
 
     def __repr__(self):
@@ -230,9 +226,7 @@ class ChatSession(Base):
     user = relationship("User", back_populates="chat_sessions")
     device = relationship("Device", back_populates="chat_sessions")
     issue = relationship("Issue", back_populates="chat_sessions")
-    chat_messages = relationship(
-        "ChatMessage", back_populates="chat_session", cascade="all, delete-orphan"
-    )
+    chat_messages = relationship("ChatMessage", back_populates="chat_session", cascade="all, delete-orphan")
     user_images = relationship("UserImage", back_populates="chat_session")
     repair_attempts = relationship("RepairAttempt", back_populates="chat_session")
 
@@ -258,9 +252,7 @@ class ChatMessage(Base):
     created_at = Column(DateTime, default=func.now())
 
     # Constraints
-    __table_args__ = (
-        CheckConstraint(sender.in_(["user", "bot"]), name="chk_chat_message_sender"),
-    )
+    __table_args__ = (CheckConstraint(sender.in_(["user", "bot"]), name="chk_chat_message_sender"),)
 
     # Relationships
     chat_session = relationship("ChatSession", back_populates="chat_messages")
@@ -275,9 +267,7 @@ class UserImage(Base):
     __tablename__ = "user_images"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(
-        UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False
-    )
+    session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False)
     filename = Column(String(255), nullable=False)
     original_filename = Column(String(255), nullable=True)
     file_path = Column(String(500), nullable=False)
@@ -302,12 +292,8 @@ class RepairAttempt(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    session_id = Column(
-        UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False
-    )
-    repair_guide_id = Column(
-        UUID(as_uuid=True), ForeignKey("repair_guides.id"), nullable=True
-    )
+    session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False)
+    repair_guide_id = Column(UUID(as_uuid=True), ForeignKey("repair_guides.id"), nullable=True)
     device_id = Column(String(50), ForeignKey("devices.id"), nullable=False)
     issue_id = Column(String(50), ForeignKey("issues.id"), nullable=False)
     status = Column(String(20), default="in_progress")
@@ -324,9 +310,7 @@ class RepairAttempt(Base):
             status.in_(["in_progress", "completed", "failed", "abandoned"]),
             name="chk_repair_attempt_status",
         ),
-        CheckConstraint(
-            "rating >= 1 AND rating <= 5", name="chk_repair_attempt_rating"
-        ),
+        CheckConstraint("rating >= 1 AND rating <= 5", name="chk_repair_attempt_rating"),
     )
 
     # Relationships
@@ -369,9 +353,7 @@ class SyncLog(Base):
     __tablename__ = "sync_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source_id = Column(
-        UUID(as_uuid=True), ForeignKey("external_data_sources.id"), nullable=False
-    )
+    source_id = Column(UUID(as_uuid=True), ForeignKey("external_data_sources.id"), nullable=False)
     sync_type = Column(String(50), nullable=False)
     records_processed = Column(Integer, default=0)
     records_created = Column(Integer, default=0)
@@ -382,9 +364,7 @@ class SyncLog(Base):
     completed_at = Column(DateTime, nullable=True)
 
     # Relationships
-    external_data_source = relationship(
-        "ExternalDataSource", back_populates="sync_logs"
-    )
+    external_data_source = relationship("ExternalDataSource", back_populates="sync_logs")
 
     def __repr__(self):
         return f"<SyncLog(id={self.id}, sync_type='{self.sync_type}')>"

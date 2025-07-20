@@ -104,9 +104,7 @@ async def login_user(login_request: LoginRequest, request: Request):
 
 
 @auth_router.get("/me")
-async def get_current_user(
-    request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
-):
+async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
     """Get current user information"""
     try:
         auth_feature = AuthenticationFeature()
