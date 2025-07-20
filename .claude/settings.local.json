@@ -56,7 +56,10 @@
       "Bash(gh pr:*)",
       "Bash(PYTHONPATH=/Users/kawai/dev/repairgpt/src python3 src/auto_feature_60.py)",
       "Bash(PYTHONPATH=/Users/kawai/dev/repairgpt/src python3 src/auto_feature_115.py)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(PYTHONPATH=/Users/kawai/dev/repairgpt/src python3 src/auto_placeholder_116.py)",
+      "Bash(PYTHONPATH=/Users/kawai/dev/repairgpt/src python3:*)",
+      "Bash(PYTHONPATH=src python3 -c \"\nimport asyncio\nfrom src.auto_placeholder_116 import IFixitIntegration\n\nasync def test_searches():\n    integration = IFixitIntegration()\n    \n    print(''🔍 Testing comprehensive iFixit integration searches:'')\n    print(''='' * 55)\n    \n    # Test 1: Nintendo Switch Joy-Con\n    print(''\\n1️⃣ Joy-Con drift repair:'')\n    results = await integration.search_guides(''joy-con drift'', ''Nintendo Switch'', limit=2)\n    if results[''success'']:\n        for guide in results[''guides'']:\n            print(f''   ✅ {guide[\"\"title\"\"]} ({guide[\"\"difficulty\"\"]})'')\n    \n    # Test 2: Laptop troubleshooting\n    print(''\\n2️⃣ Laptop boot issues:'')\n    results = await integration.search_guides(''boot'', ''Laptop'', limit=2)\n    if results[''success'']:\n        for guide in results[''guides'']:\n            print(f''   ✅ {guide[\"\"title\"\"]} ({guide[\"\"difficulty\"\"]})'')\n    \n    # Test 3: PlayStation overheating\n    print(''\\n3️⃣ PS5 overheating:'')\n    results = await integration.search_guides(''overheating'', ''PlayStation'', limit=2)\n    if results[''success'']:\n        for guide in results[''guides'']:\n            print(f''   ✅ {guide[\"\"title\"\"]} ({guide[\"\"difficulty\"\"]})'')\n    \n    print(''\\n✅ All integration tests completed successfully!'')\n\nasyncio.run(test_searches())\n\")"
     ],
     "deny": []
   }
