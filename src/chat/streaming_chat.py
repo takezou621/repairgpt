@@ -59,18 +59,14 @@ class StreamingRepairChatbot(RepairChatbot):
         """Initialize async API clients"""
         if AsyncOpenAI and self.openai_client:
             try:
-                self.async_openai_client = AsyncOpenAI(
-                    api_key=self.openai_client.api_key
-                )
+                self.async_openai_client = AsyncOpenAI(api_key=self.openai_client.api_key)
                 logger.info("Async OpenAI client initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize async OpenAI client: {e}")
 
         if AsyncAnthropic and self.anthropic_client:
             try:
-                self.async_anthropic_client = AsyncAnthropic(
-                    api_key=self.anthropic_client.api_key
-                )
+                self.async_anthropic_client = AsyncAnthropic(api_key=self.anthropic_client.api_key)
                 logger.info("Async Anthropic client initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize async Anthropic client: {e}")
@@ -86,20 +82,14 @@ class StreamingRepairChatbot(RepairChatbot):
 
         try:
             if self.active_client == "openai" and self.async_openai_client:
-                async for chunk in self._stream_with_openai(
-                    user_message, include_context
-                ):
+                async for chunk in self._stream_with_openai(user_message, include_context):
                     yield chunk
             elif self.active_client == "anthropic" and self.async_anthropic_client:
-                async for chunk in self._stream_with_anthropic(
-                    user_message, include_context
-                ):
+                async for chunk in self._stream_with_anthropic(user_message, include_context):
                     yield chunk
             else:
                 # Fallback to non-streaming response
-                response = await asyncio.to_thread(
-                    self.chat, user_message, include_context
-                )
+                response = await asyncio.to_thread(self.chat, user_message, include_context)
                 yield StreamingResponse(content=response, is_complete=True)
 
         except Exception as e:
@@ -243,8 +233,7 @@ class TokenUsageTracker:
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "total_tokens": total_tokens,
-            "estimated_cost": cost
-            or self._estimate_cost(provider, model, total_tokens),
+            "estimated_cost": cost or self._estimate_cost(provider, model, total_tokens),
         }
 
         self.usage_log.append(usage_entry)
@@ -265,18 +254,12 @@ class TokenUsageTracker:
 
     def check_limits(self, provider: str) -> bool:
         """Check if daily limits are exceeded"""
-        return self.current_usage.get(provider, 0) < self.daily_limits.get(
-            provider, float("inf")
-        )
+        return self.current_usage.get(provider, 0) < self.daily_limits.get(provider, float("inf"))
 
     def get_usage_summary(self) -> Dict:
         """Get usage summary"""
         today = datetime.now().date()
-        today_usage = [
-            entry
-            for entry in self.usage_log
-            if datetime.fromisoformat(entry["timestamp"]).date() == today
-        ]
+        today_usage = [entry for entry in self.usage_log if datetime.fromisoformat(entry["timestamp"]).date() == today]
 
         total_cost = sum(entry["estimated_cost"] for entry in today_usage)
         total_tokens = sum(entry["total_tokens"] for entry in today_usage)
@@ -312,9 +295,7 @@ class ConversationManager:
         self.conversations: Dict[str, List[Message]] = {}
         self.contexts: Dict[str, RepairContext] = {}
 
-    def create_session(
-        self, session_id: str, initial_context: Optional[RepairContext] = None
-    ) -> str:
+    def create_session(self, session_id: str, initial_context: Optional[RepairContext] = None) -> str:
         """Create a new conversation session"""
         self.conversations[session_id] = []
         self.contexts[session_id] = initial_context or RepairContext()
@@ -330,9 +311,7 @@ class ConversationManager:
 
         # Trim history if it exceeds max_history
         if len(self.conversations[session_id]) > self.max_history:
-            self.conversations[session_id] = self.conversations[session_id][
-                -self.max_history :
-            ]
+            self.conversations[session_id] = self.conversations[session_id][-self.max_history :]
 
     def get_history(self, session_id: str) -> List[Message]:
         """Get conversation history for session"""

@@ -324,9 +324,7 @@ class ResponsiveDesignManager:
         # For now, we'll use a sensible default that works across devices
         return st.columns(desktop_ratio)
 
-    def create_mobile_friendly_form(
-        self, title: str, fields: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def create_mobile_friendly_form(self, title: str, fields: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Create a mobile-friendly form with proper spacing and touch targets.
 
@@ -349,9 +347,7 @@ class ResponsiveDesignManager:
                 field_help = field.get("help", "")
 
                 if field_type == "text":
-                    values[field_key] = st.text_input(
-                        field_label, help=field_help, key=f"mobile_{field_key}"
-                    )
+                    values[field_key] = st.text_input(field_label, help=field_help, key=f"mobile_{field_key}")
                 elif field_type == "textarea":
                     values[field_key] = st.text_area(
                         field_label,
@@ -375,9 +371,7 @@ class ResponsiveDesignManager:
                     )
 
             # Mobile-friendly submit button
-            submitted = st.form_submit_button(
-                "Submit", use_container_width=True, type="primary"
-            )
+            submitted = st.form_submit_button("Submit", use_container_width=True, type="primary")
 
         return values if submitted else {}
 

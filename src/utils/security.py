@@ -598,9 +598,7 @@ def validate_image_content(content: bytes, max_size: int = 10 * 1024 * 1024) -> 
     content_lower = content.lower()
     for pattern in suspicious_patterns:
         if pattern in content_lower:
-            result["warnings"].append(
-                f"Suspicious pattern found: {pattern.decode('utf-8', errors='ignore')}"
-            )
+            result["warnings"].append(f"Suspicious pattern found: {pattern.decode('utf-8', errors='ignore')}")
 
     result["valid"] = True
     return result
@@ -627,10 +625,7 @@ def sanitize_log_data(data: Any) -> Any:
             key_lower = key.lower()
 
             # Redact sensitive keys
-            if any(
-                sensitive in key_lower
-                for sensitive in ["key", "token", "password", "secret", "auth"]
-            ):
+            if any(sensitive in key_lower for sensitive in ["key", "token", "password", "secret", "auth"]):
                 sanitized[key] = "[REDACTED]"
             else:
                 sanitized[key] = sanitize_log_data(value)

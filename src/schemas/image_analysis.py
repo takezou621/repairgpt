@@ -39,12 +39,8 @@ class DeviceTypeEnum(str, Enum):
 class ImageAnalysisRequest(BaseModel):
     """Request model for image analysis"""
 
-    language: Optional[str] = Field(
-        default="en", description="Analysis language (en/ja)"
-    )
-    context: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional context"
-    )
+    language: Optional[str] = Field(default="en", description="Analysis language (en/ja)")
+    context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context")
 
     class Config:
         json_schema_extra = {
@@ -102,20 +98,12 @@ class ImageAnalysisResponse(BaseModel):
     """Complete image analysis response"""
 
     device_info: DeviceInfoResponse = Field(description="Detected device information")
-    damage_detected: List[DamageAssessmentResponse] = Field(
-        description="List of detected damages"
-    )
+    damage_detected: List[DamageAssessmentResponse] = Field(description="List of detected damages")
     overall_condition: str = Field(description="Overall device condition")
     repair_urgency: str = Field(description="Repair urgency level")
-    estimated_repair_cost: Optional[str] = Field(
-        default=None, description="Estimated repair cost"
-    )
-    repair_difficulty: Optional[str] = Field(
-        default=None, description="Repair difficulty level"
-    )
-    analysis_confidence: float = Field(
-        ge=0.0, le=1.0, description="Overall analysis confidence"
-    )
+    estimated_repair_cost: Optional[str] = Field(default=None, description="Estimated repair cost")
+    repair_difficulty: Optional[str] = Field(default=None, description="Repair difficulty level")
+    analysis_confidence: float = Field(ge=0.0, le=1.0, description="Overall analysis confidence")
     recommended_actions: List[str] = Field(description="Recommended next steps")
     warnings: List[str] = Field(description="Safety warnings and alerts")
     language: str = Field(description="Response language")

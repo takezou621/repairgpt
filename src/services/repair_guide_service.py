@@ -102,9 +102,7 @@ class CacheManager:
 
         if REDIS_AVAILABLE and (redis_url or os.getenv("REDIS_URL")):
             try:
-                self.redis_client = redis.from_url(
-                    redis_url or os.getenv("REDIS_URL"), decode_responses=True
-                )
+                self.redis_client = redis.from_url(redis_url or os.getenv("REDIS_URL"), decode_responses=True)
                 # Test connection
                 self.redis_client.ping()
                 logger.info("Redis cache initialized successfully")
@@ -159,9 +157,7 @@ class CacheManager:
         # Simple memory cache cleanup
         if len(self.memory_cache) > 1000:
             # Remove oldest 100 items
-            sorted_items = sorted(
-                self.memory_cache.items(), key=lambda x: x[1]["timestamp"]
-            )
+            sorted_items = sorted(self.memory_cache.items(), key=lambda x: x[1]["timestamp"])
             for key, _ in sorted_items[:100]:
                 del self.memory_cache[key]
 
@@ -189,9 +185,7 @@ class RepairGuideService:
     ):
         self.ifixit_client = IFixitClient(api_key=ifixit_api_key)
         self.cache_manager = CacheManager(redis_url)
-        self.rate_limiter = RateLimiter(
-            max_calls=100, time_window=3600
-        )  # 100 calls/hour
+        self.rate_limiter = RateLimiter(max_calls=100, time_window=3600)  # 100 calls/hour
         self.offline_db = OfflineRepairDatabase() if enable_offline_fallback else None
 
         logger.info(
@@ -235,13 +229,9 @@ class RepairGuideService:
                     result = RepairGuideResult(
                         guide=guide,
                         source="ifixit",
-                        confidence_score=self._calculate_confidence_score(
-                            guide, query, filters
-                        ),
+                        confidence_score=self._calculate_confidence_score(guide, query, filters),
                         last_updated=datetime.now(),
-                        difficulty_explanation=self._explain_difficulty(
-                            guide.difficulty
-                        ),
+                        difficulty_explanation=self._explain_difficulty(guide.difficulty),
                         estimated_cost=self._estimate_repair_cost(guide),
                     )
                     results.append(result)
@@ -257,29 +247,20 @@ class RepairGuideService:
         # If we don't have enough results, try offline database
         if len(results) < limit and self.offline_db:
             try:
-                offline_guides = await self._search_offline_guides(
-                    query, filters, limit - len(results)
-                )
+                offline_guides = await self._search_offline_guides(query, filters, limit - len(results))
 
                 for guide in offline_guides:
                     result = RepairGuideResult(
                         guide=guide,
                         source="offline",
-                        confidence_score=self._calculate_confidence_score(
-                            guide, query, filters
-                        )
+                        confidence_score=self._calculate_confidence_score(guide, query, filters)
                         * 0.8,  # Lower confidence for offline
-                        last_updated=datetime.now()
-                        - timedelta(days=30),  # Assume offline data is older
-                        difficulty_explanation=self._explain_difficulty(
-                            guide.difficulty
-                        ),
+                        last_updated=datetime.now() - timedelta(days=30),  # Assume offline data is older
+                        difficulty_explanation=self._explain_difficulty(guide.difficulty),
                     )
                     results.append(result)
 
-                logger.info(
-                    f"Retrieved {len(offline_guides)} guides from offline database"
-                )
+                logger.info(f"Retrieved {len(offline_guides)} guides from offline database")
 
             except Exception as e:
                 logger.error(f"Offline database search failed: {e}")
@@ -400,9 +381,7 @@ class RepairGuideService:
                         source="ifixit",
                         confidence_score=0.9,  # High confidence for trending
                         last_updated=datetime.now(),
-                        difficulty_explanation=self._explain_difficulty(
-                            guide.difficulty
-                        ),
+                        difficulty_explanation=self._explain_difficulty(guide.difficulty),
                     )
                     results.append(result)
 
@@ -421,9 +400,7 @@ class RepairGuideService:
                 if len(results) >= limit:
                     break
                 try:
-                    search_results = await self.search_guides(
-                        query, limit=2, use_cache=True
-                    )
+                    search_results = await self.search_guides(query, limit=2, use_cache=True)
                     results.extend(search_results[:2])
                 except Exception as e:
                     logger.error(f"Failed popular search for {query}: {e}")
@@ -446,8 +423,7 @@ class RepairGuideService:
         stats = {
             "redis_available": bool(self.cache_manager.redis_client),
             "memory_cache_size": len(self.cache_manager.memory_cache),
-            "rate_limit_calls_remaining": self.rate_limiter.max_calls
-            - len(self.rate_limiter.calls),
+            "rate_limit_calls_remaining": self.rate_limiter.max_calls - len(self.rate_limiter.calls),
             "rate_limit_reset_in": self.rate_limiter.time_until_next_request(),
         }
 
@@ -460,14 +436,10 @@ class RepairGuideService:
 
         return stats
 
-    async def _search_ifixit_guides(
-        self, query: str, filters: SearchFilters, limit: int
-    ) -> List[Guide]:
+    async def _search_ifixit_guides(self, query: str, filters: SearchFilters, limit: int) -> List[Guide]:
         """Search iFixit API with filters"""
         # For now, use basic search - can be enhanced with filter application
-        guides = self.ifixit_client.search_guides(
-            query, limit * 2
-        )  # Get more to filter
+        guides = self.ifixit_client.search_guides(query, limit * 2)  # Get more to filter
 
         # Apply filters
         filtered_guides = []
@@ -479,9 +451,7 @@ class RepairGuideService:
 
         return filtered_guides
 
-    async def _search_offline_guides(
-        self, query: str, filters: SearchFilters, limit: int
-    ) -> List[Guide]:
+    async def _search_offline_guides(self, query: str, filters: SearchFilters, limit: int) -> List[Guide]:
         """Search offline database"""
         if not self.offline_db:
             return []
@@ -500,16 +470,10 @@ class RepairGuideService:
 
     def _guide_matches_filters(self, guide: Guide, filters: SearchFilters) -> bool:
         """Check if guide matches search filters"""
-        if (
-            filters.difficulty_level
-            and guide.difficulty.lower() != filters.difficulty_level.lower()
-        ):
+        if filters.difficulty_level and guide.difficulty.lower() != filters.difficulty_level.lower():
             return False
 
-        if (
-            filters.device_type
-            and filters.device_type.lower() not in guide.device.lower()
-        ):
+        if filters.device_type and filters.device_type.lower() not in guide.device.lower():
             return False
 
         if filters.category and filters.category.lower() not in guide.category.lower():
@@ -529,9 +493,7 @@ class RepairGuideService:
 
         return True
 
-    def _calculate_confidence_score(
-        self, guide: Guide, query: str, filters: SearchFilters
-    ) -> float:
+    def _calculate_confidence_score(self, guide: Guide, query: str, filters: SearchFilters) -> float:
         """Calculate confidence score for guide relevance"""
         score = 0.5  # Base score
 
@@ -547,10 +509,7 @@ class RepairGuideService:
             score += 0.2
 
         # Difficulty match
-        if (
-            filters.difficulty_level
-            and guide.difficulty.lower() == filters.difficulty_level.lower()
-        ):
+        if filters.difficulty_level and guide.difficulty.lower() == filters.difficulty_level.lower():
             score += 0.1
 
         # Popular devices get slight boost
@@ -634,26 +593,16 @@ class RepairGuideService:
             try:
                 # Find related guides based on device
                 if result.guide.device:
-                    related_guides = await self.search_guides(
-                        result.guide.device, limit=3, use_cache=True
-                    )
+                    related_guides = await self.search_guides(result.guide.device, limit=3, use_cache=True)
                     # Filter out the current guide and get top 2
-                    related = [
-                        r.guide
-                        for r in related_guides
-                        if r.guide.guideid != result.guide.guideid
-                    ][:2]
+                    related = [r.guide for r in related_guides if r.guide.guideid != result.guide.guideid][:2]
                     result.related_guides = related
             except Exception as e:
                 logger.warning(f"Failed to get related guides: {e}")
 
-    def _create_search_cache_key(
-        self, query: str, filters: SearchFilters, limit: int
-    ) -> str:
+    def _create_search_cache_key(self, query: str, filters: SearchFilters, limit: int) -> str:
         """Create cache key for search results"""
-        filter_str = (
-            f"{filters.device_type}_{filters.difficulty_level}_{filters.category}"
-        )
+        filter_str = f"{filters.device_type}_{filters.difficulty_level}_{filters.category}"
         key = f"search_{query}_{filter_str}_{limit}"
         return hashlib.md5(key.encode()).hexdigest()
 

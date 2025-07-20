@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Environment configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./repairgpt.db")
-ASYNC_DATABASE_URL = os.getenv(
-    "ASYNC_DATABASE_URL", "sqlite+aiosqlite:///./repairgpt.db"
-)
+ASYNC_DATABASE_URL = os.getenv("ASYNC_DATABASE_URL", "sqlite+aiosqlite:///./repairgpt.db")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 
@@ -98,13 +96,9 @@ engine = create_engine(db_config.database_url, **db_config.get_engine_args())
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Asynchronous engine and session factory
-async_engine = create_async_engine(
-    db_config.async_database_url, **db_config.get_async_engine_args()
-)
+async_engine = create_async_engine(db_config.async_database_url, **db_config.get_async_engine_args())
 
-AsyncSessionLocal = async_sessionmaker(
-    async_engine, class_=AsyncSession, expire_on_commit=False
-)
+AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 def enable_sqlite_foreign_keys(dbapi_connection, connection_record):
@@ -280,9 +274,7 @@ def get_database_info() -> dict:
     """Get database information and statistics"""
     info = {
         "database_url": (
-            db_config.database_url.split("@")[-1]
-            if "@" in db_config.database_url
-            else db_config.database_url
+            db_config.database_url.split("@")[-1] if "@" in db_config.database_url else db_config.database_url
         ),
         "database_type": "sqlite" if db_config.is_sqlite else "postgresql",
         "environment": ENVIRONMENT,
@@ -295,9 +287,7 @@ def get_database_info() -> dict:
             if db_config.is_sqlite:
                 result = db.execute("SELECT name FROM sqlite_master WHERE type='table'")
             else:
-                result = db.execute(
-                    "SELECT tablename FROM pg_tables WHERE schemaname='public'"
-                )
+                result = db.execute("SELECT tablename FROM pg_tables WHERE schemaname='public'")
 
             info["tables"] = [row[0] for row in result.fetchall()]
             info["health_status"] = "healthy"

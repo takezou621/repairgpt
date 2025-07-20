@@ -39,9 +39,7 @@ class I18n:
         if language in self.translations:
             self.current_language = language
         else:
-            print(
-                f"Warning: Language '{language}' not available, using default '{self.default_language}'"
-            )
+            print(f"Warning: Language '{language}' not available, using default '{self.default_language}'")
             self.current_language = self.default_language
 
     def get_language(self) -> str:
@@ -64,15 +62,11 @@ class I18n:
             Translated string
         """
         # Get translation for current language
-        translation = self._get_nested_value(
-            self.translations.get(self.current_language, {}), key
-        )
+        translation = self._get_nested_value(self.translations.get(self.current_language, {}), key)
 
         # Fallback to default language if not found
         if translation is None and self.current_language != self.default_language:
-            translation = self._get_nested_value(
-                self.translations.get(self.default_language, {}), key
-            )
+            translation = self._get_nested_value(self.translations.get(self.default_language, {}), key)
 
         # Fallback to key itself if still not found
         if translation is None:

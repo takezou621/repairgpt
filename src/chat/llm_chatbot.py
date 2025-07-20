@@ -112,17 +112,13 @@ class RepairChatbot(LoggerMixin):
 
         self.openai_client = None
         self.anthropic_client = None
-        self.huggingface_api_key = huggingface_api_key or os.getenv(
-            "HUGGINGFACE_API_KEY"
-        )
+        self.huggingface_api_key = huggingface_api_key or os.getenv("HUGGINGFACE_API_KEY")
         self.preferred_model = preferred_model
 
         # Initialize OpenAI client
         if openai and (openai_api_key or os.getenv("OPENAI_API_KEY")):
             try:
-                self.openai_client = openai.OpenAI(
-                    api_key=openai_api_key or os.getenv("OPENAI_API_KEY")
-                )
+                self.openai_client = openai.OpenAI(api_key=openai_api_key or os.getenv("OPENAI_API_KEY"))
                 self.log_info("OpenAI client initialized successfully")
             except Exception as e:
                 self.log_error(e, "Failed to initialize OpenAI client")
@@ -130,9 +126,7 @@ class RepairChatbot(LoggerMixin):
         # Initialize Anthropic client
         if anthropic and (anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")):
             try:
-                self.anthropic_client = anthropic.Anthropic(
-                    api_key=anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")
-                )
+                self.anthropic_client = anthropic.Anthropic(api_key=anthropic_api_key or os.getenv("ANTHROPIC_API_KEY"))
                 self.log_info("Anthropic client initialized successfully")
             except Exception as e:
                 self.log_error(e, "Failed to initialize Anthropic client")
@@ -175,9 +169,7 @@ class RepairChatbot(LoggerMixin):
         try:
             if not openai:
                 raise ImportError("OpenAI package not available")
-            self.openai_client = openai.OpenAI(
-                api_key=api_key or os.getenv("OPENAI_API_KEY")
-            )
+            self.openai_client = openai.OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
             self.log_info("OpenAI client initialized successfully")
         except Exception as e:
             self.log_error(e, "Failed to initialize OpenAI client")
@@ -187,9 +179,7 @@ class RepairChatbot(LoggerMixin):
         try:
             if not anthropic:
                 raise ImportError("Anthropic package not available")
-            self.anthropic_client = anthropic.Anthropic(
-                api_key=api_key or os.getenv("ANTHROPIC_API_KEY")
-            )
+            self.anthropic_client = anthropic.Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
             self.log_info("Anthropic client initialized successfully")
         except Exception as e:
             self.log_error(e, "Failed to initialize Anthropic client")
@@ -322,9 +312,7 @@ class RepairChatbot(LoggerMixin):
             # Log successful API response
             self.log_info(
                 "OpenAI API call successful",
-                tokens_used=(
-                    response.usage.total_tokens if hasattr(response, "usage") else None
-                ),
+                tokens_used=(response.usage.total_tokens if hasattr(response, "usage") else None),
                 response_length=len(result),
             )
 
@@ -372,12 +360,8 @@ class RepairChatbot(LoggerMixin):
             # Log successful API response
             self.log_info(
                 "Anthropic API call successful",
-                input_tokens=(
-                    response.usage.input_tokens if hasattr(response, "usage") else None
-                ),
-                output_tokens=(
-                    response.usage.output_tokens if hasattr(response, "usage") else None
-                ),
+                input_tokens=(response.usage.input_tokens if hasattr(response, "usage") else None),
+                output_tokens=(response.usage.output_tokens if hasattr(response, "usage") else None),
                 response_length=len(result),
             )
 
@@ -385,9 +369,7 @@ class RepairChatbot(LoggerMixin):
 
         except Exception as e:
             # Log API error with details
-            log_api_error(
-                self.logger, "anthropic_messages", e, model="claude-3-sonnet-20240229"
-            )
+            log_api_error(self.logger, "anthropic_messages", e, model="claude-3-sonnet-20240229")
             raise
 
     def _chat_with_huggingface(self, user_message: str, include_context: bool) -> str:
@@ -421,9 +403,7 @@ class RepairChatbot(LoggerMixin):
                     },
                 }
 
-                response = requests.post(
-                    api_url, headers=headers, json=payload, timeout=30
-                )
+                response = requests.post(api_url, headers=headers, json=payload, timeout=30)
 
                 if response.status_code == 200:
                     result = response.json()
@@ -478,33 +458,41 @@ class RepairChatbot(LoggerMixin):
 
     def _build_system_prompt(self, include_context: bool) -> str:
         """Build system prompt with repair context"""
-        base_prompt = """You are an expert electronics repair assistant. You provide clear, safe, and practical repair guidance for consumer electronics including gaming consoles, smartphones, laptops, and other devices.
+        base_prompt = (
+            "You are an expert electronics repair assistant. You provide clear, safe, and "
+            "practical repair guidance for consumer electronics including gaming consoles, "
+            "smartphones, laptops, and other devices.\n\n"
+            "Key principles:\n"
+            "1. SAFETY FIRST - Always prioritize user safety and warn about potential hazards\n"
+            "2. Clear instructions - Provide step-by-step guidance appropriate for the user's skill level\n"
+            "3. Tool requirements - Specify exactly what tools and parts are needed\n"
+            "4. Troubleshooting - Help diagnose issues before suggesting repairs\n"
+            "5. Alternatives - Suggest when professional repair might be better\n\n"
+            "Guidelines:\n"
+            "- Ask clarifying questions when the problem description is unclear\n"
+            "- Provide estimated difficulty and time requirements\n"
+            "- Warn about warranty implications\n"
+            "- Suggest testing steps to verify the fix worked\n"
+            "- Be honest about repair complexity and success likelihood"
+        )
 
-Key principles:
-1. SAFETY FIRST - Always prioritize user safety and warn about potential hazards
-2. Clear instructions - Provide step-by-step guidance appropriate for the user's skill level
-3. Tool requirements - Specify exactly what tools and parts are needed
-4. Troubleshooting - Help diagnose issues before suggesting repairs
-5. Alternatives - Suggest when professional repair might be better
-
-Guidelines:
-- Ask clarifying questions when the problem description is unclear
-- Provide estimated difficulty and time requirements
-- Warn about warranty implications
-- Suggest testing steps to verify the fix worked
-- Be honest about repair complexity and success likelihood"""
-
-        if include_context and (
-            self.repair_context.device_type or self.repair_context.issue_description
-        ):
-            context_info = f"""
-
-Current repair context:
-- Device: {self.repair_context.device_type} {self.repair_context.device_model}
-- Issue: {self.repair_context.issue_description}
-- User skill level: {self.repair_context.user_skill_level}
-- Available tools: {', '.join(self.repair_context.available_tools) if self.repair_context.available_tools else 'Not specified'}
-- Safety concerns: {', '.join(self.repair_context.safety_concerns) if self.repair_context.safety_concerns else 'None noted'}"""
+        if include_context and (self.repair_context.device_type or self.repair_context.issue_description):
+            available_tools_str = (
+                ', '.join(self.repair_context.available_tools)
+                if self.repair_context.available_tools else 'Not specified'
+            )
+            safety_concerns_str = (
+                ', '.join(self.repair_context.safety_concerns)
+                if self.repair_context.safety_concerns else 'None noted'
+            )
+            context_info = (
+                f"\n\nCurrent repair context:\n"
+                f"- Device: {self.repair_context.device_type} {self.repair_context.device_model}\n"
+                f"- Issue: {self.repair_context.issue_description}\n"
+                f"- User skill level: {self.repair_context.user_skill_level}\n"
+                f"- Available tools: {available_tools_str}\n"
+                f"- Safety concerns: {safety_concerns_str}"
+            )
 
             base_prompt += context_info
 
@@ -553,7 +541,10 @@ Your message: "{user_message[:100]}{'...' if len(user_message) > 100 else ''}"
                         "electrical contact issues",
                     ],
                     "solutions": [
-                        "1. **Immediate Fix**: Recalibrate the Joy-Con in System Settings > Controllers and Sensors > Calibrate Control Sticks",
+                        (
+                            "1. **Immediate Fix**: Recalibrate the Joy-Con in System Settings > "
+                            "Controllers and Sensors > Calibrate Control Sticks"
+                        ),
                         "2. **Cleaning**: Use compressed air around the analog stick base to remove debris",
                         "3. **Contact Cleaner**: Apply electrical contact cleaner under the rubber cap (advanced)",
                         "4. **Replacement**: Replace the analog stick mechanism (requires disassembly)",
@@ -651,9 +642,7 @@ Your message: "{user_message[:100]}{'...' if len(user_message) > 100 else ''}"
         for device, issues in repair_knowledge.items():
             if device in full_context:
                 for issue, details in issues.items():
-                    if issue in full_context or any(
-                        symptom in full_context for symptom in details["symptoms"]
-                    ):
+                    if issue in full_context or any(symptom in full_context for symptom in details["symptoms"]):
                         matched_advice = (device, issue, details)
                         break
 

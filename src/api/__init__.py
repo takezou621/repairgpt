@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import security and configuration
-from ..config.settings import settings, validate_api_keys
+from ..config.settings_simple import settings, validate_api_keys
 from ..utils.security import (
     RateLimiter,
     RateLimitMiddleware,
@@ -37,9 +37,7 @@ class I18nMiddleware:
                     with open(locale_file, "r", encoding="utf-8") as f:
                         self.translations[language_code] = json.load(f)
                 except Exception as e:
-                    print(
-                        f"Warning: Failed to load translation file {locale_file}: {e}"
-                    )
+                    print(f"Warning: Failed to load translation file {locale_file}: {e}")
 
     def get_language_from_request(self, request: Request) -> str:
         """Extract language from request headers or query parameters"""
@@ -104,9 +102,7 @@ def create_app() -> FastAPI:
         app.add_middleware(SecurityHeaders, headers=settings.get_security_headers())
 
     # Add rate limiting middleware
-    rate_limiter = RateLimiter(
-        max_requests=settings.rate_limit_requests_per_minute, window_seconds=60
-    )
+    rate_limiter = RateLimiter(max_requests=settings.rate_limit_requests_per_minute, window_seconds=60)
     app.add_middleware(
         RateLimitMiddleware,
         rate_limiter=rate_limiter,
@@ -148,7 +144,7 @@ def create_app() -> FastAPI:
 
         # Validate production configuration
         if settings.is_production():
-            from ..config.settings import validate_production_config
+            from ..config.settings_simple import validate_production_config
 
             issues = validate_production_config()
             if issues:
@@ -173,10 +169,7 @@ def create_app() -> FastAPI:
         logger.info(f"RepairGPT API starting in {settings.environment} mode")
         security_status = "enabled" if settings.enable_security_headers else "disabled"
         logger.info(f"Security headers: {security_status}")
-        logger.info(
-            f"Rate limiting: {settings.rate_limit_requests_per_minute} "
-            "requests/minute"
-        )
+        logger.info(f"Rate limiting: {settings.rate_limit_requests_per_minute} " "requests/minute")
 
     return app
 
@@ -195,9 +188,7 @@ def get_localized_response(request: Request, message_key: str, **kwargs) -> dict
     return {"message": message, "language": language, **kwargs}
 
 
-def get_localized_error(
-    request: Request, error_key: str, status_code: int = 400, **kwargs
-) -> HTTPException:
+def get_localized_error(request: Request, error_key: str, status_code: int = 400, **kwargs) -> HTTPException:
     """Get a localized error response"""
     language = getattr(request.state, "language", "en")
     i18n = getattr(request.state, "i18n", None)

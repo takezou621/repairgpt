@@ -13,21 +13,21 @@ pre-commit:
     # Python code formatting with Black (auto-fix enabled)
     format-python:
       glob: "*.py"
-      run: python3 -m black --line-length=88 {staged_files}
+      run: python3 -m black --line-length=120 {staged_files}
       stage_fixed: true
       fail_text: "Code formatting applied. Files have been automatically formatted."
     
     # Import sorting with isort (auto-fix enabled)
     sort-imports:
       glob: "*.py" 
-      run: python3 -m isort --profile black --line-length=88 {staged_files}
+      run: python3 -m isort --profile black --line-length=120 {staged_files}
       stage_fixed: true
       fail_text: "Import sorting applied. Files have been automatically sorted."
     
     # Python linting with flake8 (check only)
     lint-python:
       glob: "*.py"
-      run: python3 -m flake8 --max-line-length=120 --extend-ignore=E501,W503 --exclude=__pycache__,*.pyc,.git,venv,env,.venv,.env,test_lefthook.py {staged_files}
+      run: python3 -m flake8 --max-line-length=120 --extend-ignore=W503 --exclude=__pycache__,*.pyc,.git,venv,env,.venv,.env,test_lefthook.py {staged_files}
       fail_text: "Linting issues found. Fix the issues or run with LEFTHOOK=0 to skip."
 
 # Pre-push hooks: Run before each push

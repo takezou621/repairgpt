@@ -202,9 +202,7 @@ async def login_user(login_request: LoginRequest, request: Request):
 
 
 @router.get("/auth/me")
-async def get_current_user(
-    request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
-):
+async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
     """Get current user information"""
     try:
         from ..auto_feature_60 import AuthenticationFeature
@@ -226,9 +224,7 @@ async def health_check(request: Request):
     """Health check endpoint with localized response"""
     return HealthResponse(
         status="healthy",
-        message=request.state.i18n.translate(
-            "api.health.message", request.state.language
-        ),
+        message=request.state.i18n.translate("api.health.message", request.state.language),
         language=request.state.language,
         version="1.0.0",
     )
@@ -282,9 +278,7 @@ async def chat_endpoint(chat_request: ChatRequest, request: Request):
         )
 
     except Exception as e:
-        raise get_localized_error(
-            request, "api.errors.chat_failed", status_code=500, error=str(e)
-        )
+        raise get_localized_error(request, "api.errors.chat_failed", status_code=500, error=str(e))
 
 
 @router.get("/devices")
@@ -317,9 +311,7 @@ async def get_supported_devices(request: Request):
     for device in devices:
         localized_devices[device] = i18n.translate(f"devices.{device}", language)
 
-    return get_localized_response(
-        request, "api.devices.success", devices=localized_devices, count=len(devices)
-    )
+    return get_localized_response(request, "api.devices.success", devices=localized_devices, count=len(devices))
 
 
 @router.get("/skill-levels")
@@ -363,17 +355,13 @@ async def search_repair_guides(
 
         # Search offline database first
         if query:
-            offline_guides = offline_db.search_guides(
-                query, device_type, limit=limit // 2
-            )
+            offline_guides = offline_db.search_guides(query, device_type, limit=limit // 2)
             guides.extend([guide.__dict__ for guide in offline_guides])
 
         # Search iFixit if we have fewer than limit guides
         if len(guides) < limit and query:
             try:
-                online_guides = ifixit_client.search_guides(
-                    query, limit=limit - len(guides)
-                )
+                online_guides = ifixit_client.search_guides(query, limit=limit - len(guides))
                 guides.extend([guide.__dict__ for guide in online_guides])
             except Exception:
                 # Online search failed, continue with offline results
@@ -389,9 +377,7 @@ async def search_repair_guides(
         )
 
     except Exception as e:
-        raise get_localized_error(
-            request, "api.errors.search_failed", status_code=500, error=str(e)
-        )
+        raise get_localized_error(request, "api.errors.search_failed", status_code=500, error=str(e))
 
 
 @router.get("/languages")
@@ -435,9 +421,7 @@ async def analyze_device_image(
 
         # Validate file type
         allowed_types = [f"image/{ext}" for ext in settings.allowed_file_types]
-        if not file.content_type or not validate_content_type(
-            file.content_type, allowed_types
-        ):
+        if not file.content_type or not validate_content_type(file.content_type, allowed_types):
             logger.warning(f"Invalid file type uploaded: {file.content_type}")
             raise get_localized_error(
                 request,
@@ -496,9 +480,7 @@ async def analyze_device_image(
                 service="OpenAI",
             )
 
-        analysis_service = ImageAnalysisService(
-            provider="openai", api_key=settings.openai_api_key
-        )
+        analysis_service = ImageAnalysisService(provider="openai", api_key=settings.openai_api_key)
 
         # Perform analysis
         result = await analysis_service.analyze_device_image(
@@ -701,8 +683,7 @@ async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
         ):
             severity = "high"
         elif any(
-            word in diagnose_request.issue_description.lower()
-            for word in ["slow", "minor", "sometimes", "occasional"]
+            word in diagnose_request.issue_description.lower() for word in ["slow", "minor", "sometimes", "occasional"]
         ):
             severity = "low"
 
@@ -739,14 +720,8 @@ async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
         repair_recommendations = [
             RepairRecommendation(
                 title="Initial Troubleshooting",
-                description=(
-                    raw_response[:500] + "..."
-                    if len(raw_response) > 500
-                    else raw_response
-                ),
-                difficulty=(
-                    "easy" if diagnose_request.skill_level != "beginner" else "medium"
-                ),
+                description=(raw_response[:500] + "..." if len(raw_response) > 500 else raw_response),
+                difficulty=("easy" if diagnose_request.skill_level != "beginner" else "medium"),
                 estimated_time="30-60 minutes",
                 estimated_cost="$0-50",
                 success_rate="70-85%",
@@ -796,6 +771,4 @@ async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
 
     except Exception as e:
         logger.error(f"Diagnosis failed: {e}")
-        raise get_localized_error(
-            request, "api.errors.diagnosis_failed", status_code=500, error=str(e)
-        )
+        raise get_localized_error(request, "api.errors.diagnosis_failed", status_code=500, error=str(e))
