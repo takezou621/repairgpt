@@ -1,0 +1,84 @@
+# Lefthook configuration for RepairGPT
+# Git hooks manager for automated code quality checks and development workflow
+# Purpose: Ensure consistent code quality, reduce CI/CD failures, improve development efficiency
+
+# Install hooks: lefthook install
+# Skip hooks: LEFTHOOK=0 git commit
+# Skip specific hook: lefthook run pre-commit --exclude lint
+
+# Pre-commit hooks: Run before each commit
+pre-commit:
+  parallel: true
+  commands:
+    # Python code formatting with Black
+    format-python:
+      glob: "*.py"
+      run: python3 -m black --line-length=88 --check --diff {staged_files}
+      stage_fixed: true
+      fail_text: "Code formatting issues found. Run 'python3 -m black --line-length=88 src/' to fix."
+    
+    # Import sorting with isort
+    sort-imports:
+      glob: "*.py" 
+      run: python3 -m isort --profile black --line-length=88 --check-only --diff {staged_files}
+      stage_fixed: true
+      fail_text: "Import sorting issues found. Run 'python3 -m isort --profile black --line-length=88 src/' to fix."
+    
+    # Python linting with flake8
+    lint-python:
+      glob: "*.py"
+      run: python3 -m flake8 --max-line-length=88 --exclude=__pycache__,*.pyc,.git,venv,env,.venv,.env {staged_files}
+      fail_text: "Linting issues found. Fix the issues or run with LEFTHOOK=0 to skip."
+    
+    # Basic syntax check
+    syntax-check:
+      glob: "*.py"
+      run: python3 -m py_compile {staged_files}
+      fail_text: "Python syntax errors found. Fix syntax errors before committing."
+
+# Pre-push hooks: Run before each push
+pre-push:
+  commands:
+    # Run basic unit tests
+    unit-tests:
+      run: python3 -m pytest tests/unit/ -v --tb=short --maxfail=3 -x
+      fail_text: "Unit tests failed. Fix failing tests before pushing."
+      
+    # Quick integration test
+    basic-tests:
+      run: python3 -m pytest tests/test_basic_examples.py -v --tb=short
+      fail_text: "Basic tests failed. Fix issues before pushing."
+
+# Commit message validation
+commit-msg:
+  commands:
+    # Validate commit message format
+    message-format:
+      run: |
+        # Check commit message follows conventional commits format
+        commit_msg=$(cat $1)
+        if echo "$commit_msg" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|ci|perf|build|revert)(\(.+\))?: .{3,}"; then
+          exit 0
+        elif echo "$commit_msg" | grep -qE "^(Merge|Revert|Initial commit)"; then
+          exit 0
+        else
+          echo "❌ Commit message format error!"
+          echo "Expected format: type(scope): description"
+          echo "Types: feat, fix, docs, style, refactor, test, chore, ci, perf, build, revert"
+          echo "Example: feat(api): add new authentication endpoint"
+          echo "Example: fix: resolve memory leak in image processing"
+          echo ""
+          echo "Your message: $commit_msg"
+          exit 1
+        fi
+      fail_text: "Commit message does not follow conventional format."
+
+# Skip certain files/patterns
+skip_output:
+  - meta
+  - summary
+  - success
+
+# Global settings
+assert_lefthook_installed: true
+no_tty: false
