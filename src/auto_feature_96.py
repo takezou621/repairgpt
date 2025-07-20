@@ -151,7 +151,7 @@ def create_mvp_status_document(file_path, mvp_report):
         icon = "📁" if type_info == "directory" else "📄"
         content += f"- {icon} {name}\n"
 
-    content += f"""
+    content += """
 ## 🔍 Recommendations
 
 """

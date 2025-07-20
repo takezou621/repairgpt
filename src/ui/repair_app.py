@@ -154,7 +154,7 @@ def call_chat_api(message: str, device_context: Dict = None) -> str:
             )
 
             st.error(f"Chat service error: {response.status_code}")
-            return f"Sorry, I encountered an error. Please try again later."
+            return "Sorry, I encountered an error. Please try again later."
 
     except requests.exceptions.RequestException as e:
         error_msg = f"Connection error: {str(e)}"

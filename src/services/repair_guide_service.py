@@ -21,7 +21,6 @@ try:
     from ..utils.logger import get_logger
 except ImportError:
     # Fallback for direct execution
-    import os
     import sys
 
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
