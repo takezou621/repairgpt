@@ -45,7 +45,7 @@ jobs:
     - name: Check code formatting with Black
       run: |
         if [ -d "src" ] && [ "$(find src -name '*.py' | head -1)" ]; then
-          black --check --diff src/
+          black --check --diff --line-length=120 src/
         else
           echo "No Python files found in src/ - skipping Black check"
         fi
@@ -53,7 +53,7 @@ jobs:
     - name: Check import sorting with isort
       run: |
         if [ -d "src" ] && [ "$(find src -name '*.py' | head -1)" ]; then
-          isort --check-only --diff src/
+          isort --check-only --diff --line-length=120 --profile black src/
         else
           echo "No Python files found in src/ - skipping isort check"
         fi
@@ -61,7 +61,7 @@ jobs:
     - name: Lint with flake8
       run: |
         if [ -d "src" ] && [ "$(find src -name '*.py' | head -1)" ]; then
-          flake8 src/ --max-line-length=88 --extend-ignore=E203,W503
+          flake8 src/ --max-line-length=120 --extend-ignore=E203,W503
         else
           echo "No Python files found in src/ - skipping flake8 check"
         fi
