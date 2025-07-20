@@ -74,7 +74,7 @@ class RepairContext:
     device_type: Optional[str] = None
     device_model: Optional[str] = None
     issue_description: Optional[str] = None
-    user_skill_level: str = "beginner"  # beginner, intermediate, expert
+    user_skill_level: Optional[str] = None
     safety_concerns: List[str] = None
     available_tools: List[str] = None
 
@@ -478,12 +478,12 @@ class RepairChatbot(LoggerMixin):
 
         if include_context and (self.repair_context.device_type or self.repair_context.issue_description):
             available_tools_str = (
-                ', '.join(self.repair_context.available_tools)
-                if self.repair_context.available_tools else 'Not specified'
+                ", ".join(self.repair_context.available_tools)
+                if self.repair_context.available_tools
+                else "Not specified"
             )
             safety_concerns_str = (
-                ', '.join(self.repair_context.safety_concerns)
-                if self.repair_context.safety_concerns else 'None noted'
+                ", ".join(self.repair_context.safety_concerns) if self.repair_context.safety_concerns else "None noted"
             )
             context_info = (
                 f"\n\nCurrent repair context:\n"
@@ -631,8 +631,8 @@ Your message: "{user_message[:100]}{'...' if len(user_message) > 100 else ''}"
 
         # Analyze user message for keywords
         message_lower = user_message.lower()
-        device_context = self.repair_context.device_type.lower()
-        issue_context = self.repair_context.issue_description.lower()
+        device_context = self.repair_context.device_type.lower() if self.repair_context.device_type else ""
+        issue_context = self.repair_context.issue_description.lower() if self.repair_context.issue_description else ""
 
         # Combined context for analysis
         full_context = f"{message_lower} {device_context} {issue_context}"
@@ -683,13 +683,15 @@ If this doesn't match your specific issue, please provide more details about:
 3. Any recent incidents (drops, spills, etc.)
 4. Your comfort level with repairs
 
-*This response is generated from RepairGPT's built-in knowledge base. For AI-powered personalized assistance, configure API keys in settings.*"""
+*This response is generated from RepairGPT's built-in knowledge base.
+For AI-powered personalized assistance, configure API keys in settings.*"""
 
         else:
             # General repair guidance when no specific match
             response = f"""🔧 **RepairGPT General Repair Guidance**
 
-I understand you're having an issue with your device. While I don't have AI assistance active right now, I can provide general repair guidance.
+I understand you're having an issue with your device. While I don't have AI assistance active right now,
+I can provide general repair guidance.
 
 **🔍 Diagnostic Steps**:
 1. **Identify the Problem**: Be specific about symptoms
