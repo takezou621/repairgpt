@@ -55,7 +55,8 @@
       "Bash(lsof:*)",
       "Bash(gh pr:*)",
       "Bash(PYTHONPATH=/Users/kawai/dev/repairgpt/src python3 src/auto_feature_60.py)",
-      "Bash(PYTHONPATH=/Users/kawai/dev/repairgpt/src python3 src/auto_feature_115.py)"
+      "Bash(PYTHONPATH=/Users/kawai/dev/repairgpt/src python3 src/auto_feature_115.py)",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }
