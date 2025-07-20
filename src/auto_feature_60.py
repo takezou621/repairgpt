@@ -4,16 +4,12 @@ JWT Authentication Feature Implementation for Issue #60
 Integrates JWT authentication and user management system
 """
 
-import asyncio
 import os
 from datetime import datetime, timezone
-from typing import Dict, Optional
+from typing import Dict
 
 from auth.jwt_auth import (
-    JWTAuthManager,
-    Token,
     UserAuth,
-    create_access_token,
     decode_token,
     get_jwt_manager,
     hash_password,

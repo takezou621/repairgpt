@@ -5,10 +5,10 @@ import os
 import sys
 from pathlib import Path
 
+from i18n import _, i18n
+
 # Add src directory to path to import i18n module
 sys.path.insert(0, str(Path(__file__).parent))
-
-from i18n import _, i18n
 
 
 def demo_i18n_functionality():

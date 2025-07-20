@@ -5,7 +5,6 @@ Implements Issue #90: 🔒 設定管理とセキュリティ強化
 
 import json
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
@@ -415,21 +414,21 @@ async def analyze_device_image(
     """
     Analyze device image for diagnosis
 
-    Upload an image of a device for AI-powered damage assessment and repair recommendations.
-    Supports JPG, PNG, and WebP formats up to 10MB.
+    Upload an image of a device for AI-powered damage assessment and
+    repair recommendations. Supports JPG, PNG, and WebP formats up to 10MB.
     """
     try:
         # Import analysis models and service
         from ..schemas.image_analysis import (
             DamageAssessmentResponse,
             DeviceInfoResponse,
-            ImageAnalysisError,
             ImageAnalysisResponse,
         )
         from ..services.image_analysis import ImageAnalysisService
 
-        # Sanitize filename
-        safe_filename = sanitize_filename(file.filename) if file.filename else "upload"
+        # Validate filename
+        if file.filename:
+            sanitize_filename(file.filename)
 
         # Validate file type
         allowed_types = [f"image/{ext}" for ext in settings.allowed_file_types]
@@ -477,10 +476,9 @@ async def analyze_device_image(
             logger.warning(f"Image security warning: {warning}")
 
         # Parse context if provided
-        parsed_context = {}
         if context:
             try:
-                parsed_context = json.loads(context)
+                json.loads(context)
             except json.JSONDecodeError:
                 pass
 
@@ -559,7 +557,6 @@ async def analyze_device_image(
 
 
 # Additional diagnosis models for the diagnose endpoint
-from enum import Enum
 
 
 class DiagnoseRequest(BaseModel):

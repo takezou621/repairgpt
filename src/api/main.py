@@ -3,7 +3,7 @@ FastAPI main application with i18n and security support
 Implements Issue #90: 🔒 設定管理とセキュリティ強化
 """
 
-from fastapi import FastAPI, Request
+from fastapi import Request
 
 from ..config.settings import settings
 from . import create_app, get_localized_response

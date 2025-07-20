@@ -9,10 +9,6 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Add src to path for imports
-current_dir = Path(__file__).parent
-sys.path.insert(0, str(current_dir))
-
 from database.crud import (
     ChatSessionCRUD,
     DeviceCRUD,
@@ -29,6 +25,11 @@ from database.database import (
     get_db_session,
 )
 from database.models import ChatSession, Device, Issue, RepairAttempt, RepairGuide, User
+
+# Add src to path for imports
+current_dir = Path(__file__).parent
+sys.path.insert(0, str(current_dir))
+
 
 # Configure logging
 logging.basicConfig(

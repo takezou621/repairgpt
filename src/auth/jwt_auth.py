@@ -7,7 +7,7 @@ import os
 import secrets
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 import jwt
 from passlib.context import CryptContext
