@@ -6,6 +6,25 @@
 
 RepairGPT は、AI を活用して電子機器の修理をサポートするオープンソースプロジェクトです。LLM とマルチモーダル機能を使用して、ゲーム機、スマートフォン、PC などの消費者向け電子機器の診断と修理を支援します。
 
+### Core Features (Kiro Steering より)
+- **AI Repair Assistant**: Enhanced chatbot with built-in knowledge base using OpenAI GPT-4 and Claude-3
+- **Offline Repair Database**: Comprehensive repair guides for Nintendo Switch, iPhone, Laptop, PlayStation 5
+- **iFixit Integration**: Online repair guide search and access via API
+- **Image Analysis**: Visual repair assistance using OpenAI Vision API
+- **Multi-language Support**: English and Japanese (i18n implementation)
+- **Safety-First Approach**: Detailed warnings and professional recommendations
+
+### Target Users
+- **Beginners**: Basic troubleshooting with safety warnings
+- **Intermediate**: More detailed repair steps with tool requirements
+- **Expert**: Advanced diagnostics and complex repair procedures
+
+### Key Principles
+- Safety warnings are mandatory for all repair recommendations
+- Device-specific and skill-level appropriate guidance
+- Professional help recommendations for complex repairs
+- Comprehensive documentation and step-by-step instructions
+
  - ❌ 「完了！」「成功！」の安易な報告を止める
   - ✅ 実際の動作確認後にのみ結果を報告する
   - ✅ 失敗や制約は隠さず正直に伝える
@@ -37,31 +56,48 @@ RepairGPT は、AI を活用して電子機器の修理をサポートするオ�
 
 ### バックエンド
 - **言語**: Python 3.9+
-- **Webフレームワーク**: FastAPI 0.100+
+- **Webフレームワーク**: FastAPI 0.100+ (REST API framework with async support)
 - **データベース**: PostgreSQL 14+ (本番)、SQLite (開発)
-- **ORM**: SQLAlchemy 2.0+
-- **キャッシュ**: Redis 7.0+
+- **ORM**: SQLAlchemy 2.0+ (Database ORM with async capabilities)
+- **マイグレーション**: Alembic 1.11+
+- **データ検証**: Pydantic 2.0+ (Data validation and serialization)
+- **キャッシュ**: Redis 4.6+ (Caching and session management)
 
 ### フロントエンド
-- **UI**: Streamlit 1.25+
+- **UI**: Streamlit 1.25+ (Web UI framework)
+- **レスポンシブデザイン**: Mobile-friendly interface
 - **カスタムコンポーネント**: HTML/CSS/JavaScript
 
 ### AI/ML
-- **LLM**: OpenAI GPT-4、Claude-3
+- **LLM**: OpenAI GPT-4、Anthropic Claude (Advanced reasoning for complex diagnostics)
 - **Vision API**: OpenAI Vision API
-- **プロンプト管理**: LangChain
+- **プロンプト管理**: Langchain (Prompt management and LLM orchestration)
 - **画像処理**: Pillow、OpenCV
+
+### 開発ツール (Kiro Steering より)
+- **Lefthook**: Git hooks for code quality
+- **Black**: Code formatting (120 char line limit)
+- **flake8**: Linting with PEP8 compliance
+- **isort**: Import sorting
+- **pytest**: Testing framework with coverage
+- **mypy**: Type checking
 
 ### 外部サービス
 - **iFixit API**: 修理手順データ
 - **OpenAI API**: 自然言語処理
 - **Claude API**: 高度な推論
 
-## プロジェクト構造
+## プロジェクト構造 (Kiro Steering準拠)
 
+### ディレクトリ構成
 ```
 repairgpt/
 ├── README.md               # プロジェクト概要
+├── .kiro/                  # Kiro Steering ドキュメント
+│   └── steering/
+│       ├── product.md      # 製品概要・機能・ユーザー
+│       ├── structure.md    # プロジェクト構造・命名規則
+│       └── tech.md         # 技術スタック・開発コマンド
 ├── docs/                   # 包括的なドキュメント
 │   ├── architecture/       # アーキテクチャ設計
 │   ├── setup/             # セットアップガイド
@@ -69,10 +105,62 @@ repairgpt/
 │   ├── api/               # API仕様
 │   ├── development/       # 開発ガイド
 │   └── deployment/        # デプロイメント
-├── src/                   # ソースコード（未実装）
-├── tests/                 # テストコード（未実装）
-└── config/                # 設定ファイル（未実装）
+├── src/                   # ソースコード
+│   ├── api/               # FastAPI backend
+│   │   ├── main.py        # Application entry point
+│   │   ├── models.py      # Pydantic models
+│   │   └── routes/        # API route modules
+│   ├── auth/              # Authentication & JWT
+│   ├── chat/              # LLM chatbot system
+│   │   ├── llm_chatbot.py # Main chatbot logic
+│   │   ├── prompt_templates.py # Prompt management
+│   │   └── streaming_chat.py   # Real-time chat
+│   ├── clients/           # External API clients
+│   │   └── ifixit_client.py # iFixit integration
+│   ├── config/            # Configuration management
+│   │   ├── settings.py    # Full settings with validation
+│   │   └── settings_simple.py # Simplified settings
+│   ├── data/              # Data access layer
+│   │   └── offline_repair_database.py
+│   ├── database/          # Database models & CRUD
+│   │   ├── database.py    # DB connection
+│   │   ├── models.py      # SQLAlchemy models
+│   │   └── crud.py        # Database operations
+│   ├── features/          # Feature modules
+│   ├── i18n/              # Internationalization
+│   │   └── locales/       # Translation files
+│   ├── prompts/           # AI prompt templates
+│   ├── schemas/           # Data schemas & validation
+│   ├── services/          # Business logic services
+│   │   ├── image_analysis.py  # Image processing
+│   │   └── repair_guide_service.py
+│   ├── ui/                # Streamlit frontend
+│   │   ├── repair_app.py  # Main UI application
+│   │   ├── language_selector.py
+│   │   └── responsive_design.py
+│   └── utils/             # Utility functions
+│       ├── logger.py      # Logging configuration
+│       └── security.py    # Security utilities
+├── tests/                 # テストコード
+│   ├── automation/        # Automation system tests
+│   ├── fixtures/          # Test fixtures & data
+│   ├── integration/       # Integration tests
+│   │   └── test_api/     # API endpoint tests
+│   ├── unit/              # Unit tests
+│   │   ├── test_auth/    # Authentication tests
+│   │   ├── test_chat/    # Chatbot tests
+│   │   └── test_data/    # Data layer tests
+│   ├── conftest.py       # Pytest configuration
+│   └── requirements-test.txt  # Test dependencies
+└── config/                # 設定ファイル
 ```
+
+### 命名規則 (Kiro Steering準拠)
+- **Python**: snake_case (ファイル、関数、変数)
+- **クラス**: PascalCase
+- **定数**: UPPER_CASE
+- **API**: kebab-case (`/repair-guides`)
+- **データベース**: snake_case (テーブル、カラム)
 
 ## 開発ガイドライン
 
@@ -126,28 +214,32 @@ repairgpt/
 - **監視**: Prometheus + Grafana
 - **ログ**: 構造化ログ (JSON形式)
 
-## 開発コマンド
+## 開発コマンド (Kiro Steering準拠)
 
 ### 環境構築
 ```bash
-# 仮想環境作成
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
 # 依存関係インストール
 pip install -r requirements.txt
 
-# 開発用データベース初期化
-python scripts/init_db.py
+# 開発用フック設定
+lefthook install
+
+# アプリケーション実行
+python run_app.py
+# または
+streamlit run src/ui/repair_app.py
 ```
 
-### 開発サーバー起動
+### データベース操作
 ```bash
-# FastAPI サーバー
-uvicorn src.main:app --reload --port 8000
+# データベース初期化
+python scripts/init_db.py
 
-# Streamlit UI
-streamlit run src/ui/app.py --server.port 8501
+# マイグレーション実行
+alembic upgrade head
+
+# 新規マイグレーション作成
+alembic revision --autogenerate -m "description"
 ```
 
 ### テスト実行
@@ -156,22 +248,45 @@ streamlit run src/ui/app.py --server.port 8501
 pytest
 
 # カバレッジ付きテスト
-pytest --cov=src tests/
+pytest --cov=src --cov-report=html
 
-# 特定のテストのみ
-pytest tests/test_repair_service.py
+# 特定カテゴリのテスト
+pytest -m unit
+pytest -m integration
+pytest -m automation
 ```
 
 ### コード品質チェック
 ```bash
+# フォーマット (フック経由で自動実行)
+black src/ tests/ --line-length=120
+isort src/ tests/ --profile black
+
 # リンター
-flake8 src/
+flake8 src/ tests/ --max-line-length=120
 
 # 型チェック
 mypy src/
+```
 
-# フォーマッター
-black src/
+### Docker環境
+```bash
+# 開発環境
+docker-compose -f docker-compose.dev.yml up
+
+# 本番環境
+docker-compose up
+
+# 特定サービスビルド
+docker-compose build api
+```
+
+### 必須環境変数 (Kiro Steering準拠)
+```bash
+export REPAIRGPT_OPENAI_API_KEY="sk-..."
+export REPAIRGPT_CLAUDE_API_KEY="sk-ant-..."
+export REPAIRGPT_SECRET_KEY="32文字以上のシークレットキー"
+export REPAIRGPT_DATABASE_URL="データベース接続文字列"
 ```
 
 ## 注意事項
@@ -209,7 +324,16 @@ black src/
 
 ---
 
-最終更新日: 2025-01-12
+## Kiro Steering ドキュメント参照
+
+詳細な設計情報は以下のKiro Steeringドキュメントを参照:
+- [Product Overview](.kiro/steering/product.md): 製品機能・ユーザー・原則
+- [Project Structure](.kiro/steering/structure.md): ディレクトリ構成・命名規則・アーキテクチャパターン
+- [Technology Stack](.kiro/steering/tech.md): 技術スタック・開発コマンド・環境設定
+
+---
+
+最終更新日: 2025-07-20 (Kiro Steering統合)
 
 ## 自動化フローテスト
 
