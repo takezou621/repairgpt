@@ -6,7 +6,7 @@ This module provides enhanced UI components that complement the responsive desig
 and improve the overall user experience of the RepairGPT application.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import streamlit as st
 
@@ -52,7 +52,7 @@ def create_enhanced_info_card(
         margin: 1rem 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         transition: transform 0.2s ease;
-    " onmouseover="this.style.transform='translateY(-2px)'" 
+    " onmouseover="this.style.transform='translateY(-2px)'"
        onmouseout="this.style.transform='translateY(0)'">
         <h4 style="margin: 0 0 0.5rem 0; color: {border_color};">
             {icon} {title}
@@ -250,30 +250,30 @@ def show_responsive_design_info() -> None:
     st.markdown(
         """
     ## 🎨 Responsive Design & UI/UX Improvements
-    
+
     ### What's New:
-    
+
     **📱 Mobile-First Design**
     - Optimized layouts for smartphones and tablets
     - Touch-friendly buttons with 44px minimum height
     - Improved text sizing with clamp() functions
     - Better spacing and padding on smaller screens
-    
+
     **🎯 Enhanced User Experience**
     - Smooth animations and transitions
     - Hover effects and visual feedback
     - Improved color contrast and accessibility
     - Consistent design language throughout the app
-    
+
     **⚡ Performance Optimizations**
     - Reduced motion for users who prefer it
     - Optimized animations for mobile devices
     - Better resource loading and rendering
-    
+
     **🌙 Dark Mode Support**
     - Automatic adaptation to system preferences
     - Improved readability in low-light conditions
-    
+
     **♿ Accessibility Improvements**
     - Better focus indicators
     - Keyboard navigation support

@@ -1,11 +1,9 @@
 """Streaming chat functionality for real-time LLM responses"""
 
 import asyncio
-import json
-import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional
 
 try:
     import openai
@@ -81,7 +79,7 @@ class StreamingRepairChatbot(RepairChatbot):
         self, user_message: str, include_context: bool = True
     ) -> AsyncGenerator[StreamingResponse, None]:
         """Generate streaming response for user message"""
-        start_time = datetime.now()
+        datetime.now()
 
         # Add user message to history
         self.add_message("user", user_message)

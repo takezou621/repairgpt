@@ -7,13 +7,12 @@ import base64
 import hashlib
 import io
 import json
-import logging
 import os
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 try:
     import cv2
@@ -26,7 +25,7 @@ except ImportError:
     np = None
 
 try:
-    from PIL import Image, ImageEnhance, ImageFilter
+    from PIL import Image, ImageEnhance
 
     PIL_AVAILABLE = True
 except ImportError:
@@ -647,7 +646,7 @@ Please respond in JSON format."""
         try:
             # Get basic image information
             width, height = image.size
-            mode = image.mode
+            image.mode
 
             # Basic heuristics based on image properties
             device_type = self._guess_device_type_from_image(image)

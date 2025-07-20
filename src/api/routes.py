@@ -671,12 +671,12 @@ async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
         # Create diagnosis prompt
         diagnosis_prompt = f"""
         Please provide a structured diagnosis for the following device issue:
-        
+
         Device: {diagnose_request.device_type} {diagnose_request.device_model or ''}
         Issue: {diagnose_request.issue_description}
         Symptoms: {', '.join(diagnose_request.symptoms) if diagnose_request.symptoms else 'None specified'}
         User Skill Level: {diagnose_request.skill_level}
-        
+
         Please provide:
         1. Primary issue identification
         2. Possible causes (list)
@@ -686,7 +686,7 @@ async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
         6. Whether professional help is recommended
         7. Estimated time and cost if possible
         8. Preventive measures
-        
+
         Format your response clearly and focus on safety and accuracy.
         """
 

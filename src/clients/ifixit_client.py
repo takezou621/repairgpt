@@ -3,16 +3,13 @@ iFixit API Client for RepairGPT
 Implements Issue #8: iFixit APIクライアントの基本実装
 """
 
-import json
-import logging
 import time
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
-from urllib.parse import quote, urljoin
+from typing import Dict, List, Optional
 
 import requests
 
-from utils.logger import (
+from ..utils.logger import (
     LoggerMixin,
     get_logger,
     log_api_call,

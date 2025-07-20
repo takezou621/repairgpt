@@ -4,14 +4,13 @@ Implements Issue #9: 基本的なLLMチャットボットの実装
 """
 
 import json
-import logging
 import os
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
-from utils.logger import (
+from ..utils.logger import (
     LoggerMixin,
     get_logger,
     log_api_call,
@@ -34,9 +33,7 @@ except ImportError:
     Anthropic = None
 
 try:
-    from langchain.chat_models import ChatAnthropic, ChatOpenAI
-    from langchain.llms import OpenAI as LangChainOpenAI
-    from langchain.schema import AIMessage, HumanMessage, SystemMessage
+    pass
 
     LANGCHAIN_AVAILABLE = True
 except ImportError:
@@ -520,7 +517,7 @@ Current repair context:
 For device repair questions like yours:
 
 1. **Safety First**: Always power off the device and disconnect from power sources
-2. **Gather Information**: 
+2. **Gather Information**:
    - What specific symptoms are you experiencing?
    - When did the problem start?
    - Any recent drops, spills, or other incidents?

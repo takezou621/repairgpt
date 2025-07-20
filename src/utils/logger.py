@@ -17,7 +17,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 
 class JsonFormatter(logging.Formatter):
@@ -334,7 +334,7 @@ if __name__ == "__main__":
     try:
         # Test exception logging
         raise ValueError("Test exception for logging")
-    except Exception as e:
+    except Exception:
         test_logger.error("Exception occurred", exc_info=True)
 
     # Test mixin
