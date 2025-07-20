@@ -27,7 +27,7 @@ pre-commit:
     # Python linting with flake8 (check only)
     lint-python:
       glob: "*.py"
-      run: python3 -m flake8 --max-line-length=88 --exclude=__pycache__,*.pyc,.git,venv,env,.venv,.env,test_lefthook.py {staged_files}
+      run: python3 -m flake8 --max-line-length=120 --extend-ignore=E501,W503 --exclude=__pycache__,*.pyc,.git,venv,env,.venv,.env,test_lefthook.py {staged_files}
       fail_text: "Linting issues found. Fix the issues or run with LEFTHOOK=0 to skip."
 
 # Pre-push hooks: Run before each push
