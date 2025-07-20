@@ -8,6 +8,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, validator
 
 from ..config.settings import settings
@@ -201,13 +202,15 @@ async def login_user(login_request: LoginRequest, request: Request):
 
 
 @router.get("/auth/me")
-async def get_current_user(request: Request, token: str = Depends()):
+async def get_current_user(
+    request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
     """Get current user information"""
     try:
         from ..auto_feature_60 import AuthenticationFeature
 
         auth_feature = AuthenticationFeature()
-        result = await auth_feature.verify_token(token)
+        result = await auth_feature.verify_token(credentials.credentials)
 
         if result["success"]:
             return {"user": result["user"]}
