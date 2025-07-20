@@ -67,7 +67,10 @@
       "Bash(LEFTHOOK=0 git commit -m \"feat(hooks): add lefthook configuration for automated code quality\")",
       "Bash(LEFTHOOK=0 git commit -m \"feat: test lefthook auto-formatting functionality\")",
       "Bash(LEFTHOOK=0 git commit -m \"improve: optimize lefthook configuration for better performance\")",
-      "Bash(LEFTHOOK=0 git commit -m \"docs: add comprehensive lefthook documentation and README updates\")"
+      "Bash(LEFTHOOK=0 git commit -m \"docs: add comprehensive lefthook documentation and README updates\")",
+      "Bash(LEFTHOOK=0 git commit -m \"cleanup: remove lefthook test file\")",
+      "Bash(LEFTHOOK=0 git push -u origin feature/lefthook-integration)",
+      "Bash(LEFTHOOK=0 git commit -m \"test: verify lefthook functionality\")"
     ],
     "deny": []
   }
