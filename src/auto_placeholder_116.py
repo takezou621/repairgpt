@@ -6,15 +6,14 @@ Complete integration with iFixit API for repair guides
 
 import asyncio
 import os
-import time
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
-
 import sys
+import time
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from clients.ifixit_client import IFixitClient, Guide
+from clients.ifixit_client import Guide, IFixitClient
 from data.offline_repair_database import OfflineRepairDatabase
 from utils.logger import get_logger
 

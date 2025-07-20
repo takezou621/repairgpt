@@ -11,13 +11,13 @@ from typing import Dict, Optional
 
 from auth.jwt_auth import (
     JWTAuthManager,
-    UserAuth,
     Token,
+    UserAuth,
+    create_access_token,
+    decode_token,
     get_jwt_manager,
     hash_password,
     verify_password,
-    create_access_token,
-    decode_token,
 )
 from utils.logger import get_logger
 

@@ -5,15 +5,13 @@ Provides secure JWT token management for user authentication
 
 import os
 import secrets
+import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Union
 
 import jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
-
-import sys
-import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.logger import get_logger
