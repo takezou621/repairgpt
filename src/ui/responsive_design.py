@@ -6,9 +6,7 @@ This module provides responsive design components and enhanced CSS styling
 for the RepairGPT Streamlit application to improve mobile and desktop user experience.
 """
 
-import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import streamlit as st
 
@@ -45,7 +43,7 @@ class ResponsiveDesignManager:
             --padding-md: 1.5rem;
             --padding-lg: 2rem;
         }
-        
+
         /* Main header responsive styling */
         .main-header {
             text-align: center;
@@ -58,7 +56,7 @@ class ResponsiveDesignManager:
             margin-bottom: var(--padding-md);
             line-height: 1.2;
         }
-        
+
         /* Enhanced device card with mobile optimization */
         .device-card {
             background: var(--background-color);
@@ -69,12 +67,12 @@ class ResponsiveDesignManager:
             box-shadow: var(--box-shadow);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        
+
         .device-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
-        
+
         /* Responsive safety warning */
         .safety-warning {
             background: #fff3cd;
@@ -84,7 +82,7 @@ class ResponsiveDesignManager:
             margin: var(--padding-sm) 0;
             font-size: clamp(0.875rem, 2.5vw, 1rem);
         }
-        
+
         /* Enhanced step container */
         .step-container {
             background: #e8f5e8;
@@ -94,12 +92,12 @@ class ResponsiveDesignManager:
             border-left: 3px solid #28a745;
             transition: all 0.2s ease;
         }
-        
+
         .step-container:hover {
             background: #d4edda;
             border-left-width: 5px;
         }
-        
+
         /* Responsive chat messages */
         .chat-message {
             padding: var(--padding-sm);
@@ -108,19 +106,19 @@ class ResponsiveDesignManager:
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
-        
+
         .user-message {
             background: #e3f2fd;
             margin-left: clamp(0rem, 5vw, 2rem);
             border-left: 3px solid #2196f3;
         }
-        
+
         .assistant-message {
             background: #f1f8e9;
             margin-right: clamp(0rem, 5vw, 2rem);
             border-left: 3px solid #4caf50;
         }
-        
+
         /* Responsive button styling */
         .stButton > button {
             background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
@@ -133,17 +131,17 @@ class ResponsiveDesignManager:
             width: 100%;
             min-height: 44px; /* Touch-friendly minimum */
         }
-        
+
         .stButton > button:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
         }
-        
+
         /* Enhanced sidebar styling */
         .css-1d391kg {
             padding-top: var(--padding-sm);
         }
-        
+
         /* Responsive text input and text area */
         .stTextInput > div > div > input,
         .stTextArea > div > div > textarea {
@@ -151,85 +149,85 @@ class ResponsiveDesignManager:
             border: 2px solid #e1e8ed;
             transition: border-color 0.2s ease;
         }
-        
+
         .stTextInput > div > div > input:focus,
         .stTextArea > div > div > textarea:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
         }
-        
+
         /* Mobile-specific optimizations */
         @media (max-width: 768px) {
             .main-header {
                 font-size: clamp(1.2rem, 8vw, 2rem);
                 padding: var(--padding-xs) 0;
             }
-            
+
             .device-card {
                 margin: var(--padding-xs) 0;
                 padding: var(--padding-xs);
             }
-            
+
             .chat-message {
                 margin: 0.3rem 0;
                 padding: var(--padding-xs);
             }
-            
+
             .user-message,
             .assistant-message {
                 margin-left: 0;
                 margin-right: 0;
             }
-            
+
             /* Improve button touch targets */
             .stButton > button {
                 min-height: 48px;
                 font-size: 16px; /* Prevent zoom on iOS */
             }
-            
+
             /* Hide sidebar initially on mobile */
             .css-1d391kg {
                 width: 100% !important;
             }
         }
-        
+
         /* Tablet optimizations */
         @media (min-width: 769px) and (max-width: 1024px) {
             .main-header {
                 font-size: clamp(2rem, 6vw, 2.5rem);
             }
-            
+
             .user-message {
                 margin-left: 1rem;
             }
-            
+
             .assistant-message {
                 margin-right: 1rem;
             }
         }
-        
+
         /* Desktop optimizations */
         @media (min-width: 1025px) {
             .device-card {
                 max-width: 800px;
                 margin: var(--padding-sm) auto;
             }
-            
+
             .chat-message {
                 max-width: 85%;
             }
-            
+
             .user-message {
                 margin-left: auto;
                 margin-right: 0;
             }
-            
+
             .assistant-message {
                 margin-left: 0;
                 margin-right: auto;
             }
         }
-        
+
         /* Enhanced accessibility */
         .stButton > button:focus,
         .stSelectbox > div > div:focus,
@@ -238,57 +236,57 @@ class ResponsiveDesignManager:
             outline: 2px solid var(--primary-color);
             outline-offset: 2px;
         }
-        
+
         /* Dark mode support */
         @media (prefers-color-scheme: dark) {
             :root {
                 --background-color: #2c3e50;
                 --text-color: #ecf0f1;
             }
-            
+
             .device-card {
                 background: #34495e;
                 color: var(--text-color);
             }
-            
+
             .safety-warning {
                 background: #f39c12;
                 color: #2c3e50;
             }
         }
-        
+
         /* Loading spinner enhancement */
         .stSpinner > div {
             border-top-color: var(--primary-color) !important;
         }
-        
+
         /* Improved spacing for better visual hierarchy */
         .element-container {
             margin-bottom: var(--padding-xs);
         }
-        
+
         /* Enhanced selectbox styling */
         .stSelectbox > div > div {
             border-radius: var(--border-radius);
         }
-        
+
         /* File uploader enhancement */
         .stFileUploader > div {
             border-radius: var(--border-radius);
             border: 2px dashed var(--primary-color);
             transition: all 0.3s ease;
         }
-        
+
         .stFileUploader > div:hover {
             border-color: var(--secondary-color);
             background-color: rgba(78, 205, 196, 0.05);
         }
-        
+
         /* Progress bar enhancement */
         .stProgress .st-bo {
             background-color: var(--primary-color);
         }
-        
+
         /* Success/error message styling */
         .stSuccess,
         .stError,
@@ -409,43 +407,43 @@ class ResponsiveDesignManager:
             gap: 1rem;
             margin: 1rem 0;
         }}
-        
+
         .gallery-item {{
             border-radius: var(--border-radius);
             overflow: hidden;
             box-shadow: var(--box-shadow);
             transition: transform 0.2s ease;
         }}
-        
+
         .gallery-item:hover {{
             transform: scale(1.02);
         }}
-        
+
         .gallery-item img {{
             width: 100%;
             height: auto;
             object-fit: cover;
         }}
-        
+
         .gallery-caption {{
             padding: 0.5rem;
             background: var(--background-color);
             font-size: 0.875rem;
             text-align: center;
         }}
-        
+
         @media (max-width: 768px) {{
             .responsive-gallery {{
                 grid-template-columns: repeat({mobile_cols}, 1fr);
             }}
         }}
-        
+
         @media (min-width: 769px) and (max-width: 1024px) {{
             .responsive-gallery {{
                 grid-template-columns: repeat({tablet_cols}, 1fr);
             }}
         }}
-        
+
         @media (min-width: 1025px) {{
             .responsive-gallery {{
                 grid-template-columns: repeat({desktop_cols}, 1fr);
@@ -488,7 +486,7 @@ class ResponsiveDesignManager:
             margin: 1rem 0;
             justify-content: center;
         }
-        
+
         .nav-button {
             background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
             color: white;
@@ -504,12 +502,12 @@ class ResponsiveDesignManager:
             border: none;
             cursor: pointer;
         }
-        
+
         .nav-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
         }
-        
+
         .nav-button.active {
             background: var(--text-color);
         }
@@ -544,12 +542,12 @@ class ResponsiveDesignManager:
                 transition-duration: 0.1s !important;
             }
         }
-        
+
         /* Optimize scrolling */
         .main .block-container {
             scroll-behavior: smooth;
         }
-        
+
         /* Reduce motion for users who prefer it */
         @media (prefers-reduced-motion: reduce) {
             * {
@@ -592,29 +590,29 @@ def enhance_ui_components() -> None:
         border: none;
         box-shadow: var(--box-shadow);
     }
-    
+
     .stMetric {
         background: var(--background-color);
         padding: var(--padding-sm);
         border-radius: var(--border-radius);
         box-shadow: var(--box-shadow);
     }
-    
+
     .stExpander {
         border: 1px solid #e1e8ed;
         border-radius: var(--border-radius);
         overflow: hidden;
     }
-    
+
     .stTabs [data-baseweb="tab-list"] {
         gap: 0.5rem;
     }
-    
+
     .stTabs [data-baseweb="tab"] {
         border-radius: var(--border-radius) var(--border-radius) 0 0;
         background: var(--background-color);
     }
-    
+
     /* Enhanced sidebar */
     .css-1d391kg .stSelectbox,
     .css-1d391kg .stTextInput,

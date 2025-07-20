@@ -28,9 +28,9 @@ class TestNightAutomationSystem:
         """GitHub Actionsワークフローファイルのパスを取得"""
         workflows_dir = Path(".github/workflows")
         return {
-            "perfect_automation": workflows_dir / "claude-perfect-automation.yml",
-            "full_automation": workflows_dir / "claude-full-automation.yml", 
-            "auto_merge": workflows_dir / "claude-auto-merge.yml"
+            "perfect_automation": workflows_dir / "claude-smart-automation-v2.yml",
+            "full_automation": workflows_dir / "claude-smart-automation-enhanced.yml", 
+            "auto_merge": workflows_dir / "claude-auto-review-merge.yml"
         }
     
     def test_claude_code_implementation_complete(self):

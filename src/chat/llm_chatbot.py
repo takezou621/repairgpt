@@ -4,14 +4,13 @@ Implements Issue #9: 基本的なLLMチャットボットの実装
 """
 
 import json
-import logging
 import os
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
-from utils.logger import (
+from ..utils.logger import (
     LoggerMixin,
     get_logger,
     log_api_call,
@@ -34,9 +33,7 @@ except ImportError:
     Anthropic = None
 
 try:
-    from langchain.chat_models import ChatAnthropic, ChatOpenAI
-    from langchain.llms import OpenAI as LangChainOpenAI
-    from langchain.schema import AIMessage, HumanMessage, SystemMessage
+    pass
 
     LANGCHAIN_AVAILABLE = True
 except ImportError:
@@ -74,9 +71,9 @@ class Message:
 class RepairContext:
     """Context information for repair session"""
 
-    device_type: str = ""
-    device_model: str = ""
-    issue_description: str = ""
+    device_type: Optional[str] = None
+    device_model: Optional[str] = None
+    issue_description: Optional[str] = None
     user_skill_level: str = "beginner"  # beginner, intermediate, expert
     safety_concerns: List[str] = None
     available_tools: List[str] = None
@@ -86,6 +83,10 @@ class RepairContext:
             self.safety_concerns = []
         if self.available_tools is None:
             self.available_tools = []
+
+    def dict(self) -> Dict:
+        """Convert to dictionary"""
+        return asdict(self)
 
 
 class RepairChatbot(LoggerMixin):
@@ -163,6 +164,35 @@ class RepairChatbot(LoggerMixin):
             active_client=self.active_client,
             session_id=self.session_id,
         )
+
+    @property
+    def context(self) -> RepairContext:
+        """Get the current repair context"""
+        return self.repair_context
+
+    def _init_openai_client(self, api_key: Optional[str] = None):
+        """Initialize OpenAI client"""
+        try:
+            if not openai:
+                raise ImportError("OpenAI package not available")
+            self.openai_client = openai.OpenAI(
+                api_key=api_key or os.getenv("OPENAI_API_KEY")
+            )
+            self.log_info("OpenAI client initialized successfully")
+        except Exception as e:
+            self.log_error(e, "Failed to initialize OpenAI client")
+
+    def _init_anthropic_client(self, api_key: Optional[str] = None):
+        """Initialize Anthropic client"""
+        try:
+            if not anthropic:
+                raise ImportError("Anthropic package not available")
+            self.anthropic_client = anthropic.Anthropic(
+                api_key=api_key or os.getenv("ANTHROPIC_API_KEY")
+            )
+            self.log_info("Anthropic client initialized successfully")
+        except Exception as e:
+            self.log_error(e, "Failed to initialize Anthropic client")
 
     def update_context(self, **kwargs):
         """Update repair context with new information"""
@@ -487,7 +517,7 @@ Current repair context:
 For device repair questions like yours:
 
 1. **Safety First**: Always power off the device and disconnect from power sources
-2. **Gather Information**: 
+2. **Gather Information**:
    - What specific symptoms are you experiencing?
    - When did the problem start?
    - Any recent drops, spills, or other incidents?

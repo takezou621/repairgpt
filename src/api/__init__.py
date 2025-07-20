@@ -4,13 +4,11 @@ Implements Issue #90: 🔒 設定管理とセキュリティ強化
 """
 
 import json
-import os
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 # Import security and configuration
 from ..config.settings import settings, validate_api_keys
@@ -18,8 +16,6 @@ from ..utils.security import (
     RateLimiter,
     RateLimitMiddleware,
     SecurityHeaders,
-    create_audit_log,
-    sanitize_log_data,
 )
 
 
@@ -175,11 +171,11 @@ def create_app() -> FastAPI:
                 logger.warning(f"{service.upper()} API key not configured")
 
         logger.info(f"RepairGPT API starting in {settings.environment} mode")
+        security_status = "enabled" if settings.enable_security_headers else "disabled"
+        logger.info(f"Security headers: {security_status}")
         logger.info(
-            f"Security headers: {'enabled' if settings.enable_security_headers else 'disabled'}"
-        )
-        logger.info(
-            f"Rate limiting: {settings.rate_limit_requests_per_minute} requests/minute"
+            f"Rate limiting: {settings.rate_limit_requests_per_minute} "
+            "requests/minute"
         )
 
     return app

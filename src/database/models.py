@@ -4,8 +4,6 @@ Implements comprehensive database schema with 12 tables
 """
 
 import uuid
-from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import (
     JSON,
@@ -19,7 +17,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

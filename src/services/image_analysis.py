@@ -7,13 +7,12 @@ import base64
 import hashlib
 import io
 import json
-import logging
 import os
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 try:
     import cv2
@@ -26,7 +25,7 @@ except ImportError:
     np = None
 
 try:
-    from PIL import Image, ImageEnhance, ImageFilter
+    from PIL import Image, ImageEnhance
 
     PIL_AVAILABLE = True
 except ImportError:
@@ -374,10 +373,10 @@ class ImageAnalysisService:
 
             # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
             lab = cv2.cvtColor(cv_image, cv2.COLOR_BGR2LAB)
-            l, a, b = cv2.split(lab)
+            light, a, b = cv2.split(lab)
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l = clahe.apply(l)
-            enhanced = cv2.merge([l, a, b])
+            light = clahe.apply(light)
+            enhanced = cv2.merge([light, a, b])
             enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
 
             # Convert back to PIL
@@ -647,7 +646,7 @@ Please respond in JSON format."""
         try:
             # Get basic image information
             width, height = image.size
-            mode = image.mode
+            image.mode
 
             # Basic heuristics based on image properties
             device_type = self._guess_device_type_from_image(image)

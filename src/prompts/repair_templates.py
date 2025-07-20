@@ -5,7 +5,7 @@ Implements Issue #10: 修理用プロンプトテンプレートの作成
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import List
 
 
 class PromptType(Enum):

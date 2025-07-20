@@ -5,22 +5,14 @@ Enhanced with Issue #90: 🔒 設定管理とセキュリティ強化
 Enhanced with Issue #89: レスポンシブデザインとUI/UX改善
 """
 
-import base64
-import io
-import json
-import logging
 import os
 import sys
 import time
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import requests
 import streamlit as st
 from PIL import Image
-
-# Add src directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils.logger import (
     get_logger,
@@ -30,15 +22,18 @@ from utils.logger import (
     log_user_action,
 )
 
+# Add src directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+
 try:
-    from chat.llm_chatbot import RepairChatbot, RepairContext
-    from clients.ifixit_client import Guide, IFixitClient
+    pass
 
     # Import security and configuration
     from config.settings import settings
     from data.offline_repair_database import OfflineRepairDatabase
     from i18n import _, i18n
-    from utils.security import mask_sensitive_data, sanitize_filename, sanitize_input
+    from utils.security import mask_sensitive_data, sanitize_input
 
     from .language_selector import (
         get_localized_device_categories,
@@ -149,7 +144,7 @@ def call_chat_api(message: str, device_context: Dict = None) -> str:
             return result
         else:
             error_msg = f"API Error {response.status_code}: {response.text}"
-            masked_error = mask_sensitive_data(error_msg)
+            mask_sensitive_data(error_msg)
 
             log_api_error(
                 logger,
@@ -389,7 +384,7 @@ st.markdown(
         font-weight: bold;
         margin-bottom: 2rem;
     }
-    
+
     .device-card {
         background: #f8f9fa;
         padding: 1rem;
@@ -397,7 +392,7 @@ st.markdown(
         border-left: 4px solid #4ECDC4;
         margin: 1rem 0;
     }
-    
+
     .safety-warning {
         background: #fff3cd;
         border: 1px solid #ffecb5;
@@ -405,7 +400,7 @@ st.markdown(
         padding: 1rem;
         margin: 1rem 0;
     }
-    
+
     .step-container {
         background: #e8f5e8;
         padding: 1rem;
@@ -413,7 +408,7 @@ st.markdown(
         margin: 0.5rem 0;
         border-left: 3px solid #28a745;
     }
-    
+
     .chat-message {
         padding: 1rem;
         margin: 0.5rem 0;
@@ -421,19 +416,19 @@ st.markdown(
         max-width: 100%;
         word-wrap: break-word;
     }
-    
+
     .user-message {
         background: #007bff;
         color: white;
         margin-left: 2rem;
     }
-    
+
     .bot-message {
         background: #f1f3f4;
         color: #333;
         margin-right: 2rem;
     }
-    
+
     /* Responsive improvements */
     @media (max-width: 768px) {
         .user-message, .bot-message {
@@ -441,12 +436,12 @@ st.markdown(
             margin-right: 0.5rem;
             padding: 0.75rem;
         }
-        
+
         .main-header {
             font-size: 2rem;
             padding: 0.5rem 0;
         }
-        
+
         .device-card, .safety-warning, .step-container {
             padding: 0.75rem;
             margin: 0.75rem 0;

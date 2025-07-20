@@ -5,10 +5,10 @@ Implements Issue #90: 🔒 設定管理とセキュリティ強化
 
 import json
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, validator
 
 from ..config.settings import settings
@@ -23,6 +23,48 @@ from ..utils.security import (
 from . import get_localized_error, get_localized_response
 
 logger = logging.getLogger(__name__)
+
+
+# Auth Models
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    language: Optional[str] = "en"
+
+    @validator("username")
+    def validate_username(cls, v):
+        if not v or len(v) < 3:
+            raise ValueError("Username must be at least 3 characters")
+        return sanitize_input(v, max_length=50)
+
+    @validator("email")
+    def validate_email(cls, v):
+        import re
+
+        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        if not re.match(email_regex, v):
+            raise ValueError("Invalid email format")
+        return v
+
+    @validator("password")
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    username: str
+    expires_in: int
 
 
 # Request/Response models with security validation
@@ -102,6 +144,81 @@ class HealthResponse(BaseModel):
 
 # Create router
 router = APIRouter()
+
+
+# Auth endpoints
+@router.post("/auth/register", response_model=AuthResponse)
+async def register_user(register_request: RegisterRequest, request: Request):
+    """Register a new user"""
+    try:
+        from ..auto_feature_60 import AuthenticationFeature
+
+        auth_feature = AuthenticationFeature()
+        result = await auth_feature.register_user(
+            email=register_request.email,
+            password=register_request.password,
+            language=register_request.language,
+            username=register_request.username,
+        )
+
+        if result["success"]:
+            return AuthResponse(
+                access_token=result["token"]["access_token"],
+                user_id=result["user"]["user_id"],
+                username=result["user"]["username"],
+                expires_in=3600,
+            )
+        else:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/auth/login", response_model=AuthResponse)
+async def login_user(login_request: LoginRequest, request: Request):
+    """Login user"""
+    try:
+        from ..auto_feature_60 import AuthenticationFeature
+
+        auth_feature = AuthenticationFeature()
+        result = await auth_feature.login_user(
+            email=login_request.username,  # Use username as email for now
+            password=login_request.password,
+        )
+
+        if result["success"]:
+            return AuthResponse(
+                access_token=result["token"]["access_token"],
+                user_id=result["user"]["user_id"],
+                username=result["user"]["username"],
+                expires_in=3600,
+            )
+        else:
+            raise HTTPException(status_code=401, detail=result["error"])
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/auth/me")
+async def get_current_user(
+    request: Request, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    """Get current user information"""
+    try:
+        from ..auto_feature_60 import AuthenticationFeature
+
+        auth_feature = AuthenticationFeature()
+        result = await auth_feature.verify_token(credentials.credentials)
+
+        if result["success"]:
+            return {"user": result["user"]}
+        else:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -300,21 +417,21 @@ async def analyze_device_image(
     """
     Analyze device image for diagnosis
 
-    Upload an image of a device for AI-powered damage assessment and repair recommendations.
-    Supports JPG, PNG, and WebP formats up to 10MB.
+    Upload an image of a device for AI-powered damage assessment and
+    repair recommendations. Supports JPG, PNG, and WebP formats up to 10MB.
     """
     try:
         # Import analysis models and service
         from ..schemas.image_analysis import (
             DamageAssessmentResponse,
             DeviceInfoResponse,
-            ImageAnalysisError,
             ImageAnalysisResponse,
         )
         from ..services.image_analysis import ImageAnalysisService
 
-        # Sanitize filename
-        safe_filename = sanitize_filename(file.filename) if file.filename else "upload"
+        # Validate filename
+        if file.filename:
+            sanitize_filename(file.filename)
 
         # Validate file type
         allowed_types = [f"image/{ext}" for ext in settings.allowed_file_types]
@@ -362,10 +479,9 @@ async def analyze_device_image(
             logger.warning(f"Image security warning: {warning}")
 
         # Parse context if provided
-        parsed_context = {}
         if context:
             try:
-                parsed_context = json.loads(context)
+                json.loads(context)
             except json.JSONDecodeError:
                 pass
 
@@ -444,7 +560,6 @@ async def analyze_device_image(
 
 
 # Additional diagnosis models for the diagnose endpoint
-from enum import Enum
 
 
 class DiagnoseRequest(BaseModel):
@@ -556,12 +671,12 @@ async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
         # Create diagnosis prompt
         diagnosis_prompt = f"""
         Please provide a structured diagnosis for the following device issue:
-        
+
         Device: {diagnose_request.device_type} {diagnose_request.device_model or ''}
         Issue: {diagnose_request.issue_description}
         Symptoms: {', '.join(diagnose_request.symptoms) if diagnose_request.symptoms else 'None specified'}
         User Skill Level: {diagnose_request.skill_level}
-        
+
         Please provide:
         1. Primary issue identification
         2. Possible causes (list)
@@ -571,7 +686,7 @@ async def diagnose_device(diagnose_request: DiagnoseRequest, request: Request):
         6. Whether professional help is recommended
         7. Estimated time and cost if possible
         8. Preventive measures
-        
+
         Format your response clearly and focus on safety and accuracy.
         """
 

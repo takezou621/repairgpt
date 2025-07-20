@@ -14,14 +14,12 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # Import our configuration and security modules
 from src.config.settings import (
-    Settings,
     get_required_env_vars,
     get_settings,
-    validate_api_keys,
     validate_production_config,
 )
 from src.utils.security import (
@@ -31,7 +29,6 @@ from src.utils.security import (
     hash_ip_address,
     mask_sensitive_data,
     sanitize_input,
-    sanitize_log_data,
     validate_api_key,
     validate_image_content,
 )
@@ -483,7 +480,6 @@ class SecurityConfigurationManager:
         # Test data masking
         try:
             masked = mask_sensitive_data("sk-1234567890abcdef", 4)
-            expected_mask = "sk-1*************"
             mask_success = masked.startswith("sk-1") and "*" in masked
 
             results["utilities_tested"].append(

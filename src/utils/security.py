@@ -18,13 +18,12 @@ import re
 import time
 from collections import defaultdict, deque
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import bleach
-from fastapi import HTTPException, Request, status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 
 logger = logging.getLogger(__name__)
 

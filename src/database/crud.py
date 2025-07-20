@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, selectinload
 
@@ -15,15 +15,9 @@ from .models import (
     ChatMessage,
     ChatSession,
     Device,
-    DeviceIssue,
-    ExternalDataSource,
-    Issue,
     RepairAttempt,
     RepairGuide,
-    RepairStep,
-    SyncLog,
     User,
-    UserImage,
 )
 
 
@@ -103,7 +97,7 @@ class DeviceCRUD:
         """Get devices by category"""
         return (
             db.query(Device)
-            .filter(Device.category == category, Device.is_active == True)
+            .filter(Device.category == category, Device.is_active)
             .limit(limit)
             .all()
         )
@@ -119,7 +113,7 @@ class DeviceCRUD:
                     Device.name.ilike(search_term),
                     Device.manufacturer.ilike(search_term),
                 ),
-                Device.is_active == True,
+                Device.is_active,
             )
             .limit(limit)
             .all()
@@ -175,7 +169,7 @@ class RepairGuideCRUD:
         query = db.query(RepairGuide).filter(
             RepairGuide.device_id == device_id,
             RepairGuide.issue_id == issue_id,
-            RepairGuide.is_active == True,
+            RepairGuide.is_active,
         )
 
         if difficulty:
@@ -194,7 +188,7 @@ class RepairGuideCRUD:
                 RepairGuide.title.ilike(search_term),
                 RepairGuide.description.ilike(search_term),
             ),
-            RepairGuide.is_active == True,
+            RepairGuide.is_active,
         )
 
         if device_id:
@@ -448,9 +442,9 @@ class StatisticsCRUD:
         """Get general database statistics"""
         return {
             "total_users": db.query(User).count(),
-            "total_devices": db.query(Device).filter(Device.is_active == True).count(),
+            "total_devices": db.query(Device).filter(Device.is_active).count(),
             "total_repair_guides": db.query(RepairGuide)
-            .filter(RepairGuide.is_active == True)
+            .filter(RepairGuide.is_active)
             .count(),
             "total_chat_sessions": db.query(ChatSession).count(),
             "active_sessions": db.query(ChatSession)
@@ -458,7 +452,7 @@ class StatisticsCRUD:
             .count(),
             "total_repair_attempts": db.query(RepairAttempt).count(),
             "successful_repairs": db.query(RepairAttempt)
-            .filter(RepairAttempt.success == True)
+            .filter(RepairAttempt.success)
             .count(),
         }
 
