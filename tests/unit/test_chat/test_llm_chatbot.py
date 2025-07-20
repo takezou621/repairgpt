@@ -1,7 +1,6 @@
 """Tests for LLM chatbot functionality"""
 
-from datetime import datetime
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -48,6 +47,19 @@ except ImportError:
 
         def _init_anthropic_client(self):
             pass
+
+
+@pytest.fixture
+def configured_chatbot():
+    """Create a chatbot with context already set"""
+    chatbot = RepairChatbot()
+    chatbot.update_context(
+        device_type="PlayStation 5",
+        device_model="Standard",
+        issue_description="Won't read discs",
+        user_skill_level="advanced",
+    )
+    return chatbot
 
 
 class TestRepairChatbot:
@@ -162,9 +174,7 @@ class TestRepairContext:
 
     def test_context_partial_creation(self):
         """Test creating a partially filled RepairContext"""
-        context = RepairContext(
-            device_type="Samsung Galaxy", issue_description="Battery drains fast"
-        )
+        context = RepairContext(device_type="Samsung Galaxy", issue_description="Battery drains fast")
 
         assert context.device_type == "Samsung Galaxy"
         assert context.device_model is None
@@ -174,18 +184,6 @@ class TestRepairContext:
 
 class TestChatbotIntegration:
     """Test chatbot integration scenarios"""
-
-    @pytest.fixture
-    def configured_chatbot(self):
-        """Create a chatbot with context already set"""
-        chatbot = RepairChatbot()
-        chatbot.update_context(
-            device_type="PlayStation 5",
-            device_model="Standard",
-            issue_description="Won't read discs",
-            user_skill_level="advanced",
-        )
-        return chatbot
 
     def test_conversation_flow(self, configured_chatbot):
         """Test a basic conversation flow"""
@@ -200,17 +198,13 @@ class TestChatbotIntegration:
     def test_context_switching(self, configured_chatbot):
         """Test switching context mid-conversation"""
         # Initial context
-        configured_chatbot.update_context(
-            device_type="Xbox Series X", issue_description="Overheating"
-        )
+        configured_chatbot.update_context(device_type="Xbox Series X", issue_description="Overheating")
 
         response1 = configured_chatbot.chat("How do I fix this?")
         assert isinstance(response1, str)
 
         # Switch context
-        configured_chatbot.update_context(
-            device_type="Nintendo Switch", issue_description="Joy-Con drift"
-        )
+        configured_chatbot.update_context(device_type="Nintendo Switch", issue_description="Joy-Con drift")
 
         response2 = configured_chatbot.chat("What about this new issue?")
         assert isinstance(response2, str)
