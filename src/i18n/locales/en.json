@@ -2,6 +2,7 @@
   "app": {
     "title": "RepairGPT - AI Repair Assistant",
     "subtitle": "AI-Powered Electronic Device Repair Assistant",
+    "tagline": "AI-Powered Electronic Device Repair Assistant",
     "footer": {
       "description": "🔧 RepairGPT - Open Source AI Repair Assistant",
       "safety": "Always prioritize safety and consider professional help for complex repairs.",
@@ -125,13 +126,55 @@
     "available_devices": "Available Devices"
   },
   "chat": {
+    "title": "💬 Chat with RepairGPT",
+    "input_placeholder": "Describe your repair issue or ask a question...",
+    "thinking": "RepairGPT is thinking...",
+    "clear_history": "Clear Chat History",
     "you": "You",
     "repairgpt": "RepairGPT"
+  },
+  "sidebar": {
+    "device_config": "Device Configuration",
+    "device_type": "Device Type",
+    "device_model": "Device Model",
+    "device_model_help": "Enter your device model for more specific guidance",
+    "issue_description": "Issue Description",
+    "issue_description_help": "Describe the problem you're experiencing",
+    "skill_level": "Skill Level",
+    "features": "Features",
+    "show_chat": "Show Chat",
+    "show_guides": "Show Repair Guides",
+    "show_diagnosis": "Show Diagnosis",
+    "show_image_analysis": "Show Image Analysis"
+  },
+  "diagnosis": {
+    "title": "🩺 Device Diagnosis",
+    "start_button": "Start Diagnosis",
+    "analyzing": "Analyzing device issue...",
+    "completed": "Diagnosis completed successfully",
+    "primary_issue": "Primary Issue",
+    "severity": "Severity",
+    "confidence": "Confidence"
+  },
+  "image_analysis": {
+    "title": "📸 Image Analysis",
+    "upload": "Upload device photo",
+    "uploaded_image": "Uploaded Image",
+    "analyze_button": "Analyze Image",
+    "feature_coming_soon": "AI-powered image analysis coming soon..."
+  },
+  "guides": {
+    "title": "📚 Repair Guides",
+    "search_placeholder": "Search repair guides...",
+    "searching": "Searching guides...",
+    "no_results": "No repair guides found for your query",
+    "search_error": "Error occurred while searching guides"
   },
   "api": {
     "health": {
       "message": "RepairGPT API is running successfully"
     },
+    "health_warning": "⚠️ API server is not running. Some features may be limited. Start the API server with: python3 src/api/main.py",
     "devices": {
       "success": "Successfully retrieved supported devices"
     },

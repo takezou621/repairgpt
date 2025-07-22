@@ -2,6 +2,7 @@
   "app": {
     "title": "RepairGPT - AI修理アシスタント",
     "subtitle": "AIを活用した電子機器修理サポート",
+    "tagline": "AIを活用した電子機器修理サポート",
     "footer": {
       "description": "🔧 RepairGPT - オープンソースAI修理アシスタント",
       "safety": "常に安全を最優先し、複雑な修理については専門家にご相談ください。",
@@ -125,13 +126,55 @@
     "available_devices": "利用可能デバイス"
   },
   "chat": {
+    "title": "💬 RepairGPTとチャット",
+    "input_placeholder": "修理の問題や質問を入力してください...",
+    "thinking": "RepairGPTが考えています...",
+    "clear_history": "チャット履歴をクリア",
     "you": "あなた",
     "repairgpt": "RepairGPT"
+  },
+  "sidebar": {
+    "device_config": "デバイス設定",
+    "device_type": "デバイスタイプ",
+    "device_model": "デバイスモデル",
+    "device_model_help": "より具体的なガイダンスのためにデバイスモデルを入力してください",
+    "issue_description": "問題の説明",
+    "issue_description_help": "発生している問題を説明してください",
+    "skill_level": "スキルレベル",
+    "features": "機能",
+    "show_chat": "チャット表示",
+    "show_guides": "修理ガイド表示",
+    "show_diagnosis": "診断表示",
+    "show_image_analysis": "画像分析表示"
+  },
+  "diagnosis": {
+    "title": "🩺 デバイス診断",
+    "start_button": "診断開始",
+    "analyzing": "デバイスの問題を分析中...",
+    "completed": "診断が正常に完了しました",
+    "primary_issue": "主要な問題",
+    "severity": "深刻度",
+    "confidence": "信頼度"
+  },
+  "image_analysis": {
+    "title": "📸 画像分析",
+    "upload": "デバイスの写真をアップロード",
+    "uploaded_image": "アップロード画像",
+    "analyze_button": "画像分析",
+    "feature_coming_soon": "AI画像分析機能は近日公開予定です..."
+  },
+  "guides": {
+    "title": "📚 修理ガイド",
+    "search_placeholder": "修理ガイドを検索...",
+    "searching": "ガイドを検索中...",
+    "no_results": "お探しの修理ガイドが見つかりませんでした",
+    "search_error": "ガイド検索中にエラーが発生しました"
   },
   "api": {
     "health": {
       "message": "RepairGPT APIが正常に動作しています"
     },
+    "health_warning": "⚠️ APIサーバーが起動していません。一部機能が制限されます。次のコマンドでAPIサーバーを起動してください: python3 src/api/main.py",
     "devices": {
       "success": "サポート対象デバイスを正常に取得しました"
     },
