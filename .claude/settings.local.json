@@ -82,7 +82,8 @@
       "Bash(streamlit run:*)",
       "Bash(pip3 list:*)",
       "Bash(git branch:*)",
-      "Bash(REPAIRGPT_API_PORT=8003 python3 -m src.api.main)"
+      "Bash(REPAIRGPT_API_PORT=8003 python3 -m src.api.main)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }
