@@ -66,6 +66,10 @@ class Settings:
         self.openai_api_key = os.getenv("REPAIRGPT_OPENAI_API_KEY")
         self.claude_api_key = os.getenv("REPAIRGPT_CLAUDE_API_KEY")
         self.ifixit_api_key = os.getenv("REPAIRGPT_IFIXIT_API_KEY")
+        
+        # AI Configuration
+        self.anthropic_api_key = os.getenv("REPAIRGPT_ANTHROPIC_API_KEY", self.claude_api_key)  # Alias
+        self.use_mock_ai = os.getenv("REPAIRGPT_USE_MOCK_AI", "auto").lower()  # "auto", "true", "false"
 
         # API endpoints
         self.openai_api_base = os.getenv("REPAIRGPT_OPENAI_API_BASE", "https://api.openai.com/v1")
@@ -125,11 +129,22 @@ class Settings:
         """Check if running in testing environment"""
         return self.environment == Environment.TESTING
 
+    def should_use_mock_ai(self) -> bool:
+        """Determine if mock AI should be used"""
+        if self.use_mock_ai == "true":
+            return True
+        elif self.use_mock_ai == "false":
+            return False
+        else:  # auto
+            # Use mock if no API keys are configured
+            return not (self.openai_api_key or self.anthropic_api_key)
+
     def get_api_keys(self) -> dict:
         """Get all configured API keys (for validation)"""
         return {
             "openai": self.openai_api_key,
             "claude": self.claude_api_key,
+            "anthropic": self.anthropic_api_key,
             "ifixit": self.ifixit_api_key,
         }
 

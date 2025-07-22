@@ -3,6 +3,7 @@ AI-powered image analysis service for device diagnosis
 Supports multiple AI providers and comprehensive device analysis
 """
 
+import asyncio
 import base64
 import hashlib
 import io
@@ -254,6 +255,7 @@ class ImageAnalysisService:
         api_key: Optional[str] = None,
         redis_url: Optional[str] = None,
         enable_caching: bool = True,
+        use_mock: bool = False,
     ):
         """
         Initialize the image analysis service
@@ -263,9 +265,11 @@ class ImageAnalysisService:
             api_key: API key for the provider
             redis_url: Redis URL for caching
             enable_caching: Whether to enable result caching
+            use_mock: Use mock responses instead of real API calls
         """
         self.provider = provider
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.use_mock = use_mock
 
         # Initialize providers
         self.client = None
@@ -378,6 +382,106 @@ class ImageAnalysisService:
         buffer = io.BytesIO()
         image.save(buffer, format="JPEG", quality=95)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    async def _analyze_with_mock(self, image: Image.Image, language: str = "en") -> AnalysisResult:
+        """Generate mock analysis result for testing"""
+        logger.info("Generating mock image analysis")
+        
+        # Simulate processing time
+        await asyncio.sleep(1.0)
+        
+        # Mock damage detection based on image properties
+        width, height = image.size
+        damage_detected = []
+        
+        # Mock some damage detections
+        if width > 800 or height > 800:
+            damage_detected.append(
+                DamageAssessment(
+                    damage_type=DamageType.SCREEN_CRACK,
+                    confidence=0.85,
+                    severity="medium",
+                    location="upper left corner"
+                )
+            )
+        
+        if width < 600 and height < 600:
+            damage_detected.append(
+                DamageAssessment(
+                    damage_type=DamageType.SCRATCHES,
+                    confidence=0.65,
+                    severity="low",
+                    location="back panel"
+                )
+            )
+        
+        # Always add at least one mock damage
+        if not damage_detected:
+            damage_detected.append(
+                DamageAssessment(
+                    damage_type=DamageType.PHYSICAL_DAMAGE,
+                    confidence=0.75,
+                    severity="low",
+                    location="general wear"
+                )
+            )
+        
+        # Mock repair recommendations
+        repair_recommendations = []
+        for damage in damage_detected:
+            if damage.damage_type == DamageType.SCREEN_CRACK:
+                repair_recommendations.append(
+                    RepairRecommendation(
+                        action="Replace display assembly",
+                        priority="high",
+                        estimated_cost="$100-300",
+                        difficulty="moderate",
+                        tools_required=["Pentalobe screwdriver", "Suction cups", "Plastic picks"],
+                        safety_notes=["Handle broken glass carefully", "Disconnect battery first"]
+                    )
+                )
+            elif damage.damage_type == DamageType.SCRATCHES:
+                repair_recommendations.append(
+                    RepairRecommendation(
+                        action="Polish or replace back cover",
+                        priority="low",
+                        estimated_cost="$20-50",
+                        difficulty="easy",
+                        tools_required=["Polishing compound", "Microfiber cloth"],
+                        safety_notes=["Clean surface thoroughly before polishing"]
+                    )
+                )
+            else:
+                repair_recommendations.append(
+                    RepairRecommendation(
+                        action="Professional inspection recommended",
+                        priority="medium",
+                        estimated_cost="$50-100",
+                        difficulty="varies",
+                        tools_required=["Diagnostic tools"],
+                        safety_notes=["Backup data before repair"]
+                    )
+                )
+        
+        # Create mock result
+        result = AnalysisResult(
+            device_type=DeviceType.SMARTPHONE,
+            device_brand="Mock Device",
+            device_model="Test Model",
+            damage_detected=damage_detected,
+            analysis_confidence=0.8,
+            repair_recommendations=repair_recommendations,
+            estimated_repair_time="1-2 hours",
+            total_estimated_cost="$150-400",
+            professional_repair_recommended=len(damage_detected) > 1,
+            analysis_metadata={
+                "mode": "mock",
+                "image_size": f"{width}x{height}",
+                "analysis_timestamp": datetime.now().isoformat()
+            }
+        )
+        
+        return result
 
     async def analyze_with_openai(self, image: Image.Image, language: str = "en") -> AnalysisResult:
         """Analyze image using OpenAI Vision API"""
@@ -571,7 +675,9 @@ Please respond in JSON format."""
             processed_image = self.preprocess_image(image_data)
 
             # Perform analysis based on provider
-            if self.provider == "openai" and self.client:
+            if self.use_mock:
+                result = await self._analyze_with_mock(processed_image, language)
+            elif self.provider == "openai" and self.client:
                 result = await self.analyze_with_openai(processed_image, language)
             elif self.provider == "local":
                 result = await self.analyze_with_local_model(processed_image, language)
