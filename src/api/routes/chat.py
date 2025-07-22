@@ -73,8 +73,11 @@ async def chat_endpoint(chat_request: ChatRequest, request: Request):
         # Import here to avoid circular imports
         from ...chat.llm_chatbot import RepairChatbot
 
-        # Initialize chatbot
-        chatbot = RepairChatbot(preferred_model="auto")
+        # Initialize chatbot with mock mode based on settings
+        chatbot = RepairChatbot(
+            preferred_model="auto",
+            use_mock=settings.should_use_mock_ai()
+        )
 
         # Update context if provided
         if chat_request.device_type:

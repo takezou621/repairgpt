@@ -98,6 +98,7 @@ class RepairChatbot(LoggerMixin):
         anthropic_api_key: Optional[str] = None,
         huggingface_api_key: Optional[str] = None,
         preferred_model: str = "auto",
+        use_mock: bool = False,
     ):
         """
         Initialize the repair chatbot
@@ -107,13 +108,15 @@ class RepairChatbot(LoggerMixin):
             anthropic_api_key: Anthropic API key
             huggingface_api_key: Hugging Face API key (optional)
             preferred_model: "openai", "anthropic", "huggingface", or "auto"
+            use_mock: Use mock responses instead of real API calls
         """
-        self.log_info("Initializing RepairChatbot", preferred_model=preferred_model)
+        self.log_info("Initializing RepairChatbot", preferred_model=preferred_model, use_mock=use_mock)
 
         self.openai_client = None
         self.anthropic_client = None
         self.huggingface_api_key = huggingface_api_key or os.getenv("HUGGINGFACE_API_KEY")
         self.preferred_model = preferred_model
+        self.use_mock = use_mock
 
         # Initialize OpenAI client
         if openai and (openai_api_key or os.getenv("OPENAI_API_KEY")):
@@ -132,7 +135,10 @@ class RepairChatbot(LoggerMixin):
                 self.log_error(e, "Failed to initialize Anthropic client")
 
         # Set working client based on availability
-        if preferred_model == "anthropic" and self.anthropic_client:
+        if use_mock:
+            self.log_info("Using mock mode for AI responses")
+            self.active_client = "mock"
+        elif preferred_model == "anthropic" and self.anthropic_client:
             self.active_client = "anthropic"
         elif preferred_model == "openai" and self.openai_client:
             self.active_client = "openai"
@@ -239,7 +245,9 @@ class RepairChatbot(LoggerMixin):
         self.add_message("user", user_message)
 
         try:
-            if self.active_client == "openai":
+            if self.active_client == "mock":
+                response = self._mock_response(user_message, include_context)
+            elif self.active_client == "openai":
                 response = self._chat_with_openai(user_message, include_context)
             elif self.active_client == "anthropic":
                 response = self._chat_with_anthropic(user_message, include_context)
@@ -522,6 +530,131 @@ Please try again later when AI services are available for more detailed assistan
 
 Your message: "{user_message[:100]}{'...' if len(user_message) > 100 else ''}"
 """
+
+    def _mock_response(self, user_message: str, include_context: bool) -> str:
+        """Generate mock AI response for testing without API keys"""
+        self.log_info("Generating mock response", include_context=include_context)
+        
+        # Simulate processing time
+        time.sleep(0.5)
+        
+        user_lower = user_message.lower()
+        
+        # Prepare context information
+        context_info = ""
+        if include_context and self.repair_context.device_type:
+            context_info = f"\n\n**Current Context:**\n"
+            if self.repair_context.device_type:
+                context_info += f"- Device: {self.repair_context.device_type}\n"
+            if self.repair_context.device_model:
+                context_info += f"- Model: {self.repair_context.device_model}\n"
+            if self.repair_context.issue_description:
+                context_info += f"- Issue: {self.repair_context.issue_description}\n"
+            if self.repair_context.user_skill_level:
+                context_info += f"- Skill Level: {self.repair_context.user_skill_level}\n"
+        
+        # Mock responses based on keywords
+        if "joy-con" in user_lower or "drift" in user_lower:
+            return f"""🤖 **Mock AI Response** (API keys not configured)
+
+I understand you're experiencing Joy-Con drift issues. This is a common problem with Nintendo Switch controllers.
+
+**Common Solutions:**
+1. **Recalibration**: Go to System Settings > Controllers and Sensors > Calibrate Control Sticks
+2. **Cleaning**: Use compressed air around the analog stick base
+3. **Contact Cleaner**: Apply electrical contact cleaner under the rubber cap (advanced users)
+4. **Replacement**: The analog stick mechanism can be replaced with proper tools
+
+**Tools Needed:**
+- Compressed air
+- Electrical contact cleaner (optional)
+- Y00 Tripoint screwdriver (for replacement)
+- Plastic prying tools
+
+⚠️ **Safety Note**: Always power off your device before attempting repairs.{context_info}
+
+*This is a mock response for testing. Configure API keys for real AI assistance.*"""
+        
+        elif "screen" in user_lower and ("iphone" in user_lower or "cracked" in user_lower):
+            return f"""🤖 **Mock AI Response** (API keys not configured)
+
+I see you're dealing with an iPhone screen issue. Screen repairs require careful handling.
+
+**Assessment Steps:**
+1. Check if the touch functionality still works
+2. Look for LCD damage (black spots, lines, or bleeding)
+3. Test the home button/Face ID functionality
+4. Check for frame damage
+
+**Repair Options:**
+1. **Professional Repair**: Apple Store or authorized service provider
+2. **Third-party Repair**: Local repair shops (may void warranty)
+3. **DIY Repair**: Requires experience and proper tools
+
+**DIY Tools Required:**
+- Pentalobe screwdrivers
+- Plastic picks and prying tools
+- Suction cups
+- New screen assembly
+- Waterproof adhesive
+
+⚠️ **Warning**: iPhone repairs can be complex and may damage Face ID or water resistance.{context_info}
+
+*This is a mock response for testing. Configure API keys for real AI assistance.*"""
+        
+        elif "battery" in user_lower:
+            return f"""🤖 **Mock AI Response** (API keys not configured)
+
+Battery issues are common in electronic devices. Let me help you diagnose the problem.
+
+**Common Battery Problems:**
+1. **Rapid Drain**: Apps running in background, old battery
+2. **Not Charging**: Faulty cable, port damage, or battery failure
+3. **Swelling**: Dangerous - stop using immediately
+4. **Overheating**: May indicate battery or charging circuit issues
+
+**Diagnostic Steps:**
+1. Check battery health in device settings
+2. Test with different charging cables and adapters
+3. Clean charging port with compressed air
+4. Monitor battery temperature during use
+
+**Safety First:**
+- Never puncture a battery
+- Replace swollen batteries immediately
+- Use only certified replacement batteries
+- Dispose of old batteries properly{context_info}
+
+*This is a mock response for testing. Configure API keys for real AI assistance.*"""
+        
+        else:
+            # Generic repair response
+            return f"""🤖 **Mock AI Response** (API keys not configured)
+
+I'm here to help with your repair question. Based on your message: "{user_message}"
+
+**General Repair Guidelines:**
+1. **Safety First**: Always power off devices before repair
+2. **Right Tools**: Use proper tools to avoid damage
+3. **Documentation**: Take photos before disassembly
+4. **Patience**: Don't force components
+
+**Common Steps:**
+1. Identify the specific issue
+2. Research repair guides (iFixit is great)
+3. Gather necessary tools and parts
+4. Work in a clean, well-lit area
+5. Follow guides step-by-step
+
+**When to Seek Help:**
+- If you're unsure about any step
+- For complex motherboard repairs
+- When special equipment is needed
+- If device is under warranty{context_info}
+
+💡 **Tip**: Provide more specific details about your device and issue for better assistance.
+
+*This is a mock response for testing. Configure API keys for real AI assistance.*"""
 
     def _enhanced_fallback_response(self, user_message: str) -> str:
         """Provide enhanced fallback response with repair knowledge database"""
