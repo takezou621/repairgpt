@@ -11,12 +11,24 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import security and configuration
-from ..config.settings_simple import settings, validate_api_keys
-from ..utils.security import (
-    RateLimiter,
-    RateLimitMiddleware,
-    SecurityHeaders,
-)
+try:
+    from ..config.settings_simple import settings, validate_api_keys
+    from ..utils.security import (
+        RateLimiter,
+        RateLimitMiddleware,
+        SecurityHeaders,
+    )
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    from config.settings_simple import settings, validate_api_keys
+    from utils.security import (
+        RateLimiter,
+        RateLimitMiddleware,
+        SecurityHeaders,
+    )
 
 
 class I18nMiddleware:

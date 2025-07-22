@@ -8,7 +8,13 @@ Enhanced with Issue #89: レスポンシブデザインとUI/UX改善
 import os
 import sys
 import time
+from pathlib import Path
 from typing import Dict, List
+
+# Add src directory to path for imports FIRST
+current_dir = Path(__file__).parent
+src_root = current_dir.parent
+sys.path.insert(0, str(src_root))
 
 import requests
 import streamlit as st
@@ -22,9 +28,6 @@ from utils.logger import (
     log_user_action,
 )
 
-# Add src directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 
 try:
     pass
@@ -35,18 +38,32 @@ try:
     from i18n import _, i18n
     from utils.security import mask_sensitive_data, sanitize_input
 
-    from .language_selector import (
+    from language_selector import (
         get_localized_device_categories,
         get_localized_skill_levels,
         language_selector,
     )
 
     # Import responsive design components
-    from .responsive_design import enhance_ui_components, initialize_responsive_design
-    from .ui_enhancements import (
-        add_responsive_navigation_hints,
-        show_responsive_design_info,
-    )
+    try:
+        from responsive_design import enhance_ui_components, initialize_responsive_design
+        from ui_enhancements import (
+            add_responsive_navigation_hints,
+            show_responsive_design_info,
+        )
+    except ImportError:
+        # Fallback functions if responsive design modules are not available
+        def enhance_ui_components():
+            return {}
+        
+        def initialize_responsive_design():
+            return {}
+        
+        def add_responsive_navigation_hints():
+            pass
+        
+        def show_responsive_design_info():
+            pass
 except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
@@ -57,6 +74,40 @@ logger = get_logger(__name__)
 # FastAPI server configuration
 API_BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://localhost:8000")
 API_TIMEOUT = 30
+
+
+# Safe translation function with hardcoded fallbacks
+def safe_translate(key: str, fallback: str = "") -> str:
+    """安全な翻訳関数（フォールバック付き）"""
+    # Hardcoded translations to avoid any i18n issues
+    translations = {
+        "api.health_warning": "⚠️ API server is not running. Some features may be limited. Start the API server with: python3 src/api/main.py",
+        "app.title": "RepairGPT - AI Repair Assistant", 
+        "app.tagline": "AI-Powered Electronic Device Repair Assistant",
+        "sidebar.device_config": "Device Configuration",
+        "sidebar.device_type": "Device Type",
+        "sidebar.device_model": "Device Model",
+        "sidebar.device_model_help": "Enter your device model for more specific guidance",
+        "sidebar.issue_description": "Issue Description",
+        "sidebar.issue_description_help": "Describe the problem you're experiencing",
+        "sidebar.skill_level": "Skill Level",
+        "chat.title": "💬 Chat with RepairGPT",
+        "chat.input_placeholder": "Describe your repair issue or ask a question...",
+        "chat.thinking": "RepairGPT is thinking...",
+        "chat.clear_history": "Clear Chat History"
+    }
+    
+    if key in translations:
+        return translations[key]
+    
+    # Try original i18n system as backup
+    try:
+        from i18n import _
+        return _(key)
+    except:
+        return fallback or key
+
+
 
 
 def call_chat_api(message: str, device_context: Dict = None) -> str:
@@ -315,7 +366,8 @@ def check_api_health() -> bool:
     """Check if the FastAPI server is running"""
     try:
         start_time = time.time()
-        response = requests.get(f"{API_BASE_URL}{settings.api_prefix}/health", timeout=5)
+        # Use the correct /health endpoint (not /api/v1/health)
+        response = requests.get(f"{API_BASE_URL}/health", timeout=5)
 
         is_healthy = response.status_code == 200
         duration = time.time() - start_time
@@ -355,14 +407,17 @@ i18n.set_language(st.session_state.language)
 
 # Page configuration with security settings
 st.set_page_config(
-    page_title=f"{settings.app_name} - {_('app.title')}",
+    page_title=f"{settings.app_name} - {safe_translate('app.title')}",
     page_icon="🔧",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Initialize responsive design
-responsive_design = initialize_responsive_design()
+# Initialize responsive design (safely)
+try:
+    responsive_design = initialize_responsive_design()
+except NameError:
+    responsive_design = {}
 
 # Custom CSS with responsive design
 st.markdown(
@@ -467,13 +522,13 @@ def main():
     # Main header with responsive design
     st.markdown('<h1 class="main-header">🔧 RepairGPT</h1>', unsafe_allow_html=True)
     st.markdown(
-        f"<div style='text-align: center; margin-bottom: 2rem;'>{_('app.tagline')}</div>",
+        f"<div style='text-align: center; margin-bottom: 2rem;'>{safe_translate('app.tagline')}</div>",
         unsafe_allow_html=True,
     )
 
     # API health check
     if not check_api_health():
-        st.warning(_("api.health_warning"))
+        st.warning(safe_translate("api.health_warning"))
 
     # Sidebar with enhanced navigation
     with st.sidebar:
@@ -489,32 +544,32 @@ def main():
         st.markdown("---")
 
         # Device configuration with security validation
-        st.subheader(_("sidebar.device_config"))
+        st.subheader(safe_translate("sidebar.device_config"))
 
         device_categories = get_localized_device_categories()
         device_type = st.selectbox(
-            _("sidebar.device_type"),
-            options=list(device_categories.keys()),
-            format_func=lambda x: device_categories[x],
+            safe_translate("sidebar.device_type"),
+            options=device_categories,
+            index=0,
         )
 
         device_model = st.text_input(
-            _("sidebar.device_model"),
+            safe_translate("sidebar.device_model"),
             max_chars=100,
-            help=_("sidebar.device_model_help"),
+            help=safe_translate("sidebar.device_model_help"),
         )
 
         issue_description = st.text_area(
-            _("sidebar.issue_description"),
+            safe_translate("sidebar.issue_description"),
             max_chars=500,
-            help=_("sidebar.issue_description_help"),
+            help=safe_translate("sidebar.issue_description_help"),
         )
 
         skill_levels = get_localized_skill_levels()
         skill_level = st.selectbox(
-            _("sidebar.skill_level"),
-            options=list(skill_levels.keys()),
-            format_func=lambda x: skill_levels[x],
+            safe_translate("sidebar.skill_level"),
+            options=skill_levels,
+            index=0,
         )
 
         st.markdown("---")
@@ -538,14 +593,14 @@ def main():
     with col1:
         # Chat interface
         if show_chat:
-            st.subheader(_("chat.title"))
+            st.subheader(safe_translate("chat.title"))
 
             # Initialize chat history
             if "chat_history" not in st.session_state:
                 st.session_state.chat_history = []
 
             # Chat input with security validation
-            user_message = st.chat_input(_("chat.input_placeholder"), max_chars=settings.max_text_length)
+            user_message = st.chat_input(safe_translate("chat.input_placeholder"), max_chars=settings.max_text_length)
 
             if user_message:
                 # Sanitize and validate input
@@ -563,7 +618,7 @@ def main():
                 }
 
                 # Get AI response
-                with st.spinner(_("chat.thinking")):
+                with st.spinner(safe_translate("chat.thinking")):
                     ai_response = call_chat_api(safe_message, device_context)
 
                 # Add AI response to history
@@ -584,7 +639,7 @@ def main():
 
             # Clear chat button
             if st.session_state.chat_history:
-                if st.button(_("chat.clear_history")):
+                if st.button(safe_translate("chat.clear_history")):
                     st.session_state.chat_history = []
                     st.rerun()
 

@@ -10,13 +10,26 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from ..utils.logger import (
-    LoggerMixin,
-    get_logger,
-    log_api_call,
-    log_api_error,
-    log_performance,
-)
+try:
+    from ..utils.logger import (
+        LoggerMixin,
+        get_logger,
+        log_api_call,
+        log_api_error,
+        log_performance,
+    )
+except ImportError:
+    # Fallback for direct execution - add parent directory to path
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    from utils.logger import (
+        LoggerMixin,
+        get_logger,
+        log_api_call,
+        log_api_error,
+        log_performance,
+    )
 
 try:
     import openai
