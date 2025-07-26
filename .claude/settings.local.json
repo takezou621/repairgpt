@@ -83,7 +83,13 @@
       "Bash(pip3 list:*)",
       "Bash(git branch:*)",
       "Bash(REPAIRGPT_API_PORT=8003 python3 -m src.api.main)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(source:*)",
+      "Bash(if [ -f \"requirements.txt\" ])",
+      "Bash(then echo \"Found requirements.txt\")",
+      "Bash(else echo \"No requirements.txt found\")",
+      "Bash(fi)",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }

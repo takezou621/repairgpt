@@ -458,3 +458,136 @@ export REPAIRGPT_DATABASE_URL="データベース接続文字列"
 任意のGitHubリポジトリで同様のスマート自動化システムを構築可能
 
 **実行時刻:** 2025-07-13 スマート自動化汎用化完了
+
+## Claude Code エージェント活用ガイド
+
+RepairGPTプロジェクトの開発効率を最大化するため、Claude Codeの専門エージェント機能を積極的に活用します。
+
+### 利用可能なエージェント
+
+#### 1. kiro-task-organizer
+**目的**: .kiroディレクトリのステアリングドキュメントを分析し、開発タスクを適切なサイズに分割
+
+**使用シーン**:
+- 新機能実装の計画時
+- リファクタリング作業の整理時
+- スプリント計画の作成時
+
+**具体例**:
+```
+user: "修理ガイドのマルチモーダル対応を実装したい"
+assistant: kiro-task-organizerを使って.kiro/steering/を分析し、以下のタスクに分割:
+1. Vision API統合タスク
+2. 画像アップロード機能タスク
+3. UIコンポーネント更新タスク
+4. テスト実装タスク
+```
+
+#### 2. task-executor-pr-creator
+**目的**: kiro-task-organizerが作成したタスクを実装し、テストを書いてPRを作成
+
+**使用シーン**:
+- 計画されたタスクの実行時
+- 単体テストを含む実装時
+- 自動PR作成が必要な時
+
+**具体例**:
+```
+user: "Vision API統合タスクを実装してPRを作成して"
+assistant: task-executor-pr-creatorを使って:
+1. src/services/image_analysis.pyを更新
+2. テストケースを追加
+3. PR作成（タイトル: feat: Add Vision API integration）
+```
+
+#### 3. code-quality-inspector
+**目的**: 実装したコードの品質チェックと改善提案
+
+**使用シーン**:
+- 新機能実装後
+- リファクタリング後
+- PR作成前の最終チェック
+
+**具体例**:
+```
+user: "image_analysis.pyのコード品質をチェックして"
+assistant: code-quality-inspectorを使って以下を検証:
+- PEP 8準拠
+- 型ヒントの完全性
+- エラーハンドリング
+- パフォーマンス最適化
+```
+
+#### 4. qa-engineer-tester
+**目的**: 包括的な品質保証テストとバグ修正提案
+
+**使用シーン**:
+- 機能実装完了後
+- 統合テスト実行時
+- セキュリティ検証時
+
+**具体例**:
+```
+user: "修理ガイドAPIの品質テストを実行して"
+assistant: qa-engineer-testerを使って:
+1. エンドポイントテスト
+2. エッジケーステスト
+3. パフォーマンステスト
+4. セキュリティ脆弱性チェック
+```
+
+### エージェント連携ワークフロー
+
+#### 新機能実装フロー
+```
+1. kiro-task-organizer → タスク分割・計画
+2. task-executor-pr-creator → 各タスクの実装とPR作成
+3. code-quality-inspector → コード品質チェック
+4. qa-engineer-tester → 統合テストと品質保証
+```
+
+#### バグ修正フロー
+```
+1. qa-engineer-tester → バグの特定と再現
+2. task-executor-pr-creator → 修正実装とテスト
+3. code-quality-inspector → 修正コードの品質確認
+```
+
+#### リファクタリングフロー
+```
+1. code-quality-inspector → 改善点の特定
+2. kiro-task-organizer → リファクタリングタスクの計画
+3. task-executor-pr-creator → 段階的な実装
+4. qa-engineer-tester → リグレッションテスト
+```
+
+### ベストプラクティス
+
+1. **段階的実行**: 大きなタスクはkiro-task-organizerで分割してから実行
+2. **品質優先**: 実装後は必ずcode-quality-inspectorでチェック
+3. **テスト駆動**: task-executor-pr-creatorで実装時は必ずテストを含める
+4. **継続的検証**: qa-engineer-testerで定期的に品質を確認
+
+### RepairGPT固有の活用例
+
+#### 修理ガイド機能の拡張
+```
+user: "iFixit API統合を強化したい"
+1. kiro-task-organizer: .kiro/steering/product.mdを参照し、タスク分割
+2. task-executor-pr-creator: APIクライアントの拡張実装
+3. qa-engineer-tester: API応答の網羅的テスト
+```
+
+#### マルチ言語対応の改善
+```
+user: "i18nシステムを最適化したい"
+1. code-quality-inspector: 現在のi18n実装の問題点特定
+2. kiro-task-organizer: 改善タスクの計画
+3. task-executor-pr-creator: 新しい翻訳システム実装
+```
+
+### 注意事項
+
+- エージェントは独立して動作するため、明確な指示が重要
+- 各エージェントの結果を次のエージェントに引き継ぐ際は、具体的な情報を提供
+- RepairGPTのコーディング規約（PEP 8、型ヒント等）を各エージェントに遵守させる
