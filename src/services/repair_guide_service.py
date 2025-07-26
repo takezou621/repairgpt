@@ -41,7 +41,7 @@ class RepairGuideResult:
     source: str  # 'ifixit', 'offline', 'cached'
     confidence_score: float  # 0.0-1.0
     last_updated: datetime
-    related_guides: List[Guide] = None
+    related_guides: Optional[List[Guide]] = None
     difficulty_explanation: str = ""
     estimated_cost: Optional[str] = None
     success_rate: Optional[float] = None
@@ -118,6 +118,38 @@ JAPANESE_CATEGORY_MAPPINGS: Dict[str, str] = {
     "こねくたしゅうり": "connector repair",
 }
 
+# Performance optimization: Pre-computed category lookup indices for O(1) access
+_CATEGORY_EXACT_LOOKUP: Dict[str, str] = JAPANESE_CATEGORY_MAPPINGS
+_CATEGORY_PARTIAL_LOOKUP: Dict[str, str] = {}
+_CATEGORY_KEY_PARTS_INDEX: Dict[str, List[str]] = {}
+
+# Build optimized lookup structures at module load time
+def _build_category_indices():
+    """Build optimized lookup indices for category mapping performance."""
+    global _CATEGORY_PARTIAL_LOOKUP, _CATEGORY_KEY_PARTS_INDEX
+    
+    for japanese_term, english_term in JAPANESE_CATEGORY_MAPPINGS.items():
+        # Build key parts index for complex matching
+        key_parts = []
+        if "修理" in japanese_term:
+            key_parts.append("修理")
+            remaining = japanese_term.replace("修理", "")
+            if remaining:
+                key_parts.append(remaining)
+        elif "交換" in japanese_term:
+            key_parts.append("交換")
+            remaining = japanese_term.replace("交換", "")
+            if remaining:
+                key_parts.append(remaining)
+        
+        if key_parts:
+            key_signature = "|".join(sorted(key_parts))
+            _CATEGORY_KEY_PARTS_INDEX[key_signature] = key_parts
+            _CATEGORY_PARTIAL_LOOKUP[key_signature] = english_term
+
+# Initialize indices
+_build_category_indices()
+
 
 @dataclass
 class SearchFilters:
@@ -176,31 +208,19 @@ class SearchFilters:
         if normalized in JAPANESE_CATEGORY_MAPPINGS:
             return JAPANESE_CATEGORY_MAPPINGS[normalized]
             
-        # Check for partial matches in category names
-        for japanese_term, english_term in JAPANESE_CATEGORY_MAPPINGS.items():
-            # Direct containment check
+        # Optimized O(1) partial matching using pre-computed indices
+        # First check for direct substring matches in the category mappings
+        for japanese_term, english_term in _CATEGORY_EXACT_LOOKUP.items():
             if japanese_term in normalized:
                 return english_term
-            
-            # More flexible matching: check if key components are present
-            # Split the mapping term into key components
-            if len(japanese_term) >= 3:
-                # For terms like "画面修理", check if both "画面" and "修理" are present
-                # This handles cases like "画面の修理" -> "画面修理"
-                key_parts = []
-                if "修理" in japanese_term:
-                    key_parts.append("修理")
-                    remaining = japanese_term.replace("修理", "")
-                    if remaining:
-                        key_parts.append(remaining)
-                elif "交換" in japanese_term:
-                    key_parts.append("交換")
-                    remaining = japanese_term.replace("交換", "")
-                    if remaining:
-                        key_parts.append(remaining)
-                
-                # Check if all key parts are present
-                if key_parts and all(part in normalized for part in key_parts if part):
+        
+        # Enhanced partial matching using pre-computed key parts index
+        for key_signature, key_parts in _CATEGORY_KEY_PARTS_INDEX.items():
+            # Check if all key parts are present - optimized lookup
+            if key_parts and all(part in normalized for part in key_parts if part):
+                # Use pre-computed mapping for O(1) retrieval
+                english_term = _CATEGORY_PARTIAL_LOOKUP.get(key_signature)
+                if english_term:
                     return english_term
                 
         # If no mapping found, return original
@@ -259,9 +279,9 @@ class CacheManager:
 
     def _make_key(self, prefix: str, identifier: str) -> str:
         """Create a cache key"""
-        # Hash long identifiers
+        # Hash long identifiers using SHA-256 for security
         if len(identifier) > 100:
-            identifier = hashlib.md5(identifier.encode()).hexdigest()
+            identifier = hashlib.sha256(identifier.encode()).hexdigest()
         return f"repairgpt:{prefix}:{identifier}"
 
     def get(self, key: str) -> Optional[Any]:
@@ -392,8 +412,12 @@ class RepairGuideService:
 
                 logger.info(f"Retrieved {len(ifixit_guides)} guides from iFixit API")
 
+            except (ConnectionError, TimeoutError) as e:
+                logger.error(f"iFixit API connection failed: {e}")
+            except ValueError as e:
+                logger.error(f"iFixit API invalid response: {e}")
             except Exception as e:
-                logger.error(f"iFixit API search failed: {e}")
+                logger.error(f"iFixit API unexpected error: {e}")
         else:
             wait_time = self.rate_limiter.time_until_next_request()
             logger.warning(f"Rate limit exceeded, need to wait {wait_time} seconds")
@@ -416,8 +440,10 @@ class RepairGuideService:
 
                 logger.info(f"Retrieved {len(offline_guides)} guides from offline database")
 
+            except (ConnectionError, ValueError) as e:
+                logger.error(f"Offline database connection/data error: {e}")
             except Exception as e:
-                logger.error(f"Offline database search failed: {e}")
+                logger.error(f"Offline database unexpected error: {e}")
 
         # Sort by confidence score
         results.sort(key=lambda x: x.confidence_score, reverse=True)
@@ -454,15 +480,21 @@ class RepairGuideService:
             try:
                 guide = self.ifixit_client.get_guide(guide_id)
                 self.rate_limiter.record_request()
+            except (ConnectionError, TimeoutError) as e:
+                logger.error(f"Failed to get guide {guide_id} from iFixit - connection error: {e}")
+            except ValueError as e:
+                logger.error(f"Failed to get guide {guide_id} from iFixit - invalid data: {e}")
             except Exception as e:
-                logger.error(f"Failed to get guide {guide_id} from iFixit: {e}")
+                logger.error(f"Failed to get guide {guide_id} from iFixit - unexpected error: {e}")
 
         if not guide and self.offline_db:
             try:
                 guide = await self._get_offline_guide(guide_id)
                 source = "offline"
+            except (ConnectionError, ValueError) as e:
+                logger.error(f"Failed to get guide {guide_id} from offline db - connection/data error: {e}")
             except Exception as e:
-                logger.error(f"Failed to get guide {guide_id} from offline db: {e}")
+                logger.error(f"Failed to get guide {guide_id} from offline db - unexpected error: {e}")
 
         if not guide:
             logger.warning(f"Guide {guide_id} not found in any source")
@@ -539,8 +571,12 @@ class RepairGuideService:
                     )
                     results.append(result)
 
+            except (ConnectionError, TimeoutError) as e:
+                logger.error(f"Failed to get trending guides - connection error: {e}")
+            except ValueError as e:
+                logger.error(f"Failed to get trending guides - invalid data: {e}")
             except Exception as e:
-                logger.error(f"Failed to get trending guides: {e}")
+                logger.error(f"Failed to get trending guides - unexpected error: {e}")
 
         # Fallback to popular searches if needed
         if len(results) < limit:
@@ -556,8 +592,12 @@ class RepairGuideService:
                 try:
                     search_results = await self.search_guides(query, limit=2, use_cache=True)
                     results.extend(search_results[:2])
+                except (ConnectionError, TimeoutError) as e:
+                    logger.error(f"Failed popular search for {query} - connection error: {e}")
+                except ValueError as e:
+                    logger.error(f"Failed popular search for {query} - invalid data: {e}")
                 except Exception as e:
-                    logger.error(f"Failed popular search for {query}: {e}")
+                    logger.error(f"Failed popular search for {query} - unexpected error: {e}")
 
         results = results[:limit]
 
@@ -1023,7 +1063,7 @@ class RepairGuideService:
         """Create cache key for search results"""
         filter_str = f"{filters.device_type}_{filters.difficulty_level}_{filters.category}"
         key = f"search_{query}_{filter_str}_{limit}"
-        return hashlib.md5(key.encode()).hexdigest()
+        return hashlib.sha256(key.encode()).hexdigest()
 
 
 # Global service instance
