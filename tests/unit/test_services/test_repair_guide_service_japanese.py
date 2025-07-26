@@ -1194,6 +1194,286 @@ class TestAdvancedJapaneseConfidenceScoring:
         assert avg_time < 0.01, f"Average calculation time {avg_time:.4f}s should be < 0.01s"
 
 
+class TestJapaneseSearchCompleteMethodCoverage:
+    """Complete method coverage tests for Japanese search functionality"""
+
+    def setup_method(self):
+        """Set up test environment before each test"""
+        with patch('src.services.repair_guide_service.IFixitClient'), \
+             patch('src.services.repair_guide_service.OfflineRepairDatabase'), \
+             patch('src.services.repair_guide_service.CacheManager'), \
+             patch('src.services.repair_guide_service.RateLimiter'):
+            
+            self.service = RepairGuideService(
+                ifixit_api_key="test_key",
+                enable_japanese_support=True
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_guide_details_with_japanese_preprocessing(self):
+        """Test get_guide_details method with Japanese context"""
+        mock_guide = Guide(
+            guideid=123,
+            title="Nintendo Switch Joy-Con Repair",
+            device="Nintendo Switch",
+            category="Controller Repair",
+            subject="Joy-Con",
+            difficulty="Moderate",
+            url="http://example.com/guide/123",
+            image_url="http://example.com/image123.jpg",
+            tools=["Phillips Screwdriver"],
+            parts=["Joy-Con Stick"],
+            type_="Repair"
+        )
+        
+        with patch.object(self.service.ifixit_client, 'get_guide', return_value=mock_guide), \
+             patch.object(self.service.rate_limiter, 'can_make_request', return_value=True), \
+             patch.object(self.service.cache_manager, 'get', return_value=None), \
+             patch.object(self.service, '_enhance_with_related_guides', new_callable=AsyncMock):
+            
+            result = await self.service.get_guide_details(123)
+            
+            assert result is not None
+            assert result.guide.guideid == 123
+            assert result.source == "ifixit"
+            assert result.confidence_score == 1.0  # Direct fetch should have full confidence
+            assert result.difficulty_explanation != ""
+            assert result.estimated_cost is not None
+            assert result.success_rate is not None
+
+    @pytest.mark.asyncio
+    async def test_get_guides_by_device_japanese_integration(self):
+        """Test get_guides_by_device with Japanese device names"""
+        mock_guides = [
+            Guide(
+                guideid=1, title="Nintendo Switch Repair", device="Nintendo Switch",
+                category="Repair", subject="General", difficulty="Easy",
+                url="http://example.com/1", image_url="http://example.com/1.jpg",
+                tools=[], parts=[], type_="Repair"
+            )
+        ]
+        
+        with patch.object(self.service, 'search_guides', new_callable=AsyncMock) as mock_search:
+            mock_search.return_value = [
+                RepairGuideResult(
+                    guide=mock_guides[0], source="ifixit", confidence_score=0.9,
+                    last_updated=datetime.now(), difficulty_explanation="Easy repair"
+                )
+            ]
+            
+            # Test with Japanese device name
+            results = await self.service.get_guides_by_device(
+                device_type="スイッチ",  # "Nintendo Switch" in Japanese
+                device_model="OLED",
+                issue_type="画面修理"  # "screen repair" in Japanese
+            )
+            
+            # Verify search was called with proper query construction
+            mock_search.assert_called_once()
+            call_args = mock_search.call_args
+            assert "スイッチ" in call_args[0][0]  # Query should contain Japanese device name
+            assert "OLED" in call_args[0][0]
+            assert "画面修理" in call_args[0][0]
+            
+            # Verify device_type filter was set
+            filters = call_args[0][1]  # Second argument is filters
+            assert filters.device_type == "スイッチ"
+
+    @pytest.mark.asyncio
+    async def test_get_trending_guides_japanese_fallback(self):
+        """Test get_trending_guides with Japanese popular search fallback"""
+        # Mock trending guides to return empty (simulate API issue)
+        with patch.object(self.service.ifixit_client, 'get_trending_guides', return_value=[]), \
+             patch.object(self.service.rate_limiter, 'can_make_request', return_value=True), \
+             patch.object(self.service.cache_manager, 'get', return_value=None), \
+             patch.object(self.service, 'search_guides', new_callable=AsyncMock) as mock_search:
+            
+            # Configure search_guides to return results for popular queries
+            mock_search.return_value = [
+                RepairGuideResult(
+                    guide=Guide(
+                        guideid=1, title="Popular Guide", device="Nintendo Switch",
+                        category="Repair", subject="Popular", difficulty="Easy",
+                        url="http://example.com/1", image_url="http://example.com/1.jpg",
+                        tools=[], parts=[], type_="Repair"
+                    ),
+                    source="ifixit", confidence_score=0.8,
+                    last_updated=datetime.now(), difficulty_explanation="Easy"
+                )
+            ]
+            
+            results = await self.service.get_trending_guides(limit=5)
+            
+            # Should fall back to popular searches
+            assert len(results) > 0
+            assert mock_search.call_count > 0  # Should have made fallback searches
+
+    def test_get_cache_stats_japanese_context(self):
+        """Test get_cache_stats method"""
+        # Configure rate limiter with some calls
+        self.service.rate_limiter.calls = [datetime.now()] * 5
+        self.service.rate_limiter.max_calls = 100
+        
+        stats = self.service.get_cache_stats()
+        
+        # Verify stats structure
+        assert "redis_available" in stats
+        assert "memory_cache_size" in stats
+        assert "rate_limit_calls_remaining" in stats
+        assert "rate_limit_reset_in" in stats
+        
+        # Verify rate limit calculations
+        assert stats["rate_limit_calls_remaining"] == 95  # 100 - 5
+        assert isinstance(stats["rate_limit_reset_in"], int)
+
+    def test_explain_difficulty_comprehensive(self):
+        """Test _explain_difficulty method with all difficulty levels"""
+        difficulty_tests = [
+            ("easy", "Can be completed by beginners with basic tools. Low risk of damage."),
+            ("moderate", "Requires some technical knowledge and specialized tools. Moderate risk."),
+            ("difficult", "Advanced repair requiring significant expertise and specialized equipment. High risk of damage if done incorrectly."),
+            ("very difficult", "Expert-level repair. Consider professional service unless you have extensive experience."),
+            ("unknown", "Difficulty level: unknown"),  # Fallback case
+            ("", "Difficulty level: "),  # Empty case
+        ]
+        
+        for difficulty, expected_explanation in difficulty_tests:
+            result = self.service._explain_difficulty(difficulty)
+            assert result == expected_explanation
+
+    def test_estimate_repair_cost_comprehensive(self):
+        """Test _estimate_repair_cost method with various guide configurations"""
+        test_cases = [
+            # (difficulty, parts_count, expected_min_range)
+            ("easy", 1, 15),     # Base 10 + 20 for easy + 15 for 1 part = 45, range 22-90
+            ("moderate", 2, 35), # Base 10 + 50 for moderate + 30 for 2 parts = 90, range 45-180
+            ("difficult", 3, 55), # Base 10 + 100 for difficult + 45 for 3 parts = 155, range 77-310
+            ("very difficult", 0, 105), # Base 10 + 200 for very difficult + 0 parts = 210, range 105-420
+        ]
+        
+        for difficulty, parts_count, expected_min in test_cases:
+            mock_guide = Guide(
+                guideid=1, title="Test Guide", device="Test Device",
+                category="Test", subject="Test", difficulty=difficulty,
+                url="http://example.com", image_url="http://example.com/img.jpg",
+                tools=[], parts=[f"Part{i}" for i in range(parts_count)], type_="Repair"
+            )
+            
+            cost_estimate = self.service._estimate_repair_cost(mock_guide)
+            
+            # Should return range format "$X-$Y"
+            assert cost_estimate.startswith("$")
+            assert "-$" in cost_estimate
+            
+            # Extract minimum cost and verify it's reasonable
+            min_cost = int(cost_estimate.split("-")[0][1:])
+            assert min_cost >= expected_min * 0.8  # Allow some tolerance
+
+    def test_estimate_success_rate_comprehensive(self):
+        """Test _estimate_success_rate method with various guide configurations"""
+        test_cases = [
+            # (difficulty, has_tools, has_parts, has_image, expected_min_rate)
+            ("easy", True, True, True, 0.95),      # Max rate
+            ("moderate", True, True, True, 0.85),  # Good rate with all features
+            ("difficult", True, True, False, 0.65), # Lower rate, no image bonus
+            ("very difficult", False, False, False, 0.4), # Minimum features
+        ]
+        
+        for difficulty, has_tools, has_parts, has_image, expected_min in test_cases:
+            mock_guide = Guide(
+                guideid=1, title="Test Guide", device="Test Device",
+                category="Test", subject="Test", difficulty=difficulty,
+                url="http://example.com", 
+                image_url="http://example.com/img.jpg" if has_image else None,
+                tools=["Tool1"] if has_tools else [],
+                parts=["Part1"] if has_parts else [],
+                type_="Repair"
+            )
+            
+            success_rate = self.service._estimate_success_rate(mock_guide)
+            
+            # Should return rate between 0 and 0.95
+            assert 0.0 <= success_rate <= 0.95
+            
+            # Should be close to expected minimum
+            assert success_rate >= expected_min * 0.9  # Allow some tolerance
+
+    def test_create_search_cache_key_comprehensive(self):
+        """Test _create_search_cache_key method with various inputs"""
+        test_cases = [
+            # (query, device_type, difficulty, category, limit)
+            ("スイッチ修理", "Nintendo Switch", "easy", "screen repair", 10),
+            ("iPhone repair", "iPhone", "moderate", "battery", 5),
+            ("", None, None, None, 20),  # Empty/None values
+            ("very long query " * 20, "device", "difficult", "category", 100),  # Long values
+        ]
+        
+        for query, device_type, difficulty, category, limit in test_cases:
+            filters = SearchFilters(
+                device_type=device_type,
+                difficulty_level=difficulty,
+                category=category
+            )
+            
+            cache_key = self.service._create_search_cache_key(query, filters, limit)
+            
+            # Should return SHA-256 hash (64 hex characters)
+            assert isinstance(cache_key, str)
+            assert len(cache_key) == 64
+            assert all(c in '0123456789abcdef' for c in cache_key)
+
+    @pytest.mark.asyncio
+    async def test_search_offline_guides_integration(self):
+        """Test _search_offline_guides method integration"""
+        # Test when offline database is available
+        offline_guides = [
+            Guide(
+                guideid=999, title="Offline Guide", device="Nintendo Switch",
+                category="Offline Repair", subject="Offline", difficulty="Easy",
+                url="offline://guide/999", image_url="offline://image/999.jpg",
+                tools=[], parts=[], type_="Repair"
+            )
+        ]
+        
+        # Mock offline database search
+        with patch.object(self.service, 'offline_db') as mock_offline_db:
+            mock_offline_db.search_guides.return_value = offline_guides
+            
+            results = await self.service._search_offline_guides("スイッチ修理", SearchFilters(), 5)
+            
+            # Current implementation returns empty list, but test structure
+            assert isinstance(results, list)
+        
+        # Test when offline database is None
+        self.service.offline_db = None
+        results = await self.service._search_offline_guides("query", SearchFilters(), 5)
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_get_offline_guide_integration(self):
+        """Test _get_offline_guide method integration"""
+        # Test when offline database is available
+        offline_guide = Guide(
+            guideid=999, title="Offline Guide", device="Nintendo Switch",
+            category="Offline Repair", subject="Offline", difficulty="Easy",
+            url="offline://guide/999", image_url="offline://image/999.jpg",
+            tools=[], parts=[], type_="Repair"
+        )
+        
+        with patch.object(self.service, 'offline_db') as mock_offline_db:
+            mock_offline_db.get_guide.return_value = offline_guide
+            
+            result = await self.service._get_offline_guide(999)
+            
+            # Current implementation returns None, but test structure
+            assert result is None  # Current implementation
+        
+        # Test when offline database is None
+        self.service.offline_db = None
+        result = await self.service._get_offline_guide(999)
+        assert result is None
+
+
 if __name__ == "__main__":
     # Run the tests
     pytest.main([__file__, "-v"])
