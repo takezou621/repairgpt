@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 import requests
 
-from ..utils.logger import (
+from utils.logger import (
     LoggerMixin,
     get_logger,
     log_api_call,

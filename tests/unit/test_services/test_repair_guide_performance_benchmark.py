@@ -7,19 +7,21 @@ This module contains performance tests to verify the improvements:
 3. Overall search performance improvements
 """
 
-import time
+import os
 import statistics
-import pytest
-from typing import List, Dict
 
 # Import the service and related classes
 import sys
-import os
+import time
+from typing import Dict, List
+
+import pytest
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 
 from src.services.repair_guide_service import (
-    SearchFilters,
     JAPANESE_CATEGORY_MAPPINGS,
+    SearchFilters,
 )
 
 
@@ -212,10 +214,10 @@ class TestMemoryUsage:
         """Test that category indices don't use excessive memory."""
         from src.services.repair_guide_service import (
             _CATEGORY_EXACT_LOOKUP,
-            _CATEGORY_PARTIAL_LOOKUP,
             _CATEGORY_KEY_PARTS_INDEX,
+            _CATEGORY_PARTIAL_LOOKUP,
         )
-        
+
         # Indices should exist and be reasonable size
         assert len(_CATEGORY_EXACT_LOOKUP) > 0
         

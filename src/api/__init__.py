@@ -12,17 +12,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Import security and configuration
 try:
-    from ..config.settings_simple import settings, validate_api_keys
-    from ..utils.security import (
+    from config.settings_simple import settings, validate_api_keys
+    from utils.security import (
         RateLimiter,
         RateLimitMiddleware,
         SecurityHeaders,
     )
 except ImportError:
     # Fallback for direct execution
-    import sys
     import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    import sys
+
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from config.settings_simple import settings, validate_api_keys
     from utils.security import (
         RateLimiter,
@@ -156,7 +157,7 @@ def create_app() -> FastAPI:
 
         # Validate production configuration
         if settings.is_production():
-            from ..config.settings_simple import validate_production_config
+            from config.settings_simple import validate_production_config
 
             issues = validate_production_config()
             if issues:

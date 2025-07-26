@@ -38,6 +38,44 @@ build/
 
 # Temporary files
 automation_test_results.json
+temp_*.py
+temp_*.txt
+temp_*.json
+
+# Debug and fix scripts (should be in appropriate directories)
+debug_*.py
+fix_*.py
+qa_*.py
+
+# Test scripts in root (should be in tests/ directory)
+test_*.py
+*_test.py
+*_tests.py
+
+# Run scripts (only essential ones should be in root)
+run_*.py
+start*.py
+!run_app.py
+!run_api.py
+
+# Verification and validation scripts
+verify_*.py
+validate_*.py
+final_*.py
+minimal_*.py
+standalone_*.py
+integration_*.py
+demo_*.py
+
+# Reports and analysis files
+*_report.txt
+*_report.json
+*_analysis.py
+comprehensive_*.py
+proof_*.py
+
+# Automation trigger files
+AUTOMATION_*.txt
 
 # Documentation files (untracked)
 GEMINI.md

@@ -89,7 +89,20 @@
       "Bash(then echo \"Found requirements.txt\")",
       "Bash(else echo \"No requirements.txt found\")",
       "Bash(fi)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(PYTHONPATH=/Users/kawai/dev/repairgpt/src python -m api.main)",
+      "Bash(REPAIRGPT_API_PORT=8003 python -m src.api.main)",
+      "Bash(chmod:*)",
+      "Bash(PYTHONPATH:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(cat:*)",
+      "Bash(isort:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_click",
+      "Bash(autopep8:*)"
     ],
     "deny": []
   }

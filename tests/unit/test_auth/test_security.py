@@ -1,8 +1,9 @@
 """Tests for authentication and security functionality"""
 
-import pytest
-from unittest.mock import Mock, patch
 from datetime import timedelta
+from unittest.mock import Mock, patch
+
+import pytest
 
 try:
     from jose import JWTError
@@ -12,7 +13,12 @@ except ImportError:
         pass
 
 try:
-    from src.utils.security import create_access_token, verify_password, get_password_hash, verify_token
+    from src.utils.security import (
+        create_access_token,
+        get_password_hash,
+        verify_password,
+        verify_token,
+    )
     SECURITY_MODULE_AVAILABLE = True
 except ImportError:
     # Fallback for missing security module

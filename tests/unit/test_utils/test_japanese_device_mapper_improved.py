@@ -10,12 +10,12 @@ covering all fixes and enhancements including:
 - Performance improvements
 """
 
-import time
-import threading
-from typing import List, Optional, Tuple
 import gc
-import sys
 import importlib.util
+import sys
+import threading
+import time
+from typing import List, Optional, Tuple
 
 # Import the improved mapper directly
 spec = importlib.util.spec_from_file_location(

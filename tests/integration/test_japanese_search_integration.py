@@ -16,23 +16,24 @@ Test Categories:
 """
 
 import asyncio
-import time
-import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from typing import List, Optional, Dict, Any
 import concurrent.futures
+import time
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import pytest
+
+from src.clients.ifixit_client import Guide, IFixitClient
+from src.data.offline_repair_database import OfflineRepairDatabase
 from src.services.repair_guide_service import (
-    RepairGuideService,
-    SearchFilters,
-    RepairGuideResult,
     CacheManager,
     RateLimiter,
+    RepairGuideResult,
+    RepairGuideService,
+    SearchFilters,
 )
-from src.clients.ifixit_client import Guide, IFixitClient
 from src.utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
-from src.data.offline_repair_database import OfflineRepairDatabase
 
 
 class TestJapaneseSearchEndToEndIntegration:
@@ -689,7 +690,7 @@ class TestJapaneseSearchPerformanceAndLoad:
     async def test_memory_usage_under_load(self):
         """Test memory usage doesn't grow excessively under load"""
         import tracemalloc
-        
+
         # Start memory tracing
         tracemalloc.start()
         

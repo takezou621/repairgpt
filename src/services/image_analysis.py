@@ -52,7 +52,7 @@ except ImportError:
     redis = None
 
 try:
-    from ..utils.logger import get_logger
+    from utils.logger import get_logger
 except ImportError:
     # Fallback for direct execution
     import sys

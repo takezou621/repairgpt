@@ -6,14 +6,14 @@ JWT-based user authentication and management
 from datetime import datetime, timezone
 from typing import Dict
 
-from ..auth.jwt_auth import (
+from auth.jwt_auth import (
     UserAuth,
     decode_token,
     get_jwt_manager,
     hash_password,
     verify_password,
 )
-from ..utils.logger import get_logger
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

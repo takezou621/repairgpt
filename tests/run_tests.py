@@ -6,9 +6,9 @@ Smart Automation Test Runner
 Test runner for the weekend daytime smart automation system
 """
 
+import importlib.util
 import sys
 import unittest
-import importlib.util
 from pathlib import Path
 
 
