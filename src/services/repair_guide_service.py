@@ -349,10 +349,17 @@ class RepairGuideService:
         self.offline_db = OfflineRepairDatabase() if enable_offline_fallback else None
         self.japanese_mapper = get_mapper() if enable_japanese_support else None
 
+        # Safely check for redis_client existence (for testing with mocks)
+        has_redis = False
+        try:
+            has_redis = bool(getattr(self.cache_manager, 'redis_client', None))
+        except AttributeError:
+            has_redis = False
+
         logger.info(
             "RepairGuideService initialized",
             has_ifixit_key=bool(ifixit_api_key),
-            has_cache=bool(self.cache_manager.redis_client),
+            has_cache=has_redis,
             has_offline_db=bool(self.offline_db),
             has_japanese_support=bool(self.japanese_mapper),
         )
@@ -606,18 +613,28 @@ class RepairGuideService:
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""
+        # Safely check for redis_client existence
+        has_redis = False
+        try:
+            has_redis = bool(getattr(self.cache_manager, 'redis_client', None))
+        except AttributeError:
+            has_redis = False
+
         stats = {
-            "redis_available": bool(self.cache_manager.redis_client),
-            "memory_cache_size": len(self.cache_manager.memory_cache),
+            "redis_available": has_redis,
+            "memory_cache_size": len(getattr(self.cache_manager, 'memory_cache', {})),
             "rate_limit_calls_remaining": self.rate_limiter.max_calls - len(self.rate_limiter.calls),
             "rate_limit_reset_in": self.rate_limiter.time_until_next_request(),
         }
 
-        if self.cache_manager.redis_client:
+        # Safely access redis_client for memory info
+        if has_redis:
             try:
-                info = self.cache_manager.redis_client.info("memory")
-                stats["redis_memory_usage"] = info.get("used_memory_human", "unknown")
-            except Exception:
+                redis_client = getattr(self.cache_manager, 'redis_client', None)
+                if redis_client:
+                    info = redis_client.info("memory")
+                    stats["redis_memory_usage"] = info.get("used_memory_human", "unknown")
+            except (AttributeError, Exception):
                 pass
 
         return stats
