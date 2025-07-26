@@ -7,10 +7,8 @@ import time
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import JSONResponse
 
 from ..models import (
-    ErrorResponse,
     RepairGuide,
     RepairGuideSearchRequest,
     RepairGuideSearchResponse,
@@ -18,25 +16,11 @@ from ..models import (
     SearchMetadata,
 )
 
-try:
-    from ...services.repair_guide_service import (
-        RepairGuideResult,
-        SearchFilters,
-        get_repair_guide_service,
-    )
-    from ...utils.logger import get_logger
-except ImportError:
-    # Fallback for development/testing
-    import sys
-    import os
-    
-    sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
-    from services.repair_guide_service import (
-        RepairGuideResult,
-        SearchFilters,
-        get_repair_guide_service,
-    )
-    from utils.logger import get_logger
+from ...services.repair_guide_service import (
+    SearchFilters,
+    get_repair_guide_service,
+)
+from ...utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -49,7 +33,7 @@ router = APIRouter(prefix="/repair-guides", tags=["repair-guides"])
     summary="Search repair guides with Japanese support",
     description="""
     Search for repair guides with enhanced Japanese language support.
-    
+
     Features:
     - Japanese device name mapping (e.g., "スイッチ" → "Nintendo Switch")
     - Japanese difficulty level mapping (e.g., "初心者" → "beginner")
@@ -63,27 +47,27 @@ async def search_repair_guides(
 ) -> RepairGuideSearchResponse:
     """
     Search for repair guides with Japanese language support.
-    
+
     Args:
         request: Search request with query, language, and filters
-        
+
     Returns:
         RepairGuideSearchResponse with results and metadata
-        
+
     Raises:
         HTTPException: If search fails or invalid parameters provided
     """
     start_time = time.time()
-    
+
     try:
         logger.info(
             f"Searching repair guides: query='{request.query}', "
             f"language={request.language}, limit={request.limit}"
         )
-        
+
         # Get repair guide service
         service = get_repair_guide_service()
-        
+
         # Convert API models to service models
         service_filters = None
         if request.filters:
@@ -98,7 +82,7 @@ async def search_repair_guides(
                 include_community_guides=request.filters.include_community_guides,
                 min_rating=request.filters.min_rating,
             )
-        
+
         # Perform search
         search_results = await service.search_guides(
             query=request.query,
@@ -106,27 +90,27 @@ async def search_repair_guides(
             limit=request.limit,
             use_cache=request.use_cache,
         )
-        
+
         # Convert service results to API models
         api_results = []
         total_confidence = 0.0
         japanese_mapping_quality = 1.0
-        
+
         for result in search_results:
             # Calculate Japanese mapping quality if available
             if result.confidence_score and service.japanese_mapper:
                 if service._is_japanese_query(request.query):
                     japanese_mapping_quality = service._assess_japanese_mapping_quality(request.query)
-            
+
             total_confidence += result.confidence_score
-            
+
             api_guide = RepairGuide(
                 id=str(result.guide.guideid),
                 title=result.guide.title,
                 device_type=_map_device_name_to_enum(result.guide.device),
                 device_model=getattr(result.guide, 'device_model', None),
                 difficulty=_map_difficulty_to_enum(result.guide.difficulty),
-                time_estimate=result.guide.time_estimate or "Unknown",
+                time_estimate=result.guide.time_required or "Unknown",
                 cost_estimate=result.estimated_cost,
                 success_rate=f"{result.success_rate:.0%}" if result.success_rate else None,
                 summary=result.guide.summary,
@@ -140,14 +124,14 @@ async def search_repair_guides(
                 last_updated=result.last_updated.isoformat() if result.last_updated else None,
             )
             api_results.append(api_guide)
-        
+
         # Calculate average confidence
         avg_confidence = total_confidence / len(search_results) if search_results else 0.0
-        
+
         # Detect language and get processed query
         language_detected = "ja" if service._is_japanese_query(request.query) else "en"
         query_processed = service._preprocess_japanese_query(request.query)
-        
+
         # Create metadata
         processing_time_ms = int((time.time() - start_time) * 1000)
         metadata = SearchMetadata(
@@ -159,16 +143,16 @@ async def search_repair_guides(
             cache_hit=False,  # Would be set by cache check
             processing_time_ms=processing_time_ms,
         )
-        
+
         logger.info(
             f"Search completed: found {len(search_results)} results in {processing_time_ms}ms"
         )
-        
+
         return RepairGuideSearchResponse(
             results=api_results,
             metadata=metadata,
         )
-        
+
     except ValueError as e:
         logger.error(f"Invalid search parameters: {e}")
         raise HTTPException(
@@ -212,18 +196,18 @@ async def search_repair_guides_get(
 ) -> RepairGuideSearchResponse:
     """
     GET endpoint for repair guide search with query parameters.
-    
+
     Supports the same Japanese functionality as the POST endpoint but via query parameters.
     """
     # Convert query parameters to request model
     from ..models import RepairGuideSearchFilters
-    
+
     filters = RepairGuideSearchFilters(
         device_type=device_type,
         difficulty_level=difficulty_level,
         category=category,
     )
-    
+
     request = RepairGuideSearchRequest(
         query=query,
         language=language,
@@ -231,7 +215,7 @@ async def search_repair_guides_get(
         limit=limit,
         use_cache=use_cache,
     )
-    
+
     return await search_repair_guides(request)
 
 
@@ -247,22 +231,22 @@ async def get_repair_guide_details(
 ) -> RepairGuide:
     """
     Get detailed information for a specific repair guide.
-    
+
     Args:
         guide_id: Unique identifier for the repair guide
         source: Source of the guide (ifixit, offline)
-        
+
     Returns:
         Detailed repair guide information
-        
+
     Raises:
         HTTPException: If guide not found or error occurs
     """
     try:
         logger.info(f"Fetching repair guide details: id={guide_id}, source={source}")
-        
+
         service = get_repair_guide_service()
-        
+
         # Convert guide_id to integer for iFixit API
         try:
             guide_id_int = int(guide_id)
@@ -271,19 +255,19 @@ async def get_repair_guide_details(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid guide ID format",
             )
-        
+
         result = await service.get_guide_details(
             guide_id=guide_id_int,
             source=source,
             use_cache=True,
         )
-        
+
         if not result:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Repair guide {guide_id} not found",
             )
-        
+
         # Convert to API model with detailed steps
         steps = []
         if hasattr(result.guide, 'steps') and result.guide.steps:
@@ -300,7 +284,7 @@ async def get_repair_guide_details(
                     tips=getattr(step, 'tips', []),
                 )
                 steps.append(api_step)
-        
+
         api_guide = RepairGuide(
             id=str(result.guide.guideid),
             title=result.guide.title,
@@ -320,10 +304,10 @@ async def get_repair_guide_details(
             confidence_score=result.confidence_score,
             last_updated=result.last_updated.isoformat() if result.last_updated else None,
         )
-        
+
         logger.info(f"Successfully retrieved guide details for {guide_id}")
         return api_guide
-        
+
     except HTTPException:
         raise
     except ValueError as e:
@@ -361,18 +345,16 @@ async def get_guides_by_device(
 ) -> RepairGuideSearchResponse:
     """
     Get repair guides for a specific device type.
-    
+
     Supports Japanese device names (e.g., "スイッチ", "アイフォン").
     """
     try:
         logger.info(f"Fetching guides for device: {device_type}, model: {device_model}")
-        
-        service = get_repair_guide_service()
-        
+
         # Build search filters
         from ..models import RepairGuideSearchFilters
         filters = RepairGuideSearchFilters(device_type=device_type)
-        
+
         # Build query
         query_parts = [device_type]
         if device_model:
@@ -380,7 +362,7 @@ async def get_guides_by_device(
         if issue_type:
             query_parts.append(issue_type)
         query = " ".join(query_parts)
-        
+
         # Create search request
         request = RepairGuideSearchRequest(
             query=query,
@@ -388,9 +370,9 @@ async def get_guides_by_device(
             filters=filters,
             limit=limit,
         )
-        
+
         return await search_repair_guides(request)
-        
+
     except Exception as e:
         logger.error(f"Error fetching guides for device {device_type}: {e}")
         raise HTTPException(
@@ -411,10 +393,10 @@ async def get_trending_guides(
     """Get trending repair guides."""
     try:
         logger.info(f"Fetching trending guides: limit={limit}")
-        
+
         service = get_repair_guide_service()
         results = await service.get_trending_guides(limit=limit)
-        
+
         # Convert to API models
         api_results = []
         for result in results:
@@ -424,7 +406,7 @@ async def get_trending_guides(
                 device_type=_map_device_name_to_enum(result.guide.device),
                 device_model=getattr(result.guide, 'device_model', None),
                 difficulty=_map_difficulty_to_enum(result.guide.difficulty),
-                time_estimate=result.guide.time_estimate or "Unknown",
+                time_estimate=result.guide.time_required or "Unknown",
                 cost_estimate=result.estimated_cost,
                 success_rate=f"{result.success_rate:.0%}" if result.success_rate else None,
                 summary=result.guide.summary,
@@ -438,7 +420,7 @@ async def get_trending_guides(
                 last_updated=result.last_updated.isoformat() if result.last_updated else None,
             )
             api_results.append(api_guide)
-        
+
         metadata = SearchMetadata(
             total_found=len(results),
             language_detected="en",
@@ -446,12 +428,12 @@ async def get_trending_guides(
             search_confidence=0.9,
             cache_hit=False,
         )
-        
+
         return RepairGuideSearchResponse(
             results=api_results,
             metadata=metadata,
         )
-        
+
     except Exception as e:
         logger.error(f"Error fetching trending guides: {e}")
         raise HTTPException(
@@ -481,12 +463,12 @@ def _map_device_name_to_enum(device_name: str) -> str:
         "laptop": "laptop",
         "desktop": "desktop_pc",
     }
-    
+
     device_lower = device_name.lower()
     for key, value in device_mapping.items():
         if key in device_lower:
             return value
-    
+
     return "other"
 
 
@@ -501,6 +483,6 @@ def _map_difficulty_to_enum(difficulty: str) -> str:
         "intermediate": "medium",
         "expert": "expert",
     }
-    
+
     difficulty_lower = difficulty.lower()
     return difficulty_mapping.get(difficulty_lower, "medium")
