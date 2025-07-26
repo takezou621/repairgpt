@@ -47,9 +47,81 @@ class RepairGuideResult:
     success_rate: Optional[float] = None
 
 
+# Japanese difficulty level mappings (moved outside dataclass)
+JAPANESE_DIFFICULTY_MAPPINGS: Dict[str, str] = {
+    "初心者": "beginner",
+    "しょしんしゃ": "beginner",
+    "はじめて": "beginner",
+    "簡単": "easy",
+    "かんたん": "easy",
+    "やさしい": "easy",
+    "易しい": "easy",
+    "中級者": "intermediate",
+    "ちゅうきゅうしゃ": "intermediate",
+    "中級": "intermediate",
+    "ちゅうきゅう": "intermediate",
+    "普通": "moderate",
+    "ふつう": "moderate",
+    "上級者": "expert",
+    "じょうきゅうしゃ": "expert",
+    "上級": "expert",
+    "じょうきゅう": "expert",
+    "難しい": "difficult",
+    "むずかしい": "difficult",
+    "困難": "difficult",
+    "こんなん": "difficult",
+    "高度": "very difficult",
+    "こうど": "very difficult",
+    "専門": "very difficult",
+    "せんもん": "very difficult",
+    "プロ": "very difficult",
+    "ぷろ": "very difficult",
+}
+
+# Japanese category mappings (moved outside dataclass)
+JAPANESE_CATEGORY_MAPPINGS: Dict[str, str] = {
+    "画面修理": "screen repair",
+    "がめんしゅうり": "screen repair",
+    "液晶修理": "screen repair",
+    "えきしょうしゅうり": "screen repair",
+    "タッチパネル": "touchscreen repair",
+    "たっちぱねる": "touchscreen repair",
+    "バッテリー交換": "battery replacement",
+    "ばってりーこうかん": "battery replacement",
+    "電池交換": "battery replacement",
+    "でんちこうかん": "battery replacement",
+    "基板修理": "motherboard repair",
+    "きばんしゅうり": "motherboard repair",
+    "マザーボード": "motherboard repair",
+    "まざーぼーど": "motherboard repair",
+    "充電器修理": "charger repair",
+    "じゅうでんきしゅうり": "charger repair",
+    "充電ポート": "charging port repair",
+    "じゅうでんぽーと": "charging port repair",
+    "ボタン修理": "button repair",
+    "ぼたんしゅうり": "button repair",
+    "スピーカー修理": "speaker repair",
+    "すぴーかーしゅうり": "speaker repair",
+    "カメラ修理": "camera repair",
+    "かめらしゅうり": "camera repair",
+    "キーボード修理": "keyboard repair",
+    "きーぼーどしゅうり": "keyboard repair",
+    "トラックパッド": "trackpad repair",
+    "とらっくぱっど": "trackpad repair",
+    "冷却ファン": "cooling fan repair",
+    "れいきゃくふぁん": "cooling fan repair",
+    "排熱": "thermal management",
+    "はいねつ": "thermal management",
+    "水没修理": "water damage repair",
+    "すいぼつしゅうり": "water damage repair",
+    "コネクタ修理": "connector repair",
+    "こねくたしゅうり": "connector repair",
+}
+
+
 @dataclass
 class SearchFilters:
-    """Search filters for repair guides"""
+    """Search filters for repair guides with Japanese support"""
 
     device_type: Optional[str] = None
     difficulty_level: Optional[str] = None  # Easy, Moderate, Difficult
@@ -60,6 +132,79 @@ class SearchFilters:
     language: str = "en"
     include_community_guides: bool = True
     min_rating: Optional[float] = None
+    
+    def normalize_japanese_difficulty(self, difficulty: str) -> str:
+        """
+        Normalize Japanese difficulty level to English equivalent.
+        
+        Args:
+            difficulty: Japanese difficulty level string
+            
+        Returns:
+            English difficulty level string or original if no mapping found
+        """
+        if not difficulty:
+            return difficulty
+            
+        # Normalize input for matching
+        normalized = difficulty.lower().strip()
+        
+        # Direct mapping lookup
+        if normalized in JAPANESE_DIFFICULTY_MAPPINGS:
+            return JAPANESE_DIFFICULTY_MAPPINGS[normalized]
+            
+        # If no mapping found, return original
+        return difficulty
+    
+    def normalize_japanese_category(self, category: str) -> str:
+        """
+        Normalize Japanese category name to English equivalent.
+        
+        Args:
+            category: Japanese category name string
+            
+        Returns:
+            English category name string or original if no mapping found
+        """
+        if not category:
+            return category
+            
+        # Normalize input for matching
+        normalized = category.lower().strip()
+        
+        # Direct mapping lookup
+        if normalized in JAPANESE_CATEGORY_MAPPINGS:
+            return JAPANESE_CATEGORY_MAPPINGS[normalized]
+            
+        # Check for partial matches in category names
+        for japanese_term, english_term in JAPANESE_CATEGORY_MAPPINGS.items():
+            # Direct containment check
+            if japanese_term in normalized:
+                return english_term
+            
+            # More flexible matching: check if key components are present
+            # Split the mapping term into key components
+            if len(japanese_term) >= 3:
+                # For terms like "画面修理", check if both "画面" and "修理" are present
+                # This handles cases like "画面の修理" -> "画面修理"
+                key_parts = []
+                if "修理" in japanese_term:
+                    key_parts.append("修理")
+                    remaining = japanese_term.replace("修理", "")
+                    if remaining:
+                        key_parts.append(remaining)
+                elif "交換" in japanese_term:
+                    key_parts.append("交換")
+                    remaining = japanese_term.replace("交換", "")
+                    if remaining:
+                        key_parts.append(remaining)
+                
+                # Check if all key parts are present
+                if key_parts and all(part in normalized for part in key_parts if part):
+                    return english_term
+                
+        # If no mapping found, return original
+        return category
 
 
 class RateLimiter:
@@ -478,48 +623,164 @@ class RepairGuideService:
         return None
 
     def _guide_matches_filters(self, guide: Guide, filters: SearchFilters) -> bool:
-        """Check if guide matches search filters"""
-        if filters.difficulty_level and guide.difficulty.lower() != filters.difficulty_level.lower():
-            return False
+        """Check if guide matches search filters with Japanese support"""
+        # Enhanced difficulty matching with Japanese normalization
+        if filters.difficulty_level:
+            normalized_difficulty = filters.normalize_japanese_difficulty(filters.difficulty_level)
+            
+            # Check for exact match first
+            if guide.difficulty.lower() == normalized_difficulty.lower():
+                pass  # Match found
+            # Check for similar difficulty levels
+            elif not self._is_similar_difficulty(guide.difficulty, normalized_difficulty):
+                return False
 
-        if filters.device_type and filters.device_type.lower() not in guide.device.lower():
-            return False
-
-        if filters.category and filters.category.lower() not in guide.category.lower():
-            return False
-
-        if filters.required_tools:
-            guide_tools_lower = [tool.lower() for tool in guide.tools]
-            for required_tool in filters.required_tools:
-                if not any(required_tool.lower() in tool for tool in guide_tools_lower):
+        # Enhanced device type matching
+        if filters.device_type:
+            device_lower = guide.device.lower()
+            filter_device_lower = filters.device_type.lower()
+            
+            # Direct match
+            if filter_device_lower not in device_lower:
+                # Try Japanese device mapping if available
+                if self.japanese_mapper:
+                    try:
+                        # Check if filter device type is Japanese and can be mapped
+                        mapped_device = self.japanese_mapper.map_device_name(filters.device_type)
+                        if mapped_device and mapped_device.lower() in device_lower:
+                            pass  # Match found through Japanese mapping
+                        else:
+                            return False
+                    except Exception as e:
+                        logger.debug(f"Error in Japanese device matching: {e}")
+                        return False
+                else:
                     return False
 
+        # Enhanced category matching with Japanese normalization
+        if filters.category:
+            normalized_category = filters.normalize_japanese_category(filters.category)
+            guide_category_lower = guide.category.lower()
+            
+            # Check if normalized category matches
+            if normalized_category.lower() not in guide_category_lower:
+                # Also check original category in case normalization wasn't needed
+                if filters.category.lower() not in guide_category_lower:
+                    return False
+
+        # Tool filtering (unchanged but enhanced error handling)
+        if filters.required_tools:
+            guide_tools_lower = [tool.lower() for tool in guide.tools] if guide.tools else []
+            for required_tool in filters.required_tools:
+                # Normalize Japanese tool names if needed
+                normalized_tool = self._normalize_japanese_tool_name(required_tool)
+                
+                if not any(normalized_tool.lower() in tool for tool in guide_tools_lower):
+                    # Also try original tool name
+                    if not any(required_tool.lower() in tool for tool in guide_tools_lower):
+                        return False
+
         if filters.exclude_tools:
-            guide_tools_lower = [tool.lower() for tool in guide.tools]
+            guide_tools_lower = [tool.lower() for tool in guide.tools] if guide.tools else []
             for excluded_tool in filters.exclude_tools:
+                # Normalize Japanese tool names if needed
+                normalized_tool = self._normalize_japanese_tool_name(excluded_tool)
+                
+                if any(normalized_tool.lower() in tool for tool in guide_tools_lower):
+                    return False
+                # Also check original tool name
                 if any(excluded_tool.lower() in tool for tool in guide_tools_lower):
                     return False
 
         return True
+    
+    def _normalize_japanese_tool_name(self, tool_name: str) -> str:
+        """
+        Normalize Japanese tool names to English equivalents.
+        
+        Args:
+            tool_name: Tool name that may be in Japanese
+            
+        Returns:
+            Normalized tool name
+        """
+        if not tool_name:
+            return tool_name
+            
+        # Basic Japanese tool mappings
+        tool_mappings = {
+            "ドライバー": "screwdriver",
+            "どらいばー": "screwdriver",
+            "ネジ回し": "screwdriver",
+            "ねじまわし": "screwdriver",
+            "プラスドライバー": "phillips screwdriver",
+            "ぷらすどらいばー": "phillips screwdriver",
+            "ピンセット": "tweezers",
+            "ぴんせっと": "tweezers",
+            "スパチュラ": "spudger",
+            "すぱちゅら": "spudger",
+            "オープニングツール": "opening tool",
+            "おーぷにんぐつーる": "opening tool",
+            "サクションカップ": "suction cup",
+            "さくしょんかっぷ": "suction cup",
+            "ヒートガン": "heat gun",
+            "ひーとがん": "heat gun",
+            "はんだこて": "soldering iron",
+            "ハンダゴテ": "soldering iron",
+        }
+        
+        normalized = tool_name.lower().strip()
+        return tool_mappings.get(normalized, tool_name)
 
     def _calculate_confidence_score(self, guide: Guide, query: str, filters: SearchFilters) -> float:
-        """Calculate confidence score for guide relevance"""
+        """Calculate confidence score for guide relevance with Japanese optimization"""
         score = 0.5  # Base score
 
         query_lower = query.lower()
         title_lower = guide.title.lower()
         device_lower = guide.device.lower()
+        
+        # Track if this was a Japanese search for special scoring
+        is_japanese_search = self._is_japanese_query(query)
+        japanese_mapping_quality = 1.0  # Default quality
 
         # Exact matches boost score
         if query_lower in title_lower:
             score += 0.3
+            if is_japanese_search:
+                # Slightly higher boost for exact matches in Japanese searches
+                score += 0.05
 
         if filters.device_type and filters.device_type.lower() in device_lower:
             score += 0.2
 
-        # Difficulty match
-        if filters.difficulty_level and guide.difficulty.lower() == filters.difficulty_level.lower():
-            score += 0.1
+        # Enhanced difficulty matching with Japanese support
+        if filters.difficulty_level:
+            # Normalize Japanese difficulty if needed
+            normalized_difficulty = filters.normalize_japanese_difficulty(filters.difficulty_level)
+            
+            # Check for exact match
+            if guide.difficulty.lower() == normalized_difficulty.lower():
+                score += 0.1
+                if is_japanese_search:
+                    # Bonus for successful Japanese difficulty mapping
+                    score += 0.05
+            
+            # Check for approximate difficulty matches
+            elif self._is_similar_difficulty(guide.difficulty, normalized_difficulty):
+                score += 0.05
+
+        # Enhanced category matching with Japanese support
+        if filters.category:
+            # Normalize Japanese category if needed
+            normalized_category = filters.normalize_japanese_category(filters.category)
+            
+            # Check if guide category matches normalized category
+            if normalized_category.lower() in guide.category.lower():
+                score += 0.15
+                if is_japanese_search:
+                    # Bonus for successful Japanese category mapping
+                    score += 0.05
 
         # Popular devices get slight boost
         popular_devices = [
@@ -533,6 +794,28 @@ class RepairGuideService:
         if any(device in device_lower for device in popular_devices):
             score += 0.05
 
+        # Japanese device mapping quality adjustment
+        if is_japanese_search and self.japanese_mapper:
+            try:
+                # Check if original query contained devices that were mapped
+                original_words = query.split()
+                mapped_count = 0
+                total_device_words = 0
+                
+                for word in original_words:
+                    if self.japanese_mapper.is_device_name(word):
+                        total_device_words += 1
+                        if self.japanese_mapper.map_device_name(word):
+                            mapped_count += 1
+                
+                if total_device_words > 0:
+                    japanese_mapping_quality = mapped_count / total_device_words
+                    # Adjust score based on mapping quality
+                    score += 0.1 * japanese_mapping_quality
+                    
+            except Exception as e:
+                logger.debug(f"Error calculating Japanese mapping quality: {e}")
+
         # Quality indicators
         if guide.tools:  # Has tool list
             score += 0.05
@@ -541,7 +824,72 @@ class RepairGuideService:
         if guide.image_url:  # Has images
             score += 0.05
 
+        # Japanese search confidence adjustment
+        if is_japanese_search:
+            # Apply mapping quality factor to final score
+            score = score * (0.8 + 0.2 * japanese_mapping_quality)
+            
+            # Ensure Japanese searches don't get unfairly penalized
+            score = max(score, 0.4)  # Minimum score for Japanese searches
+
         return min(score, 1.0)  # Cap at 1.0
+    
+    def _is_japanese_query(self, query: str) -> bool:
+        """
+        Check if query contains Japanese characters.
+        
+        Args:
+            query: Search query to check
+            
+        Returns:
+            True if query contains Japanese characters
+        """
+        if not query:
+            return False
+            
+        # Check for Japanese character ranges
+        japanese_ranges = [
+            (0x3040, 0x309F),  # Hiragana
+            (0x30A0, 0x30FF),  # Katakana
+            (0x4E00, 0x9FAF),  # CJK Unified Ideographs (Kanji)
+            (0xFF66, 0xFF9D),  # Half-width Katakana
+        ]
+        
+        for char in query:
+            char_code = ord(char)
+            for start, end in japanese_ranges:
+                if start <= char_code <= end:
+                    return True
+                    
+        return False
+    
+    def _is_similar_difficulty(self, guide_difficulty: str, target_difficulty: str) -> bool:
+        """
+        Check if two difficulty levels are similar.
+        
+        Args:
+            guide_difficulty: Guide's difficulty level
+            target_difficulty: Target difficulty level
+            
+        Returns:
+            True if difficulty levels are similar
+        """
+        # Define difficulty similarity groups
+        difficulty_groups = [
+            ["easy", "beginner"],
+            ["moderate", "intermediate"],
+            ["difficult", "expert", "very difficult"],
+        ]
+        
+        guide_lower = guide_difficulty.lower()
+        target_lower = target_difficulty.lower()
+        
+        # Check if both difficulties are in the same group
+        for group in difficulty_groups:
+            if guide_lower in group and target_lower in group:
+                return True
+                
+        return False
 
     def _explain_difficulty(self, difficulty: str) -> str:
         """Provide explanation for difficulty level"""

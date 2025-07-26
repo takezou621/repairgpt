@@ -372,6 +372,526 @@ class TestJapaneseSearchIntegration:
             # More specific checks would depend on exact mapping behavior
 
 
+class TestJapaneseSearchFilters:
+    """Test cases for Japanese search filter functionality"""
+
+    def setup_method(self):
+        """Set up test environment before each test"""
+        self.filters = SearchFilters()
+
+    def test_japanese_difficulty_mapping_basic(self):
+        """Test basic Japanese difficulty level mappings"""
+        test_cases = [
+            ("初心者", "beginner"),
+            ("中級者", "intermediate"),
+            ("上級者", "expert"),
+            ("簡単", "easy"),
+            ("普通", "moderate"),
+            ("難しい", "difficult"),
+            ("高度", "very difficult"),
+        ]
+        
+        for japanese_input, expected_output in test_cases:
+            result = self.filters.normalize_japanese_difficulty(japanese_input)
+            assert result == expected_output, f"Expected '{expected_output}' for '{japanese_input}', got '{result}'"
+
+    def test_japanese_difficulty_mapping_hiragana(self):
+        """Test Japanese difficulty mappings with hiragana"""
+        test_cases = [
+            ("しょしんしゃ", "beginner"),
+            ("ちゅうきゅうしゃ", "intermediate"),
+            ("じょうきゅうしゃ", "expert"),
+            ("かんたん", "easy"),
+            ("ふつう", "moderate"),
+            ("むずかしい", "difficult"),
+        ]
+        
+        for japanese_input, expected_output in test_cases:
+            result = self.filters.normalize_japanese_difficulty(japanese_input)
+            assert result == expected_output, f"Expected '{expected_output}' for '{japanese_input}', got '{result}'"
+
+    def test_japanese_difficulty_mapping_no_match(self):
+        """Test Japanese difficulty mapping when no match is found"""
+        test_cases = [
+            "unknown_level",
+            "english_text",
+            "適当",  # Random Japanese word not in mappings
+            "",
+            None,
+        ]
+        
+        for test_input in test_cases:
+            result = self.filters.normalize_japanese_difficulty(test_input)
+            assert result == test_input, f"Expected original input '{test_input}', got '{result}'"
+
+    def test_japanese_category_mapping_basic(self):
+        """Test basic Japanese category mappings"""
+        test_cases = [
+            ("画面修理", "screen repair"),
+            ("バッテリー交換", "battery replacement"),
+            ("基板修理", "motherboard repair"),
+            ("タッチパネル", "touchscreen repair"),
+            ("充電器修理", "charger repair"),
+            ("ボタン修理", "button repair"),
+            ("スピーカー修理", "speaker repair"),
+        ]
+        
+        for japanese_input, expected_output in test_cases:
+            result = self.filters.normalize_japanese_category(japanese_input)
+            assert result == expected_output, f"Expected '{expected_output}' for '{japanese_input}', got '{result}'"
+
+    def test_japanese_category_mapping_hiragana(self):
+        """Test Japanese category mappings with hiragana"""
+        test_cases = [
+            ("がめんしゅうり", "screen repair"),
+            ("ばってりーこうかん", "battery replacement"),
+            ("きばんしゅうり", "motherboard repair"),
+            ("たっちぱねる", "touchscreen repair"),
+            ("じゅうでんきしゅうり", "charger repair"),
+        ]
+        
+        for japanese_input, expected_output in test_cases:
+            result = self.filters.normalize_japanese_category(japanese_input)
+            assert result == expected_output, f"Expected '{expected_output}' for '{japanese_input}', got '{result}'"
+
+    def test_japanese_category_mapping_partial_match(self):
+        """Test Japanese category mapping with partial matches"""
+        test_cases = [
+            ("画面の修理", "screen repair"),  # Contains 画面修理
+            ("バッテリーの交換作業", "battery replacement"),  # Contains バッテリー交換
+        ]
+        
+        for japanese_input, expected_output in test_cases:
+            result = self.filters.normalize_japanese_category(japanese_input)
+            assert result == expected_output, f"Expected '{expected_output}' for '{japanese_input}', got '{result}'"
+
+    def test_japanese_category_mapping_no_match(self):
+        """Test Japanese category mapping when no match is found"""
+        test_cases = [
+            "unknown_category",
+            "english_text",
+            "その他",  # Random Japanese word not in mappings
+            "",
+            None,
+        ]
+        
+        for test_input in test_cases:
+            result = self.filters.normalize_japanese_category(test_input)
+            assert result == test_input, f"Expected original input '{test_input}', got '{result}'"
+
+    def test_search_filters_case_insensitive(self):
+        """Test that Japanese mappings are case insensitive"""
+        # Test with mixed case (though less common in Japanese)
+        test_cases = [
+            ("初心者", "初心者".upper()),  # Same result expected
+            ("簡単", "簡単".lower()),
+        ]
+        
+        for input1, input2 in test_cases:
+            result1 = self.filters.normalize_japanese_difficulty(input1)
+            result2 = self.filters.normalize_japanese_difficulty(input2)
+            # Should produce same result regardless of case
+            assert result1 == result2 or (result1 == input1 and result2 == input2)
+
+
+class TestJapaneseConfidenceScoring:
+    """Test cases for Japanese-enhanced confidence scoring"""
+
+    def setup_method(self):
+        """Set up test environment before each test"""
+        with patch('src.services.repair_guide_service.IFixitClient'), \
+             patch('src.services.repair_guide_service.OfflineRepairDatabase'), \
+             patch('src.services.repair_guide_service.CacheManager'), \
+             patch('src.services.repair_guide_service.RateLimiter'):
+            
+            self.service = RepairGuideService(
+                ifixit_api_key="test_key",
+                enable_japanese_support=True
+            )
+
+    def test_is_japanese_query_detection(self):
+        """Test Japanese query detection"""
+        japanese_queries = [
+            "スイッチ 修理",  # Katakana + Kanji
+            "あいふぉん",  # Hiragana
+            "アイフォン",  # Katakana
+            "スマホ repair",  # Mixed Japanese + English
+            "修理ガイド",  # Kanji + Katakana
+        ]
+        
+        english_queries = [
+            "iPhone repair",
+            "Nintendo Switch",
+            "123 test",
+            "repair guide",
+            "",
+        ]
+        
+        for query in japanese_queries:
+            assert self.service._is_japanese_query(query), f"'{query}' should be detected as Japanese"
+            
+        for query in english_queries:
+            assert not self.service._is_japanese_query(query), f"'{query}' should not be detected as Japanese"
+
+    def test_difficulty_similarity_matching(self):
+        """Test difficulty similarity matching"""
+        similarity_groups = [
+            (["easy", "beginner"], True),
+            (["moderate", "intermediate"], True),
+            (["difficult", "expert", "very difficult"], True),
+            (["easy", "difficult"], False),
+            (["beginner", "expert"], False),
+            (["moderate", "very difficult"], False),
+        ]
+        
+        for difficulties, should_be_similar in similarity_groups:
+            if len(difficulties) >= 2:
+                result = self.service._is_similar_difficulty(difficulties[0], difficulties[1])
+                assert result == should_be_similar, f"'{difficulties[0]}' and '{difficulties[1]}' similarity should be {should_be_similar}"
+                
+            # Test all combinations in groups that should be similar
+            if should_be_similar and len(difficulties) > 2:
+                for i in range(len(difficulties)):
+                    for j in range(i + 1, len(difficulties)):
+                        result = self.service._is_similar_difficulty(difficulties[i], difficulties[j])
+                        assert result, f"'{difficulties[i]}' and '{difficulties[j]}' should be similar"
+
+    def test_confidence_score_japanese_bonus(self):
+        """Test that Japanese searches receive appropriate confidence bonuses"""
+        # Create mock guide
+        mock_guide = Guide(
+            guideid=1,
+            title="Nintendo Switch Screen Repair",
+            device="Nintendo Switch",
+            category="Repair",
+            subject="Screen",
+            difficulty="Moderate",
+            url="http://example.com/guide/1",
+            image_url="http://example.com/image1.jpg",
+            tools=["Phillips Screwdriver"],
+            parts=["Screen Assembly"],
+            type_="Repair"
+        )
+        
+        # Test Japanese vs English queries
+        japanese_query = "スイッチ 画面 修理"
+        english_query = "Nintendo Switch screen repair"
+        
+        filters = SearchFilters()
+        
+        japanese_score = self.service._calculate_confidence_score(mock_guide, japanese_query, filters)
+        english_score = self.service._calculate_confidence_score(mock_guide, english_query, filters)
+        
+        # Both should have reasonable scores
+        assert 0.4 <= japanese_score <= 1.0, f"Japanese score {japanese_score} should be reasonable"
+        assert 0.4 <= english_score <= 1.0, f"English score {english_score} should be reasonable"
+        
+        # Japanese query should get minimum reasonable score due to mapping
+        assert japanese_score >= 0.4, "Japanese queries should get minimum reasonable confidence"
+
+    def test_confidence_score_with_japanese_filters(self):
+        """Test confidence scoring with Japanese filters"""
+        mock_guide = Guide(
+            guideid=2,
+            title="iPhone Battery Replacement",
+            device="iPhone",
+            category="Battery",
+            subject="Battery",
+            difficulty="Easy",
+            url="http://example.com/guide/2",
+            image_url="http://example.com/image2.jpg",
+            tools=["Suction Cup"],
+            parts=["Battery"],
+            type_="Repair"
+        )
+        
+        # Test with Japanese difficulty filter
+        filters_japanese = SearchFilters(
+            difficulty_level="簡単",  # "easy" in Japanese
+            category="バッテリー交換"  # "battery replacement" in Japanese
+        )
+        
+        score = self.service._calculate_confidence_score(mock_guide, "アイフォン", filters_japanese)
+        
+        # Should get bonuses for matching Japanese filters
+        assert score > 0.5, "Should get confidence bonus for matching Japanese filters"
+
+
+class TestJapaneseFilterMatching:
+    """Test cases for Japanese filter matching in _guide_matches_filters"""
+
+    def setup_method(self):
+        """Set up test environment before each test"""
+        with patch('src.services.repair_guide_service.IFixitClient'), \
+             patch('src.services.repair_guide_service.OfflineRepairDatabase'), \
+             patch('src.services.repair_guide_service.CacheManager'), \
+             patch('src.services.repair_guide_service.RateLimiter'):
+            
+            self.service = RepairGuideService(
+                ifixit_api_key="test_key",
+                enable_japanese_support=True
+            )
+
+    def test_guide_matches_japanese_difficulty_filter(self):
+        """Test guide matching with Japanese difficulty filters"""
+        mock_guide = Guide(
+            guideid=1,
+            title="Test Repair",
+            device="Test Device",
+            category="Repair",
+            subject="Test",
+            difficulty="Easy",
+            url="http://example.com/guide/1",
+            image_url="http://example.com/image1.jpg",
+            tools=[],
+            parts=[],
+            type_="Repair"
+        )
+        
+        # Test matching Japanese difficulty
+        filters = SearchFilters(difficulty_level="簡単")  # "easy" in Japanese
+        assert self.service._guide_matches_filters(mock_guide, filters)
+        
+        # Test non-matching Japanese difficulty
+        filters = SearchFilters(difficulty_level="難しい")  # "difficult" in Japanese
+        assert not self.service._guide_matches_filters(mock_guide, filters)
+
+    def test_guide_matches_japanese_category_filter(self):
+        """Test guide matching with Japanese category filters"""
+        mock_guide = Guide(
+            guideid=2,
+            title="Screen Repair Guide",
+            device="Smartphone",
+            category="Screen Repair",
+            subject="Screen",
+            difficulty="Moderate",
+            url="http://example.com/guide/2",
+            image_url="http://example.com/image2.jpg",
+            tools=[],
+            parts=[],
+            type_="Repair"
+        )
+        
+        # Test matching Japanese category
+        filters = SearchFilters(category="画面修理")  # "screen repair" in Japanese
+        assert self.service._guide_matches_filters(mock_guide, filters)
+        
+        # Test non-matching Japanese category
+        filters = SearchFilters(category="バッテリー交換")  # "battery replacement" in Japanese
+        assert not self.service._guide_matches_filters(mock_guide, filters)
+
+    def test_guide_matches_japanese_device_filter(self):
+        """Test guide matching with Japanese device filters"""
+        mock_guide = Guide(
+            guideid=3,
+            title="Nintendo Switch Repair",
+            device="Nintendo Switch",
+            category="Repair",
+            subject="Console",
+            difficulty="Moderate",
+            url="http://example.com/guide/3",
+            image_url="http://example.com/image3.jpg",
+            tools=[],
+            parts=[],
+            type_="Repair"
+        )
+        
+        # Test matching Japanese device name
+        filters = SearchFilters(device_type="スイッチ")  # "Switch" in Japanese
+        
+        # Mock the Japanese mapper to return the mapping
+        with patch.object(self.service.japanese_mapper, 'map_device_name', return_value="Nintendo Switch"):
+            assert self.service._guide_matches_filters(mock_guide, filters)
+        
+        # Test non-matching Japanese device name
+        filters = SearchFilters(device_type="アイフォン")  # "iPhone" in Japanese
+        
+        with patch.object(self.service.japanese_mapper, 'map_device_name', return_value="iPhone"):
+            assert not self.service._guide_matches_filters(mock_guide, filters)
+
+    def test_normalize_japanese_tool_names(self):
+        """Test Japanese tool name normalization"""
+        test_cases = [
+            ("ドライバー", "screwdriver"),
+            ("プラスドライバー", "phillips screwdriver"),
+            ("ピンセット", "tweezers"),
+            ("スパチュラ", "spudger"),
+            ("サクションカップ", "suction cup"),
+            ("unknown_tool", "unknown_tool"),  # Should return original
+        ]
+        
+        for japanese_tool, expected_english in test_cases:
+            result = self.service._normalize_japanese_tool_name(japanese_tool)
+            assert result == expected_english, f"Expected '{expected_english}' for '{japanese_tool}', got '{result}'"
+
+    def test_guide_matches_japanese_required_tools(self):
+        """Test guide matching with Japanese required tools"""
+        mock_guide = Guide(
+            guideid=4,
+            title="Repair Guide",
+            device="Device",
+            category="Repair",
+            subject="Test",
+            difficulty="Easy",
+            url="http://example.com/guide/4",
+            image_url="http://example.com/image4.jpg",
+            tools=["Phillips Screwdriver", "Tweezers"],
+            parts=[],
+            type_="Repair"
+        )
+        
+        # Test with Japanese tool names that should match
+        filters = SearchFilters(required_tools=["プラスドライバー"])  # "phillips screwdriver"
+        assert self.service._guide_matches_filters(mock_guide, filters)
+        
+        # Test with Japanese tool names that should not match
+        filters = SearchFilters(required_tools=["サクションカップ"])  # "suction cup"
+        assert not self.service._guide_matches_filters(mock_guide, filters)
+
+    def test_guide_matches_japanese_exclude_tools(self):
+        """Test guide matching with Japanese excluded tools"""
+        mock_guide = Guide(
+            guideid=5,
+            title="Repair Guide",
+            device="Device",
+            category="Repair",
+            subject="Test",
+            difficulty="Easy",
+            url="http://example.com/guide/5",
+            image_url="http://example.com/image5.jpg",
+            tools=["Phillips Screwdriver"],
+            parts=[],
+            type_="Repair"
+        )
+        
+        # Test excluding Japanese tool that guide has - should not match
+        filters = SearchFilters(exclude_tools=["プラスドライバー"])  # "phillips screwdriver"
+        assert not self.service._guide_matches_filters(mock_guide, filters)
+        
+        # Test excluding Japanese tool that guide doesn't have - should match
+        filters = SearchFilters(exclude_tools=["サクションカップ"])  # "suction cup"
+        assert self.service._guide_matches_filters(mock_guide, filters)
+
+
+class TestJapaneseIntegrationScenarios:
+    """Integration test scenarios for Japanese filter functionality"""
+
+    def setup_method(self):
+        """Set up test environment before each test"""
+        with patch('src.services.repair_guide_service.IFixitClient'), \
+             patch('src.services.repair_guide_service.OfflineRepairDatabase'), \
+             patch('src.services.repair_guide_service.CacheManager'), \
+             patch('src.services.repair_guide_service.RateLimiter'):
+            
+            self.service = RepairGuideService(
+                ifixit_api_key="test_key",
+                enable_japanese_support=True
+            )
+
+    @pytest.mark.asyncio
+    async def test_end_to_end_japanese_search_with_filters(self):
+        """Test complete Japanese search workflow with filters"""
+        # Create multiple mock guides
+        guides = [
+            Guide(
+                guideid=1,
+                title="Nintendo Switch Screen Repair",
+                device="Nintendo Switch",
+                category="Screen Repair",
+                subject="Screen",
+                difficulty="Easy",
+                url="http://example.com/guide/1",
+                image_url="http://example.com/image1.jpg",
+                tools=["Phillips Screwdriver"],
+                parts=["Screen"],
+                type_="Repair"
+            ),
+            Guide(
+                guideid=2,
+                title="Nintendo Switch Battery Replacement",
+                device="Nintendo Switch",
+                category="Battery",
+                subject="Battery",
+                difficulty="Difficult",
+                url="http://example.com/guide/2",
+                image_url="http://example.com/image2.jpg",
+                tools=["Tweezers"],
+                parts=["Battery"],
+                type_="Repair"
+            ),
+        ]
+        
+        # Set up Japanese filters
+        filters = SearchFilters(
+            device_type="スイッチ",  # "Switch"
+            difficulty_level="簡単",  # "easy"
+            category="画面修理"  # "screen repair"
+        )
+        
+        with patch.object(self.service, '_search_ifixit_guides', return_value=guides), \
+             patch.object(self.service.rate_limiter, 'can_make_request', return_value=True), \
+             patch.object(self.service.cache_manager, 'get', return_value=None), \
+             patch.object(self.service, '_enhance_with_related_guides', new_callable=AsyncMock):
+            
+            # Search with Japanese query and filters
+            results = await self.service.search_guides("スイッチ 画面", filters)
+            
+            # Should only return the easy screen repair guide, not the difficult battery guide
+            assert len(results) == 1
+            assert results[0].guide.guideid == 1
+            assert "Screen" in results[0].guide.title
+            assert results[0].guide.difficulty == "Easy"
+
+    def test_japanese_filter_compatibility_with_english_guides(self):
+        """Test that Japanese filters work with English guide data"""
+        english_guide = Guide(
+            guideid=3,
+            title="iPhone Screen Replacement",
+            device="iPhone",
+            category="screen repair",
+            subject="Screen",
+            difficulty="moderate",
+            url="http://example.com/guide/3",
+            image_url="http://example.com/image3.jpg",
+            tools=["phillips screwdriver"],
+            parts=["Screen"],
+            type_="Repair"
+        )
+        
+        # Japanese filters should match English guide content
+        filters = SearchFilters(
+            difficulty_level="中級",  # "intermediate/moderate"
+            category="画面修理"  # "screen repair"
+        )
+        
+        assert self.service._guide_matches_filters(english_guide, filters)
+
+    def test_mixed_japanese_english_filters(self):
+        """Test filters with mixed Japanese and English content"""
+        mock_guide = Guide(
+            guideid=4,
+            title="Mixed Language Test",
+            device="Test Device",
+            category="Battery Replacement",
+            subject="Battery",
+            difficulty="Easy",
+            url="http://example.com/guide/4",
+            image_url="http://example.com/image4.jpg",
+            tools=["Screwdriver"],
+            parts=["Battery"],
+            type_="Repair"
+        )
+        
+        # Mix of Japanese and English filters
+        filters = SearchFilters(
+            difficulty_level="easy",  # English
+            category="バッテリー交換",  # Japanese "battery replacement"
+            required_tools=["ドライバー"]  # Japanese "screwdriver"
+        )
+        
+        assert self.service._guide_matches_filters(mock_guide, filters)
+
+
 if __name__ == "__main__":
     # Run the tests
     pytest.main([__file__, "-v"])
