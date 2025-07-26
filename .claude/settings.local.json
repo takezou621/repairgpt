@@ -96,7 +96,13 @@
       "Bash(PYTHONPATH:*)",
       "WebFetch(domain:localhost)",
       "Bash(cat:*)",
-      "Bash(isort:*)"
+      "Bash(isort:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_click",
+      "Bash(autopep8:*)"
     ],
     "deny": []
   }
