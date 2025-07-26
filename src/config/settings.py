@@ -7,7 +7,7 @@ import os
 from enum import Enum
 from typing import List, Optional, Set
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator, ConfigDict
 
 try:
     from pydantic_settings import BaseSettings
@@ -136,84 +136,95 @@ class Settings(BaseSettings):
     # Validators
     # ============================================================================
 
-    @validator("debug")
-    def set_debug_mode(cls, v, values):
+    @field_validator("debug")
+    @classmethod
+    def set_debug_mode(cls, v, info):
         """Set debug mode based on environment"""
-        if values.get("environment") == Environment.DEVELOPMENT:
+        if info.data.get("environment") == Environment.DEVELOPMENT:
             return True
         return v
 
-    @validator("log_level")
-    def set_log_level(cls, v, values):
+    @field_validator("log_level")
+    @classmethod
+    def set_log_level(cls, v, info):
         """Set log level based on environment"""
-        env = values.get("environment")
+        env = info.data.get("environment")
         if env == Environment.DEVELOPMENT:
             return LogLevel.DEBUG
         elif env == Environment.PRODUCTION:
             return LogLevel.WARNING
         return v
 
-    @validator("secret_key")
-    def validate_secret_key(cls, v, values):
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, v, info):
         """Validate secret key is set for production"""
-        if values.get("environment") == Environment.PRODUCTION and not v:
+        if info.data.get("environment") == Environment.PRODUCTION and not v:
             raise ValueError("Secret key must be set in production environment")
         if v and len(v) < 32:
             raise ValueError("Secret key must be at least 32 characters long")
         return v
 
-    @validator("openai_api_key")
+    @field_validator("openai_api_key")
+    @classmethod
     def validate_openai_key(cls, v):
         """Validate OpenAI API key format"""
         if v and not v.startswith("sk-"):
             raise ValueError("Invalid OpenAI API key format")
         return v
 
-    @validator("claude_api_key")
+    @field_validator("claude_api_key")
+    @classmethod
     def validate_claude_key(cls, v):
         """Validate Claude API key format"""
         if v and not v.startswith("sk-ant-"):
             raise ValueError("Invalid Claude API key format")
         return v
 
-    @validator("allowed_hosts")
-    def validate_allowed_hosts(cls, v, values):
+    @field_validator("allowed_hosts")
+    @classmethod
+    def validate_allowed_hosts(cls, v, info):
         """Validate allowed hosts for production"""
-        if values.get("environment") == Environment.PRODUCTION and "*" in v:
+        if info.data.get("environment") == Environment.PRODUCTION and "*" in v:
             raise ValueError("Wildcard hosts not allowed in production")
         return v
 
-    @validator("cors_origins")
-    def validate_cors_origins(cls, v, values):
+    @field_validator("cors_origins")
+    @classmethod
+    def validate_cors_origins(cls, v, info):
         """Validate CORS origins for production"""
-        if values.get("environment") == Environment.PRODUCTION:
+        if info.data.get("environment") == Environment.PRODUCTION:
             for origin in v:
                 if "localhost" in origin:
                     raise ValueError("Localhost origins not allowed in production")
         return v
 
-    @validator("database_url")
-    def validate_database_url(cls, v, values):
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, v, info):
         """Validate database URL"""
-        if values.get("environment") == Environment.PRODUCTION and v.startswith("sqlite"):
+        if info.data.get("environment") == Environment.PRODUCTION and v.startswith("sqlite"):
             raise ValueError("SQLite not recommended for production")
         return v
 
-    @validator("rate_limit_requests_per_minute")
+    @field_validator("rate_limit_requests_per_minute")
+    @classmethod
     def validate_rate_limit(cls, v):
         """Validate rate limit values"""
         if v <= 0:
             raise ValueError("Rate limit must be greater than 0")
         return v
 
-    @validator("max_image_size_mb")
+    @field_validator("max_image_size_mb")
+    @classmethod
     def validate_max_image_size(cls, v):
         """Validate maximum image size"""
         if v <= 0 or v > 50:
             raise ValueError("Maximum image size must be between 1 and 50 MB")
         return v
 
-    @validator("upload_dir", "temp_dir")
+    @field_validator("upload_dir", "temp_dir")
+    @classmethod
     def validate_directories(cls, v):
         """Ensure directories exist"""
         os.makedirs(v, exist_ok=True)
@@ -266,18 +277,12 @@ class Settings(BaseSettings):
             "Content-Security-Policy": "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
         }
 
-    class Config:
-        """Pydantic configuration"""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
-        # Environment variable prefixes
-        env_prefix = "REPAIRGPT_"
-
-        # Schema extra for documentation
-        schema_extra = {
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        env_prefix="REPAIRGPT_",
+        json_schema_extra={
             "example": {
                 "environment": "development",
                 "debug": True,
@@ -287,6 +292,7 @@ class Settings(BaseSettings):
                 "cors_origins": ["http://localhost:3000", "http://localhost:8501"],
             }
         }
+    )
 
 
 # Global settings instance

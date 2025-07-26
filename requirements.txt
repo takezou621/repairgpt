@@ -20,7 +20,7 @@ requests>=2.31.0
 httpx>=0.24.0
 
 # Data processing
-pydantic>=2.0.0
+pydantic[email]>=2.0.0
 python-multipart>=0.0.6
 
 # Development dependencies
