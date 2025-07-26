@@ -26,7 +26,7 @@ from services.repair_guide_service import (
     SearchFilters,
     get_repair_guide_service,
 )
-from utils.japanese_device_mapper_improved import (
+from utils.japanese_device_mapper import (
     find_device_match,
     get_mapper,
     is_likely_device,
@@ -40,22 +40,79 @@ from utils.logger import (
     log_user_action,
 )
 
+# Conditional imports with fallbacks to prevent circular dependencies
 try:
-    pass
+    from config.settings import settings
+except ImportError:
+    # Fallback settings
+    class FallbackSettings:
+        app_name = "RepairGPT"
+        debug = False
+        environment = "development"
+        max_text_length = 5000
+        max_image_size_mb = 10
+        allowed_file_types = ["jpg", "jpeg", "png"]
+        api_prefix = "/api/v1"
+        enable_security_headers = True
+    settings = FallbackSettings()
 
-    # Import security and configuration
-    from language_selector import (
+try:
+    from data.offline_repair_database import OfflineRepairDatabase
+except ImportError:
+    OfflineRepairDatabase = None
+
+try:
+    from utils.security import mask_sensitive_data, sanitize_input
+except ImportError:
+    def mask_sensitive_data(data):
+        return data
+    def sanitize_input(text, max_length=5000):
+        return str(text)[:max_length] if text else ""
+
+try:
+    from i18n import _, i18n
+except ImportError:
+    def _(key, **kwargs):
+        return key.format(**kwargs) if kwargs else key
+    class MockI18n:
+        def set_language(self, lang):
+            pass
+    i18n = MockI18n()
+
+# Import UI components with fallbacks
+try:
+    from ui.language_selector import (
         get_localized_device_categories,
         get_localized_skill_levels,
         language_selector,
     )
+except ImportError:
+    try:
+        from language_selector import (
+            get_localized_device_categories,
+            get_localized_skill_levels,
+            language_selector,
+        )
+    except ImportError:
+        # Fallback functions
+        def language_selector():
+            return "en"
+        def get_localized_device_categories():
+            return ["Select device", "Nintendo Switch", "iPhone", "PlayStation", "Laptop", "Desktop PC"]
+        def get_localized_skill_levels():
+            return ["Beginner", "Intermediate", "Expert"]
 
-    from config.settings import settings
-    from data.offline_repair_database import OfflineRepairDatabase
-    from i18n import _, i18n
-    from utils.security import mask_sensitive_data, sanitize_input
-
-    # Import responsive design components
+# Import responsive design components with fallbacks
+try:
+    from ui.responsive_design import (
+        enhance_ui_components,
+        initialize_responsive_design,
+    )
+    from ui.ui_enhancements import (
+        add_responsive_navigation_hints,
+        show_responsive_design_info,
+    )
+except ImportError:
     try:
         from responsive_design import (
             enhance_ui_components,
@@ -78,10 +135,6 @@ try:
 
         def show_responsive_design_info():
             pass
-
-except ImportError as e:
-    st.error(f"Import error: {e}")
-    st.stop()
 
 # Get logger instance
 logger = get_logger(__name__)

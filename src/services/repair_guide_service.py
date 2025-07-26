@@ -779,48 +779,61 @@ class RepairGuideService:
         Returns:
             Confidence score between 0.0 and 1.0
         """
-        score = 0.5  # Base score
-
-        query_lower = query.lower()
-        title_lower = guide.title.lower()
-        device_lower = guide.device.lower()
+        # Start with base score
+        score = 0.5
+        
+        # Normalize inputs for consistent processing
+        query_lower = query.lower() if query else ""
+        title_lower = guide.title.lower() if guide.title else ""
+        device_lower = guide.device.lower() if guide.device else ""
 
         # Enhanced Japanese query detection and analysis
         is_japanese_search = self._is_japanese_query(query)
-        japanese_ratio = self._calculate_japanese_ratio(query) if is_japanese_search else 0.0
-        japanese_mapping_quality = self._assess_japanese_mapping_quality(query) if is_japanese_search else 1.0
-        fuzzy_match_confidence = 1.0  # Default confidence for non-fuzzy matches
-
+        
+        # Calculate Japanese metrics with deterministic values
+        japanese_ratio = 0.0
+        japanese_mapping_quality = 1.0
+        fuzzy_match_confidence = 1.0
+        
+        if is_japanese_search:
+            japanese_ratio = self._calculate_japanese_ratio(query)
+            japanese_mapping_quality = self._assess_japanese_mapping_quality(query)
+            fuzzy_match_confidence = self._evaluate_fuzzy_matching_confidence(query)
+        
         # Exact matches boost score with Japanese-specific adjustments
-        if query_lower in title_lower:
+        if query_lower and query_lower in title_lower:
             base_boost = 0.3
             if is_japanese_search:
-                # Adjust boost based on Japanese content ratio and mapping quality
-                japanese_boost = 0.05 * japanese_ratio * japanese_mapping_quality
+                # Deterministic boost based on Japanese content ratio and mapping quality
+                japanese_boost = min(0.05 * japanese_ratio * japanese_mapping_quality, 0.1)
                 score += base_boost + japanese_boost
             else:
                 score += base_boost
 
         # Device type matching with enhanced Japanese support
-        if filters.device_type and filters.device_type.lower() in device_lower:
-            base_boost = 0.2
-            if is_japanese_search:
-                # Bonus for successful Japanese device mapping
-                device_mapping_bonus = 0.05 * japanese_mapping_quality
-                score += base_boost + device_mapping_bonus
-            else:
-                score += base_boost
+        if filters.device_type and device_lower:
+            device_type_lower = filters.device_type.lower()
+            if device_type_lower in device_lower:
+                base_boost = 0.2
+                if is_japanese_search:
+                    # Deterministic bonus for successful Japanese device mapping
+                    device_mapping_bonus = min(0.05 * japanese_mapping_quality, 0.08)
+                    score += base_boost + device_mapping_bonus
+                else:
+                    score += base_boost
 
         # Enhanced difficulty matching with Japanese normalization quality assessment
-        if filters.difficulty_level:
+        if filters.difficulty_level and guide.difficulty:
             normalized_difficulty = filters.normalize_japanese_difficulty(filters.difficulty_level)
+            guide_difficulty_lower = guide.difficulty.lower()
+            normalized_difficulty_lower = normalized_difficulty.lower()
 
             # Check for exact match
-            if guide.difficulty.lower() == normalized_difficulty.lower():
+            if guide_difficulty_lower == normalized_difficulty_lower:
                 base_boost = 0.1
                 if is_japanese_search and normalized_difficulty != filters.difficulty_level:
-                    # Bonus for successful Japanese difficulty mapping
-                    mapping_bonus = 0.05 * japanese_mapping_quality
+                    # Deterministic bonus for successful Japanese difficulty mapping
+                    mapping_bonus = min(0.05 * japanese_mapping_quality, 0.07)
                     score += base_boost + mapping_bonus
                 else:
                     score += base_boost
@@ -829,26 +842,28 @@ class RepairGuideService:
             elif self._is_similar_difficulty(guide.difficulty, normalized_difficulty):
                 base_boost = 0.05
                 if is_japanese_search:
-                    # Reduced bonus for approximate matches
-                    mapping_bonus = 0.02 * japanese_mapping_quality
+                    # Deterministic reduced bonus for approximate matches
+                    mapping_bonus = min(0.02 * japanese_mapping_quality, 0.04)
                     score += base_boost + mapping_bonus
                 else:
                     score += base_boost
 
         # Enhanced category matching with Japanese normalization assessment
-        if filters.category:
+        if filters.category and guide.category:
             normalized_category = filters.normalize_japanese_category(filters.category)
+            guide_category_lower = guide.category.lower()
+            normalized_category_lower = normalized_category.lower()
 
-            if normalized_category.lower() in guide.category.lower():
+            if normalized_category_lower in guide_category_lower:
                 base_boost = 0.15
                 if is_japanese_search and normalized_category != filters.category:
-                    # Bonus for successful Japanese category mapping
-                    mapping_bonus = 0.05 * japanese_mapping_quality
+                    # Deterministic bonus for successful Japanese category mapping
+                    mapping_bonus = min(0.05 * japanese_mapping_quality, 0.08)
                     score += base_boost + mapping_bonus
                 else:
                     score += base_boost
 
-        # Popular devices get slight boost
+        # Popular devices get deterministic slight boost
         popular_devices = [
             "iphone",
             "android",
@@ -857,73 +872,74 @@ class RepairGuideService:
             "xbox",
             "playstation",
         ]
-        if any(device in device_lower for device in popular_devices):
+        if device_lower and any(device in device_lower for device in popular_devices):
             score += 0.05
 
-        # Advanced Japanese device mapping quality assessment
+        # Advanced Japanese device mapping quality assessment (deterministic)
         if is_japanese_search and self.japanese_mapper:
             try:
-                # Assess fuzzy matching quality if used in preprocessing
-                fuzzy_match_confidence = self._evaluate_fuzzy_matching_confidence(query)
-
-                # Detailed device mapping analysis
+                # Detailed device mapping analysis with consistent results
                 mapping_analysis = self._analyze_device_mapping_quality(query)
                 direct_mappings = mapping_analysis.get("direct_mappings", 0)
                 fuzzy_mappings = mapping_analysis.get("fuzzy_mappings", 0)
                 total_device_terms = mapping_analysis.get("total_device_terms", 0)
 
                 if total_device_terms > 0:
-                    # Weight direct mappings higher than fuzzy mappings
+                    # Deterministic weight calculation for direct vs fuzzy mappings
                     weighted_mapping_quality = (direct_mappings * 1.0 + fuzzy_mappings * 0.7) / total_device_terms
-                    # Apply fuzzy matching confidence factor
-                    final_mapping_quality = weighted_mapping_quality * fuzzy_match_confidence
+                    # Apply fuzzy matching confidence factor deterministically
+                    final_mapping_quality = min(weighted_mapping_quality * fuzzy_match_confidence, 1.0)
 
-                    # Adjust score based on refined mapping quality
-                    score += 0.1 * final_mapping_quality
+                    # Deterministic score adjustment based on refined mapping quality
+                    mapping_bonus = min(0.1 * final_mapping_quality, 0.15)
+                    score += mapping_bonus
                     japanese_mapping_quality = final_mapping_quality
 
             except Exception as e:
                 logger.debug(f"Error in advanced Japanese mapping quality assessment: {e}")
+                # Use fallback deterministic value
+                japanese_mapping_quality = 0.8
 
-        # Quality indicators with Japanese content consideration
+        # Quality indicators with deterministic Japanese content consideration
         quality_bonus = 0.0
-        if guide.tools:  # Has tool list
+        if hasattr(guide, 'tools') and guide.tools:  # Has tool list
             quality_bonus += 0.05
-        if guide.parts:  # Has parts list
+        if hasattr(guide, 'parts') and guide.parts:  # Has parts list
             quality_bonus += 0.05
-        if guide.image_url:  # Has images
+        if hasattr(guide, 'image_url') and guide.image_url:  # Has images
             quality_bonus += 0.05
 
-        # Apply quality bonus with Japanese adjustment
+        # Apply quality bonus with deterministic Japanese adjustment
         if is_japanese_search:
-            # Slightly reduce quality bonus for Japanese searches to account for potential mismatches
+            # Deterministic reduction for Japanese searches to account for potential mismatches
             quality_bonus *= 0.9
         score += quality_bonus
 
-        # Comprehensive Japanese search confidence adjustment
+        # Comprehensive Japanese search confidence adjustment (deterministic)
         if is_japanese_search:
-            # Calculate final adjustment factor based on multiple metrics
+            # Calculate deterministic final adjustment factor based on multiple metrics
             base_adjustment = 0.8  # Base adjustment for Japanese searches
-            mapping_adjustment = 0.15 * japanese_mapping_quality  # Mapping quality bonus
-            ratio_adjustment = 0.05 * japanese_ratio  # Japanese content ratio bonus
+            mapping_adjustment = min(0.15 * japanese_mapping_quality, 0.2)  # Mapping quality bonus
+            ratio_adjustment = min(0.05 * japanese_ratio, 0.08)  # Japanese content ratio bonus
 
-            final_adjustment = base_adjustment + mapping_adjustment + ratio_adjustment
+            final_adjustment = min(base_adjustment + mapping_adjustment + ratio_adjustment, 1.1)
             score = score * final_adjustment
 
-            # Enhanced minimum score calculation based on query quality
-            min_score = 0.35 + (0.1 * japanese_mapping_quality)
+            # Enhanced minimum score calculation based on query quality (deterministic)
+            min_score = min(0.35 + (0.1 * japanese_mapping_quality), 0.6)
             score = max(score, min_score)
 
-            # Additional boost for high-quality Japanese queries
+            # Additional deterministic boost for high-quality Japanese queries
             if japanese_mapping_quality > 0.8 and fuzzy_match_confidence > 0.8:
                 score += 0.05
 
-        # Mixed language query handling
+        # Mixed language query handling (deterministic)
         if self._is_mixed_language_query(query):
-            # Moderate adjustment for mixed language queries
+            # Deterministic moderate adjustment for mixed language queries
             score *= 0.95
 
-        return min(score, 1.0)  # Cap at 1.0
+        # Ensure score is within valid range and deterministic
+        return min(max(score, 0.0), 1.0)
 
     def _is_japanese_query(self, query: str) -> bool:
         """
