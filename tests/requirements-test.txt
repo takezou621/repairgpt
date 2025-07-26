@@ -9,6 +9,9 @@ pytest-asyncio>=0.21.0
 pytest-mock>=3.10.0
 pytest-xdist>=3.0.0
 
+# Mock Redis for tests
+fakeredis>=2.10.0
+
 # Web testing
 fastapi[all]>=0.100.0
 httpx>=0.24.0
