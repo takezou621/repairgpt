@@ -15,10 +15,10 @@ except ImportError:
     REDIS_AVAILABLE = False
     redis = None
 
-from clients.ifixit_client import Guide, IFixitClient
-from data.offline_repair_database import OfflineRepairDatabase
-from utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
-from utils.logger import get_logger
+from src.clients.ifixit_client import Guide, IFixitClient
+from src.data.offline_repair_database import OfflineRepairDatabase
+from src.utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

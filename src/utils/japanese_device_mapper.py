@@ -43,6 +43,7 @@ class JapaneseDeviceMapper:
         # iPhone variations
         "アイフォン": "iPhone",
         "あいふォん": "iPhone",
+        "あいふぉん": "iPhone",
         "アイフォーン": "iPhone",
         "iphone": "iPhone",
         "iphon": "iPhone",

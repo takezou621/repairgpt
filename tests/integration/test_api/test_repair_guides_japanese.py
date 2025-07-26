@@ -11,6 +11,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Import the API models and app
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
+
 from src.api.main import app
 from src.api.models import (
     RepairGuideSearchFilters,
