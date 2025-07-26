@@ -152,28 +152,14 @@ async def register_user(register_request: RegisterRequest, request: Request):
     """Register a new user"""
     try:
         try:
-    try:
-    try:
-    try:
-    from ..auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
+            from ..auto_feature_60 import AuthenticationFeature
+        except ImportError:
+            # Fallback for direct execution
+            import os
+            import sys
+
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+            from auto_feature_60 import AuthenticationFeature
 
         auth_feature = AuthenticationFeature()
         result = await auth_feature.register_user(
@@ -202,28 +188,14 @@ async def login_user(login_request: LoginRequest, request: Request):
     """Login user"""
     try:
         try:
-    try:
-    try:
-    try:
-    from ..auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
+            from ..auto_feature_60 import AuthenticationFeature
+        except ImportError:
+            # Fallback for direct execution
+            import os
+            import sys
+
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+            from auto_feature_60 import AuthenticationFeature
 
         auth_feature = AuthenticationFeature()
         result = await auth_feature.login_user(
@@ -250,28 +222,14 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
     """Get current user information"""
     try:
         try:
-    try:
-    try:
-    try:
-    from ..auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from auto_feature_60 import AuthenticationFeature
+            from ..auto_feature_60 import AuthenticationFeature
+        except ImportError:
+            # Fallback for direct execution
+            import os
+            import sys
+
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+            from auto_feature_60 import AuthenticationFeature
 
         auth_feature = AuthenticationFeature()
         result = await auth_feature.verify_token(credentials.credentials)

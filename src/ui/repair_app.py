@@ -20,6 +20,18 @@ import requests
 import streamlit as st
 from PIL import Image
 
+from services.repair_guide_service import (
+    RepairGuideResult,
+    RepairGuideService,
+    SearchFilters,
+    get_repair_guide_service,
+)
+from utils.japanese_device_mapper_improved import (
+    find_device_match,
+    get_mapper,
+    is_likely_device,
+    map_japanese_device,
+)
 from utils.logger import (
     get_logger,
     log_api_call,
@@ -27,38 +39,28 @@ from utils.logger import (
     log_performance,
     log_user_action,
 )
-from services.repair_guide_service import (
-    get_repair_guide_service,
-    RepairGuideService,
-    SearchFilters,
-    RepairGuideResult,
-)
-from utils.japanese_device_mapper_improved import (
-    get_mapper,
-    map_japanese_device,
-    find_device_match,
-    is_likely_device,
-)
-
 
 try:
     pass
 
     # Import security and configuration
-    from config.settings import settings
-    from data.offline_repair_database import OfflineRepairDatabase
-    from i18n import _, i18n
-    from utils.security import mask_sensitive_data, sanitize_input
-
     from language_selector import (
         get_localized_device_categories,
         get_localized_skill_levels,
         language_selector,
     )
 
+    from config.settings import settings
+    from data.offline_repair_database import OfflineRepairDatabase
+    from i18n import _, i18n
+    from utils.security import mask_sensitive_data, sanitize_input
+
     # Import responsive design components
     try:
-        from responsive_design import enhance_ui_components, initialize_responsive_design
+        from responsive_design import (
+            enhance_ui_components,
+            initialize_responsive_design,
+        )
         from ui_enhancements import (
             add_responsive_navigation_hints,
             show_responsive_design_info,
@@ -67,15 +69,16 @@ try:
         # Fallback functions if responsive design modules are not available
         def enhance_ui_components():
             return {}
-        
+
         def initialize_responsive_design():
             return {}
-        
+
         def add_responsive_navigation_hints():
             pass
-        
+
         def show_responsive_design_info():
             pass
+
 except ImportError as e:
     st.error(f"Import error: {e}")
     st.stop()
@@ -92,52 +95,53 @@ API_TIMEOUT = 30
 def preprocess_japanese_search_query(query: str) -> str:
     """
     Preprocess Japanese search query to enhance search results.
-    
+
     Args:
         query: Search query that may contain Japanese text
-        
+
     Returns:
         Preprocessed query with Japanese device names converted to English
     """
     if not query:
         return query
-        
+
     try:
         japanese_mapper = get_mapper()
-        
+
         # Split query into words for processing
         import re
-        words = re.split(r'[\s\u3000]+', query.strip())  # Split on spaces and full-width spaces
+
+        words = re.split(r"[\s\u3000]+", query.strip())  # Split on spaces and full-width spaces
         processed_words = []
-        
+
         for word in words:
             if not word:
                 continue
-                
+
             # Try direct device mapping first
             english_device = japanese_mapper.map_device_name(word)
             if english_device:
                 processed_words.append(english_device)
                 continue
-            
+
             # Try fuzzy matching for partial matches
             fuzzy_result = japanese_mapper.find_best_match(word, threshold=0.7)
             if fuzzy_result:
                 device_name, confidence = fuzzy_result
                 processed_words.append(device_name)
                 continue
-            
+
             # If no device mapping found, keep original word
             processed_words.append(word)
-        
+
         # Join processed words back into query
         processed_query = " ".join(processed_words)
-        
+
         if processed_query != query:
             logger.info(f"Japanese query preprocessed: '{query}' -> '{processed_query}'")
-        
+
         return processed_query
-        
+
     except Exception as e:
         logger.warning(f"Japanese query preprocessing failed: {e}")
         return query
@@ -146,7 +150,7 @@ def preprocess_japanese_search_query(query: str) -> str:
 def get_japanese_search_suggestions() -> List[str]:
     """
     Get commonly used Japanese search queries for suggestions.
-    
+
     Returns:
         List of Japanese search query suggestions
     """
@@ -160,32 +164,32 @@ def get_japanese_search_suggestions() -> List[str]:
         "iPad 充電できない",
         "スマホ 水没修理",
         "ゲーム機 読み込みエラー",
-        "ヘッドフォン 音が出ない"
+        "ヘッドフォン 音が出ない",
     ]
 
 
 def normalize_japanese_filter_values(filters: Dict[str, str]) -> Dict[str, str]:
     """
     Normalize Japanese filter values to their English equivalents.
-    
+
     Args:
         filters: Dictionary of filter values that may contain Japanese text
-        
+
     Returns:
         Dictionary with normalized filter values
     """
     normalized = filters.copy()
-    
+
     # Japanese difficulty mappings
     japanese_difficulty_map = {
         "初心者": "beginner",
-        "中級者": "intermediate", 
+        "中級者": "intermediate",
         "上級者": "expert",
         "簡単": "easy",
         "普通": "moderate",
-        "難しい": "difficult"
+        "難しい": "difficult",
     }
-    
+
     # Japanese category mappings
     japanese_category_map = {
         "画面修理": "screen repair",
@@ -196,23 +200,23 @@ def normalize_japanese_filter_values(filters: Dict[str, str]) -> Dict[str, str]:
         "スピーカー修理": "speaker repair",
         "カメラ修理": "camera repair",
         "キーボード修理": "keyboard repair",
-        "水没修理": "water damage repair"
+        "水没修理": "water damage repair",
     }
-    
+
     # Normalize difficulty
-    if 'difficulty' in normalized and normalized['difficulty'] in japanese_difficulty_map:
-        normalized['difficulty'] = japanese_difficulty_map[normalized['difficulty']]
-    
+    if "difficulty" in normalized and normalized["difficulty"] in japanese_difficulty_map:
+        normalized["difficulty"] = japanese_difficulty_map[normalized["difficulty"]]
+
     # Normalize category
-    if 'category' in normalized and normalized['category'] in japanese_category_map:
-        normalized['category'] = japanese_category_map[normalized['category']]
-    
+    if "category" in normalized and normalized["category"] in japanese_category_map:
+        normalized["category"] = japanese_category_map[normalized["category"]]
+
     # Normalize device type using Japanese mapper
-    if 'device_type' in normalized and normalized['device_type']:
-        mapped_device = map_japanese_device(normalized['device_type'])
+    if "device_type" in normalized and normalized["device_type"]:
+        mapped_device = map_japanese_device(normalized["device_type"])
         if mapped_device:
-            normalized['device_type'] = mapped_device
-    
+            normalized["device_type"] = mapped_device
+
     return normalized
 
 
@@ -222,7 +226,7 @@ def safe_translate(key: str, fallback: str = "") -> str:
     # Hardcoded translations to avoid any i18n issues
     translations = {
         "api.health_warning": "⚠️ API server is not running. Some features may be limited. Start the API server with: python3 src/api/main.py",
-        "app.title": "RepairGPT - AI Repair Assistant", 
+        "app.title": "RepairGPT - AI Repair Assistant",
         "app.tagline": "AI-Powered Electronic Device Repair Assistant",
         "sidebar.device_config": "Device Configuration",
         "sidebar.device_type": "Device Type",
@@ -258,20 +262,19 @@ def safe_translate(key: str, fallback: str = "") -> str:
         "search.bookmarks": "Bookmarks",
         "search.clear_history": "Clear History",
         "search.save_bookmark": "Save Bookmark",
-        "search.remove_bookmark": "Remove Bookmark"
+        "search.remove_bookmark": "Remove Bookmark",
     }
-    
+
     if key in translations:
         return translations[key]
-    
+
     # Try original i18n system as backup
     try:
         from i18n import _
+
         return _(key)
     except:
         return fallback or key
-
-
 
 
 def call_chat_api(message: str, device_context: Dict = None) -> str:
@@ -892,26 +895,28 @@ def main():
             if current_lang == "ja":
                 placeholder_text = safe_translate("search.input_placeholder_japanese", "例: スイッチ 画面割れ")
             else:
-                placeholder_text = safe_translate("search.input_placeholder", "Enter device and issue (supports Japanese)")
-            
+                placeholder_text = safe_translate(
+                    "search.input_placeholder", "Enter device and issue (supports Japanese)"
+                )
+
             # Main search input with enhanced features
             col_search, col_suggest = st.columns([3, 1])
-            
+
             with col_search:
                 search_query = st.text_input(
                     safe_translate("search.japanese_input", "Smart Search"),
                     placeholder=placeholder_text,
                     max_chars=200,
-                    key="main_search_input"
+                    key="main_search_input",
                 )
-            
+
             with col_suggest:
                 if st.button("💡 Suggestions", key="search_suggestions_btn"):
                     suggestions = get_japanese_search_suggestions()
                     selected_suggestion = st.selectbox(
                         safe_translate("search.suggestions", "Suggestions"),
                         ["Select suggestion..."] + suggestions,
-                        key="suggestion_selector"
+                        key="suggestion_selector",
                     )
                     if selected_suggestion != "Select suggestion...":
                         st.session_state.main_search_input = selected_suggestion
@@ -920,51 +925,65 @@ def main():
             # Advanced search filters with Japanese support
             with st.expander(safe_translate("search.filters", "🔧 Advanced Filters")):
                 filter_col1, filter_col2, filter_col3 = st.columns(3)
-                
+
                 with filter_col1:
                     if current_lang == "ja":
                         difficulty_options = ["すべて", "初心者", "中級者", "上級者"]
                     else:
                         difficulty_options = ["All", "Beginner", "Intermediate", "Expert"]
-                    
+
                     difficulty_filter = st.selectbox(
-                        safe_translate("search.difficulty", "Difficulty"),
-                        difficulty_options,
-                        key="difficulty_filter"
+                        safe_translate("search.difficulty", "Difficulty"), difficulty_options, key="difficulty_filter"
                     )
-                
+
                 with filter_col2:
                     if current_lang == "ja":
-                        category_options = ["すべて", "画面修理", "バッテリー交換", "基板修理", "ボタン修理", "充電器修理", "水没修理"]
+                        category_options = [
+                            "すべて",
+                            "画面修理",
+                            "バッテリー交換",
+                            "基板修理",
+                            "ボタン修理",
+                            "充電器修理",
+                            "水没修理",
+                        ]
                     else:
-                        category_options = ["All", "Screen Repair", "Battery Replacement", "Motherboard Repair", "Button Repair", "Charger Repair", "Water Damage"]
-                    
+                        category_options = [
+                            "All",
+                            "Screen Repair",
+                            "Battery Replacement",
+                            "Motherboard Repair",
+                            "Button Repair",
+                            "Charger Repair",
+                            "Water Damage",
+                        ]
+
                     category_filter = st.selectbox(
-                        safe_translate("search.category", "Category"),
-                        category_options,
-                        key="category_filter"
+                        safe_translate("search.category", "Category"), category_options, key="category_filter"
                     )
-                
+
                 with filter_col3:
                     device_filter = st.selectbox(
                         safe_translate("search.device_filter", "Device Filter"),
                         ["All Devices"] + get_localized_device_categories()[1:],  # Skip "Select device"
-                        key="device_filter"
+                        key="device_filter",
                     )
 
             # Search execution and results
             if search_query:
                 start_time = time.time()
                 safe_query = sanitize_input(search_query, max_length=200)
-                
+
                 # Preprocess Japanese query
                 processed_query = preprocess_japanese_search_query(safe_query)
-                
+
                 # Normalize filter values
                 filter_values = {
-                    "difficulty": difficulty_filter if difficulty_filter != "All" and difficulty_filter != "すべて" else None,
+                    "difficulty": (
+                        difficulty_filter if difficulty_filter != "All" and difficulty_filter != "すべて" else None
+                    ),
                     "category": category_filter if category_filter != "All" and category_filter != "すべて" else None,
-                    "device_type": device_filter if device_filter != "All Devices" else None
+                    "device_type": device_filter if device_filter != "All Devices" else None,
                 }
                 normalized_filters = normalize_japanese_filter_values(filter_values)
 
@@ -972,34 +991,31 @@ def main():
                     try:
                         # Initialize repair guide service
                         repair_service = get_repair_guide_service()
-                        
+
                         # Create search filters
                         search_filters = SearchFilters(
                             device_type=normalized_filters.get("device_type"),
                             difficulty_level=normalized_filters.get("difficulty"),
                             category=normalized_filters.get("category"),
-                            language=current_lang
+                            language=current_lang,
                         )
-                        
+
                         # Perform search using the repair guide service
                         import asyncio
+
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
-                        
+
                         try:
                             search_results = loop.run_until_complete(
-                                repair_service.search_guides(
-                                    query=processed_query,
-                                    filters=search_filters,
-                                    limit=8
-                                )
+                                repair_service.search_guides(query=processed_query, filters=search_filters, limit=8)
                             )
                         finally:
                             loop.close()
-                        
+
                         processing_time = time.time() - start_time
                         st.session_state.last_search_time = processing_time
-                        
+
                         # Add to search history
                         if search_query not in st.session_state.search_history:
                             st.session_state.search_history.insert(0, search_query)
@@ -1017,59 +1033,73 @@ def main():
                                 st.metric("Avg Confidence", f"{avg_confidence:.2f}")
                             with metrics_col3:
                                 st.metric("Processing Time", f"{processing_time:.2f}s")
-                            
-                            st.success(safe_translate("search.results_found", "Found {count} repair guides").format(count=len(search_results)))
-                            
+
+                            st.success(
+                                safe_translate("search.results_found", "Found {count} repair guides").format(
+                                    count=len(search_results)
+                                )
+                            )
+
                             # Display results with enhanced layout
                             for i, result in enumerate(search_results):
                                 guide = result.guide
-                                
+
                                 # Create expandable guide section with quality indicators
-                                quality_indicator = "🟢" if result.confidence_score > 0.8 else "🟡" if result.confidence_score > 0.6 else "🔴"
-                                source_icon = "🌐" if result.source == "ifixit" else "💾" if result.source == "offline" else "📋"
-                                
+                                quality_indicator = (
+                                    "🟢"
+                                    if result.confidence_score > 0.8
+                                    else "🟡" if result.confidence_score > 0.6 else "🔴"
+                                )
+                                source_icon = (
+                                    "🌐" if result.source == "ifixit" else "💾" if result.source == "offline" else "📋"
+                                )
+
                                 with st.expander(f"{quality_indicator} {source_icon} {guide.title}"):
                                     # Guide metadata
                                     info_col1, info_col2, info_col3 = st.columns(3)
-                                    
+
                                     with info_col1:
                                         st.markdown(f"**{_("guides.difficulty")}:** {guide.difficulty}")
-                                        if hasattr(guide, 'time_estimate') and guide.time_estimate:
+                                        if hasattr(guide, "time_estimate") and guide.time_estimate:
                                             st.markdown(f"**Time:** {guide.time_estimate}")
-                                    
+
                                     with info_col2:
-                                        st.markdown(f"**{safe_translate('search.confidence', 'Confidence')}:** {result.confidence_score:.2f}")
-                                        st.markdown(f"**{safe_translate('search.source', 'Source')}:** {result.source.title()}")
-                                    
+                                        st.markdown(
+                                            f"**{safe_translate('search.confidence', 'Confidence')}:** {result.confidence_score:.2f}"
+                                        )
+                                        st.markdown(
+                                            f"**{safe_translate('search.source', 'Source')}:** {result.source.title()}"
+                                        )
+
                                     with info_col3:
                                         if result.estimated_cost:
                                             st.markdown(f"**Cost Estimate:** {result.estimated_cost}")
                                         if result.success_rate:
                                             st.markdown(f"**Success Rate:** {result.success_rate:.0%}")
-                                    
+
                                     # Guide content
                                     if guide.summary:
                                         st.markdown(f"**{_('guides.summary')}:** {guide.summary}")
-                                    
+
                                     if result.difficulty_explanation:
                                         st.info(f"💡 {result.difficulty_explanation}")
-                                    
+
                                     # Tools and parts
-                                    if hasattr(guide, 'tools_required') and guide.tools_required:
+                                    if hasattr(guide, "tools_required") and guide.tools_required:
                                         st.markdown(f"**{_('guides.tools_required')}:**")
                                         for tool in guide.tools_required:
                                             st.markdown(f"- {tool}")
-                                    
-                                    if hasattr(guide, 'parts') and guide.parts:
+
+                                    if hasattr(guide, "parts") and guide.parts:
                                         st.markdown(f"**Parts Required:**")
                                         for part in guide.parts:
                                             st.markdown(f"- {part}")
-                                    
+
                                     # Warnings
-                                    if hasattr(guide, 'warnings') and guide.warnings:
+                                    if hasattr(guide, "warnings") and guide.warnings:
                                         for warning in guide.warnings:
                                             st.warning(f"⚠️ {warning}")
-                                    
+
                                     # Bookmark functionality
                                     bookmark_col1, bookmark_col2 = st.columns([3, 1])
                                     with bookmark_col2:
@@ -1082,16 +1112,16 @@ def main():
                                             if st.button("📌 Bookmark", key=f"add_bookmark_{i}"):
                                                 st.session_state.search_bookmarks.append(bookmark_key)
                                                 st.rerun()
-                                    
+
                                     # Related guides
                                     if result.related_guides:
                                         st.markdown("**Related Guides:**")
                                         for related in result.related_guides[:2]:  # Show top 2
                                             st.markdown(f"- 🔗 {related.title}")
-                                            
+
                         else:
                             st.info(safe_translate("search.no_results", "No repair guides found for your search."))
-                            
+
                             # Search suggestions for no results
                             if current_lang == "ja":
                                 st.markdown("**検索のコツ:**")
@@ -1124,7 +1154,7 @@ def main():
             if st.session_state.search_history or st.session_state.search_bookmarks:
                 with st.expander("📚 History & Bookmarks"):
                     history_tab, bookmark_tab = st.tabs(["History", "Bookmarks"])
-                    
+
                     with history_tab:
                         if st.session_state.search_history:
                             st.markdown("**Recent Searches:**")
@@ -1132,13 +1162,13 @@ def main():
                                 if st.button(f"🔄 {query}", key=f"history_{i}"):
                                     st.session_state.main_search_input = query
                                     st.rerun()
-                            
+
                             if st.button(safe_translate("search.clear_history", "Clear History")):
                                 st.session_state.search_history = []
                                 st.rerun()
                         else:
                             st.info("No search history yet")
-                    
+
                     with bookmark_tab:
                         if st.session_state.search_bookmarks:
                             st.markdown("**Bookmarked Guides:**")
@@ -1150,17 +1180,19 @@ def main():
         # Responsive design info
         if settings.debug:
             show_responsive_design_info()
-            
+
             # Debug info for Japanese search
             if st.session_state.get("last_search_time"):
                 st.markdown("**Japanese Search Debug Info:**")
-                st.json({
-                    "last_processing_time": f"{st.session_state.last_search_time:.3f}s",
-                    "search_history_count": len(st.session_state.search_history),
-                    "bookmarks_count": len(st.session_state.search_bookmarks),
-                    "current_language": st.session_state.get("language", "en"),
-                    "japanese_mapper_available": get_mapper() is not None
-                })
+                st.json(
+                    {
+                        "last_processing_time": f"{st.session_state.last_search_time:.3f}s",
+                        "search_history_count": len(st.session_state.search_history),
+                        "bookmarks_count": len(st.session_state.search_bookmarks),
+                        "current_language": st.session_state.get("language", "en"),
+                        "japanese_mapper_available": get_mapper() is not None,
+                    }
+                )
 
 
 if __name__ == "__main__":

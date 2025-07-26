@@ -5,20 +5,21 @@ Tests Japanese search functionality, character encoding, and API responses
 
 import asyncio
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock, patch
 
 # Import the API models and app
 from src.api.main import app
 from src.api.models import (
+    RepairGuideSearchFilters,
     RepairGuideSearchRequest,
     RepairGuideSearchResponse,
     SearchLanguage,
-    RepairGuideSearchFilters,
 )
-from src.services.repair_guide_service import RepairGuideResult, SearchFilters
 from src.clients.ifixit_client import Guide
+from src.services.repair_guide_service import RepairGuideResult, SearchFilters
 
 
 class TestJapaneseRepairGuideAPI:
@@ -50,7 +51,7 @@ class TestJapaneseRepairGuideAPI:
     def mock_repair_guide_result(self, mock_guide):
         """Create mock repair guide result"""
         from datetime import datetime
-        
+
         return RepairGuideResult(
             guide=mock_guide,
             source="ifixit",
@@ -64,7 +65,7 @@ class TestJapaneseRepairGuideAPI:
     @pytest.mark.asyncio
     async def test_japanese_search_post_endpoint(self, client, mock_repair_guide_result):
         """Test Japanese search via POST endpoint"""
-        with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+        with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
             # Setup mock service
             service_instance = MagicMock()
             service_instance.search_guides = AsyncMock(return_value=[mock_repair_guide_result])
@@ -78,12 +79,8 @@ class TestJapaneseRepairGuideAPI:
             test_request = {
                 "query": "スイッチ 画面修理",
                 "language": "ja",
-                "filters": {
-                    "difficulty_level": "初心者",
-                    "category": "画面修理",
-                    "device_type": "スイッチ"
-                },
-                "limit": 10
+                "filters": {"difficulty_level": "初心者", "category": "画面修理", "device_type": "スイッチ"},
+                "limit": 10,
             }
 
             response = client.post("/api/v1/repair-guides/search", json=test_request)
@@ -112,7 +109,7 @@ class TestJapaneseRepairGuideAPI:
     @pytest.mark.asyncio
     async def test_japanese_search_get_endpoint(self, client, mock_repair_guide_result):
         """Test Japanese search via GET endpoint with query parameters"""
-        with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+        with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
             # Setup mock service
             service_instance = MagicMock()
             service_instance.search_guides = AsyncMock(return_value=[mock_repair_guide_result])
@@ -130,8 +127,8 @@ class TestJapaneseRepairGuideAPI:
                     "language": "ja",
                     "device_type": "スイッチ",
                     "difficulty_level": "中級者",
-                    "limit": 5
-                }
+                    "limit": 5,
+                },
             )
 
             assert response.status_code == 200
@@ -153,13 +150,9 @@ class TestJapaneseRepairGuideAPI:
         ]
 
         for query in japanese_queries:
-            test_request = {
-                "query": query,
-                "language": "ja",
-                "limit": 5
-            }
+            test_request = {"query": query, "language": "ja", "limit": 5}
 
-            with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+            with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
                 service_instance = MagicMock()
                 service_instance.search_guides = AsyncMock(return_value=[])
                 service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -169,10 +162,10 @@ class TestJapaneseRepairGuideAPI:
                 mock_service.return_value = service_instance
 
                 response = client.post("/api/v1/repair-guides/search", json=test_request)
-                
+
                 # Should not fail with encoding errors
                 assert response.status_code == 200
-                
+
                 # Verify UTF-8 encoding is preserved
                 assert response.headers.get("content-type") == "application/json"
 
@@ -190,13 +183,11 @@ class TestJapaneseRepairGuideAPI:
             test_request = {
                 "query": "修理ガイド",
                 "language": "ja",
-                "filters": {
-                    "difficulty_level": japanese_diff
-                },
-                "limit": 5
+                "filters": {"difficulty_level": japanese_diff},
+                "limit": 5,
             }
 
-            with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+            with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
                 service_instance = MagicMock()
                 service_instance.search_guides = AsyncMock(return_value=[mock_repair_guide_result])
                 service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -210,7 +201,7 @@ class TestJapaneseRepairGuideAPI:
 
                 # Verify the service was called with correct filters
                 call_args = service_instance.search_guides.call_args
-                filters = call_args[1]['filters']
+                filters = call_args[1]["filters"]
                 assert filters.difficulty_level == japanese_diff
 
     def test_japanese_category_mapping(self, client, mock_repair_guide_result):
@@ -223,16 +214,9 @@ class TestJapaneseRepairGuideAPI:
         ]
 
         for japanese_cat, expected_english in japanese_categories:
-            test_request = {
-                "query": "修理",
-                "language": "ja",
-                "filters": {
-                    "category": japanese_cat
-                },
-                "limit": 5
-            }
+            test_request = {"query": "修理", "language": "ja", "filters": {"category": japanese_cat}, "limit": 5}
 
-            with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+            with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
                 service_instance = MagicMock()
                 service_instance.search_guides = AsyncMock(return_value=[mock_repair_guide_result])
                 service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -253,13 +237,9 @@ class TestJapaneseRepairGuideAPI:
         ]
 
         for query in mixed_queries:
-            test_request = {
-                "query": query,
-                "language": "ja",
-                "limit": 5
-            }
+            test_request = {"query": query, "language": "ja", "limit": 5}
 
-            with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+            with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
                 service_instance = MagicMock()
                 service_instance.search_guides = AsyncMock(return_value=[mock_repair_guide_result])
                 service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -276,7 +256,7 @@ class TestJapaneseRepairGuideAPI:
         japanese_devices = ["スイッチ", "アイフォン", "マックブック"]
 
         for device in japanese_devices:
-            with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+            with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
                 service_instance = MagicMock()
                 service_instance.search_guides = AsyncMock(return_value=[mock_repair_guide_result])
                 service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -285,10 +265,7 @@ class TestJapaneseRepairGuideAPI:
                 service_instance.japanese_mapper = MagicMock()
                 mock_service.return_value = service_instance
 
-                response = client.get(
-                    f"/api/v1/repair-guides/device/{device}",
-                    params={"language": "ja", "limit": 10}
-                )
+                response = client.get(f"/api/v1/repair-guides/device/{device}", params={"language": "ja", "limit": 10})
 
                 assert response.status_code == 200
                 data = response.json()
@@ -304,30 +281,22 @@ class TestJapaneseRepairGuideAPI:
         ]
 
         for invalid_input in invalid_inputs:
-            test_request = {
-                "query": invalid_input,
-                "language": "ja",
-                "limit": 5
-            }
+            test_request = {"query": invalid_input, "language": "ja", "limit": 5}
 
             response = client.post("/api/v1/repair-guides/search", json=test_request)
-            
+
             # Should handle gracefully, either 200 with empty results or 400 with clear error
             assert response.status_code in [200, 400]
-            
+
             if response.status_code == 400:
                 error_data = response.json()
                 assert "detail" in error_data
 
     def test_performance_japanese_search(self, client, mock_repair_guide_result):
         """Test performance metrics for Japanese search"""
-        test_request = {
-            "query": "大きなスイッチの画面修理ガイド",
-            "language": "ja",
-            "limit": 20
-        }
+        test_request = {"query": "大きなスイッチの画面修理ガイド", "language": "ja", "limit": 20}
 
-        with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+        with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
             service_instance = MagicMock()
             service_instance.search_guides = AsyncMock(return_value=[mock_repair_guide_result] * 20)
             service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -349,14 +318,9 @@ class TestJapaneseRepairGuideAPI:
 
     def test_cache_behavior_japanese(self, client, mock_repair_guide_result):
         """Test caching behavior with Japanese queries"""
-        test_request = {
-            "query": "スイッチ修理",
-            "language": "ja",
-            "use_cache": True,
-            "limit": 5
-        }
+        test_request = {"query": "スイッチ修理", "language": "ja", "use_cache": True, "limit": 5}
 
-        with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+        with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
             service_instance = MagicMock()
             service_instance.search_guides = AsyncMock(return_value=[mock_repair_guide_result])
             service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -382,15 +346,11 @@ class TestJapaneseRepairGuideAPI:
         example_request = {
             "query": "スイッチ 画面修理",
             "language": "ja",
-            "filters": {
-                "difficulty_level": "初心者",
-                "category": "画面修理",
-                "device_type": "スイッチ"
-            },
-            "limit": 10
+            "filters": {"difficulty_level": "初心者", "category": "画面修理", "device_type": "スイッチ"},
+            "limit": 10,
         }
 
-        with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+        with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
             service_instance = MagicMock()
             service_instance.search_guides = AsyncMock(return_value=[])
             service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -419,17 +379,13 @@ class TestJapaneseRepairGuideAPI:
         ]
 
         for query in edge_cases:
-            test_request = {
-                "query": query,
-                "language": "ja",
-                "limit": 5
-            }
+            test_request = {"query": query, "language": "ja", "limit": 5}
 
             if query == "":  # Empty string should return validation error
                 response = client.post("/api/v1/repair-guides/search", json=test_request)
                 assert response.status_code == 422  # Validation error
             else:  # Non-empty strings (including whitespace) should work
-                with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+                with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
                     service_instance = MagicMock()
                     service_instance.search_guides = AsyncMock(return_value=[])
                     service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -443,13 +399,9 @@ class TestJapaneseRepairGuideAPI:
 
     def test_japanese_response_headers(self, client):
         """Test that response headers are properly set for Japanese content"""
-        test_request = {
-            "query": "スイッチ修理",
-            "language": "ja",
-            "limit": 5
-        }
+        test_request = {"query": "スイッチ修理", "language": "ja", "limit": 5}
 
-        with patch('src.api.routes.repair_guides.get_repair_guide_service') as mock_service:
+        with patch("src.api.routes.repair_guides.get_repair_guide_service") as mock_service:
             service_instance = MagicMock()
             service_instance.search_guides = AsyncMock(return_value=[])
             service_instance._is_japanese_query = MagicMock(return_value=True)
@@ -465,10 +417,13 @@ class TestJapaneseRepairGuideAPI:
             content_type = response.headers.get("content-type", "")
             assert "application/json" in content_type
 
-    @pytest.mark.parametrize("endpoint", [
-        "/api/v1/repair-guides/search",
-        "/api/v1/repair-guides/trending",
-    ])
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            "/api/v1/repair-guides/search",
+            "/api/v1/repair-guides/trending",
+        ],
+    )
     def test_endpoint_availability(self, client, endpoint):
         """Test that all Japanese-enabled endpoints are available"""
         if endpoint == "/api/v1/repair-guides/search":
@@ -477,6 +432,6 @@ class TestJapaneseRepairGuideAPI:
         else:
             # GET request
             response = client.get(endpoint)
-        
+
         # Should not return 404 - endpoint exists
         assert response.status_code != 404

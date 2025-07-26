@@ -74,10 +74,7 @@ async def chat_endpoint(chat_request: ChatRequest, request: Request):
         from ...chat.llm_chatbot import RepairChatbot
 
         # Initialize chatbot with mock mode based on settings
-        chatbot = RepairChatbot(
-            preferred_model="auto",
-            use_mock=settings.should_use_mock_ai()
-        )
+        chatbot = RepairChatbot(preferred_model="auto", use_mock=settings.should_use_mock_ai())
 
         # Update context if provided
         if chat_request.device_type:

@@ -89,7 +89,8 @@
       "Bash(then echo \"Found requirements.txt\")",
       "Bash(else echo \"No requirements.txt found\")",
       "Bash(fi)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(isort:*)"
     ],
     "deny": []
   }

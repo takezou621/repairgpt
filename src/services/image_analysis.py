@@ -53,12 +53,14 @@ except ImportError:
 
 try:
     from ..utils.logger import get_logger
+    from ..api.models import RepairRecommendation
 except ImportError:
     # Fallback for direct execution
     import sys
 
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
     from utils.logger import get_logger
+    from api.models import RepairRecommendation
 
 logger = get_logger(__name__)
 
@@ -386,14 +388,14 @@ class ImageAnalysisService:
     async def _analyze_with_mock(self, image: Image.Image, language: str = "en") -> AnalysisResult:
         """Generate mock analysis result for testing"""
         logger.info("Generating mock image analysis")
-        
+
         # Simulate processing time
         await asyncio.sleep(1.0)
-        
+
         # Mock damage detection based on image properties
         width, height = image.size
         damage_detected = []
-        
+
         # Mock some damage detections
         if width > 800 or height > 800:
             damage_detected.append(
@@ -401,31 +403,25 @@ class ImageAnalysisService:
                     damage_type=DamageType.SCREEN_CRACK,
                     confidence=0.85,
                     severity="medium",
-                    location="upper left corner"
+                    location="upper left corner",
                 )
             )
-        
+
         if width < 600 and height < 600:
             damage_detected.append(
                 DamageAssessment(
-                    damage_type=DamageType.SCRATCHES,
-                    confidence=0.65,
-                    severity="low",
-                    location="back panel"
+                    damage_type=DamageType.SCRATCHES, confidence=0.65, severity="low", location="back panel"
                 )
             )
-        
+
         # Always add at least one mock damage
         if not damage_detected:
             damage_detected.append(
                 DamageAssessment(
-                    damage_type=DamageType.PHYSICAL_DAMAGE,
-                    confidence=0.75,
-                    severity="low",
-                    location="general wear"
+                    damage_type=DamageType.PHYSICAL_DAMAGE, confidence=0.75, severity="low", location="general wear"
                 )
             )
-        
+
         # Mock repair recommendations
         repair_recommendations = []
         for damage in damage_detected:
@@ -437,7 +433,7 @@ class ImageAnalysisService:
                         estimated_cost="$100-300",
                         difficulty="moderate",
                         tools_required=["Pentalobe screwdriver", "Suction cups", "Plastic picks"],
-                        safety_notes=["Handle broken glass carefully", "Disconnect battery first"]
+                        safety_notes=["Handle broken glass carefully", "Disconnect battery first"],
                     )
                 )
             elif damage.damage_type == DamageType.SCRATCHES:
@@ -448,7 +444,7 @@ class ImageAnalysisService:
                         estimated_cost="$20-50",
                         difficulty="easy",
                         tools_required=["Polishing compound", "Microfiber cloth"],
-                        safety_notes=["Clean surface thoroughly before polishing"]
+                        safety_notes=["Clean surface thoroughly before polishing"],
                     )
                 )
             else:
@@ -459,10 +455,10 @@ class ImageAnalysisService:
                         estimated_cost="$50-100",
                         difficulty="varies",
                         tools_required=["Diagnostic tools"],
-                        safety_notes=["Backup data before repair"]
+                        safety_notes=["Backup data before repair"],
                     )
                 )
-        
+
         # Create mock result
         result = AnalysisResult(
             device_type=DeviceType.SMARTPHONE,
@@ -477,10 +473,10 @@ class ImageAnalysisService:
             analysis_metadata={
                 "mode": "mock",
                 "image_size": f"{width}x{height}",
-                "analysis_timestamp": datetime.now().isoformat()
-            }
+                "analysis_timestamp": datetime.now().isoformat(),
+            },
         )
-        
+
         return result
 
     async def analyze_with_openai(self, image: Image.Image, language: str = "en") -> AnalysisResult:

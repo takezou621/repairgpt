@@ -156,7 +156,7 @@ class DeviceInfo(BaseModel):
 # Japanese search language enum
 class SearchLanguage(str, Enum):
     """Supported search languages"""
-    
+
     ENGLISH = "en"
     JAPANESE = "ja"
 
@@ -164,7 +164,7 @@ class SearchLanguage(str, Enum):
 # Repair Guide Search Models
 class RepairGuideSearchFilters(BaseModel):
     """Search filters for repair guides with Japanese support"""
-    
+
     device_type: Optional[str] = Field(None, description="Device type filter")
     difficulty_level: Optional[str] = Field(None, description="Difficulty level (English or Japanese)")
     category: Optional[str] = Field(None, description="Repair category (English or Japanese)")
@@ -177,39 +177,37 @@ class RepairGuideSearchFilters(BaseModel):
 
 class RepairGuideSearchRequest(BaseModel):
     """Request model for repair guide search with Japanese support"""
-    
+
     query: str = Field(..., min_length=1, description="Search query (Japanese or English)")
     language: SearchLanguage = Field(default=SearchLanguage.ENGLISH, description="Search language")
     filters: Optional[RepairGuideSearchFilters] = Field(None, description="Search filters")
     limit: int = Field(default=10, ge=1, le=50, description="Maximum number of results")
     use_cache: bool = Field(default=True, description="Use cached results if available")
-    
+
     class Config:
         schema_extra = {
             "example": {
                 "query": "スイッチ 画面修理",
                 "language": "ja",
-                "filters": {
-                    "difficulty_level": "初心者",
-                    "category": "画面修理",
-                    "device_type": "スイッチ"
-                },
-                "limit": 10
+                "filters": {"difficulty_level": "初心者", "category": "画面修理", "device_type": "スイッチ"},
+                "limit": 10,
             }
         }
 
 
 class SearchMetadata(BaseModel):
     """Metadata for search results including Japanese processing information"""
-    
+
     total_found: int = Field(..., description="Total number of results found")
     language_detected: str = Field(..., description="Detected query language")
     query_processed: str = Field(..., description="Processed query string")
-    japanese_mapping_quality: Optional[float] = Field(None, ge=0.0, le=1.0, description="Japanese device mapping quality")
+    japanese_mapping_quality: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Japanese device mapping quality"
+    )
     search_confidence: float = Field(..., ge=0.0, le=1.0, description="Overall search confidence")
     cache_hit: bool = Field(default=False, description="Whether results came from cache")
     processing_time_ms: Optional[int] = Field(None, description="Processing time in milliseconds")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -219,7 +217,7 @@ class SearchMetadata(BaseModel):
                 "japanese_mapping_quality": 0.95,
                 "search_confidence": 0.87,
                 "cache_hit": False,
-                "processing_time_ms": 250
+                "processing_time_ms": 250,
             }
         }
 
@@ -262,10 +260,10 @@ class RepairGuide(BaseModel):
 
 class RepairGuideSearchResponse(BaseModel):
     """Response model for repair guide search"""
-    
+
     results: List[RepairGuide] = Field(..., description="Search results")
     metadata: SearchMetadata = Field(..., description="Search metadata")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -278,7 +276,7 @@ class RepairGuideSearchResponse(BaseModel):
                         "time_estimate": "30-45 minutes",
                         "cost_estimate": "$50-$80",
                         "confidence_score": 0.95,
-                        "source": "ifixit"
+                        "source": "ifixit",
                     }
                 ],
                 "metadata": {
@@ -286,8 +284,8 @@ class RepairGuideSearchResponse(BaseModel):
                     "language_detected": "ja",
                     "query_processed": "Nintendo Switch screen repair",
                     "japanese_mapping_quality": 0.95,
-                    "search_confidence": 0.87
-                }
+                    "search_confidence": 0.87,
+                },
             }
         }
 

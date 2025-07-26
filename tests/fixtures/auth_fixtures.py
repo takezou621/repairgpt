@@ -1,8 +1,9 @@
 """Authentication test fixtures and data"""
 
-import pytest
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
+import pytest
 
 
 @pytest.fixture
@@ -13,7 +14,7 @@ def sample_user_data() -> Dict[str, Any]:
         "email": "test@example.com",
         "password": "testpassword123",
         "preferred_language": "en",
-        "skill_level": "beginner"
+        "skill_level": "beginner",
     }
 
 
@@ -26,22 +27,22 @@ def multiple_users_data() -> List[Dict[str, Any]]:
             "email": "user1@example.com",
             "password": "password123",
             "preferred_language": "en",
-            "skill_level": "beginner"
+            "skill_level": "beginner",
         },
         {
             "username": "user2",
             "email": "user2@example.com",
             "password": "password456",
             "preferred_language": "ja",
-            "skill_level": "intermediate"
+            "skill_level": "intermediate",
         },
         {
             "username": "user3",
             "email": "user3@example.com",
             "password": "password789",
             "preferred_language": "en",
-            "skill_level": "expert"
-        }
+            "skill_level": "expert",
+        },
     ]
 
 
@@ -55,17 +56,14 @@ def admin_user_data() -> Dict[str, Any]:
         "preferred_language": "en",
         "skill_level": "expert",
         "role": "admin",
-        "permissions": ["read", "write", "admin"]
+        "permissions": ["read", "write", "admin"],
     }
 
 
 @pytest.fixture
 def valid_login_credentials() -> Dict[str, str]:
     """Valid login credentials for testing"""
-    return {
-        "username": "testuser",
-        "password": "testpassword123"
-    }
+    return {"username": "testuser", "password": "testpassword123"}
 
 
 @pytest.fixture
@@ -76,7 +74,7 @@ def invalid_login_credentials() -> List[Dict[str, str]]:
         {"username": "testuser", "password": "wrongpassword"},
         {"username": "", "password": "password123"},
         {"username": "testuser", "password": ""},
-        {"username": "", "password": ""}
+        {"username": "", "password": ""},
     ]
 
 
@@ -101,7 +99,7 @@ def malformed_jwt_tokens() -> List[str]:
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid_payload.signature",
         "valid_header.eyJzdWIiOiJ0ZXN0dXNlciJ9.missing_exp",
         "",
-        "Bearer token_without_bearer_prefix"
+        "Bearer token_without_bearer_prefix",
     ]
 
 
@@ -120,7 +118,7 @@ def auth_headers_invalid() -> List[Dict[str, str]]:
         {"Authorization": "Bearer "},
         {"Authorization": ""},
         {},  # No authorization header
-        {"Authorization": "token_without_bearer"}
+        {"Authorization": "token_without_bearer"},
     ]
 
 
@@ -135,7 +133,7 @@ def password_test_cases() -> List[Dict[str, Any]]:
         {"password": "password", "should_pass": False, "reason": "too common"},
         {"password": "Password123!", "should_pass": True, "reason": "strong password"},
         {"password": "   spaced   ", "should_pass": False, "reason": "contains spaces"},
-        {"password": "日本語パスワード", "should_pass": True, "reason": "unicode characters"}
+        {"password": "日本語パスワード", "should_pass": True, "reason": "unicode characters"},
     ]
 
 
@@ -154,7 +152,7 @@ def username_test_cases() -> List[Dict[str, Any]]:
         {"username": "user-123", "should_pass": True, "reason": "hyphen allowed"},
         {"username": "123user", "should_pass": True, "reason": "starts with number"},
         {"username": "_user", "should_pass": True, "reason": "starts with underscore"},
-        {"username": "-user", "should_pass": False, "reason": "starts with hyphen"}
+        {"username": "-user", "should_pass": False, "reason": "starts with hyphen"},
     ]
 
 
@@ -172,7 +170,7 @@ def email_test_cases() -> List[Dict[str, Any]]:
         {"email": "test@.com", "should_pass": False, "reason": "domain starts with dot"},
         {"email": "", "should_pass": False, "reason": "empty email"},
         {"email": "test@example", "should_pass": False, "reason": "no TLD"},
-        {"email": "test@exam ple.com", "should_pass": False, "reason": "space in domain"}
+        {"email": "test@exam ple.com", "should_pass": False, "reason": "space in domain"},
     ]
 
 
@@ -184,32 +182,27 @@ def security_test_payloads() -> List[Dict[str, Any]]:
             "type": "sql_injection",
             "username": "'; DROP TABLE users; --",
             "password": "password",
-            "description": "SQL injection attempt"
+            "description": "SQL injection attempt",
         },
         {
             "type": "sql_injection",
             "username": "admin' OR '1'='1",
             "password": "password",
-            "description": "SQL injection with OR condition"
+            "description": "SQL injection with OR condition",
         },
         {
             "type": "xss",
             "username": "<script>alert('xss')</script>",
             "password": "password",
-            "description": "XSS attempt"
+            "description": "XSS attempt",
         },
         {
             "type": "command_injection",
             "username": "; rm -rf /",
             "password": "password",
-            "description": "Command injection attempt"
+            "description": "Command injection attempt",
         },
-        {
-            "type": "ldap_injection",
-            "username": "*)(&",
-            "password": "password",
-            "description": "LDAP injection attempt"
-        }
+        {"type": "ldap_injection", "username": "*)(&", "password": "password", "description": "LDAP injection attempt"},
     ]
 
 
@@ -220,10 +213,7 @@ def rate_limiting_test_data() -> Dict[str, Any]:
         "max_attempts": 5,
         "time_window": 300,  # 5 minutes
         "lockout_duration": 900,  # 15 minutes
-        "test_credentials": {
-            "username": "ratelimituser",
-            "password": "wrongpassword"
-        }
+        "test_credentials": {"username": "ratelimituser", "password": "wrongpassword"},
     }
 
 
@@ -234,7 +224,7 @@ def session_test_data() -> Dict[str, Any]:
         "session_timeout": 3600,  # 1 hour
         "refresh_threshold": 300,  # 5 minutes
         "max_concurrent_sessions": 3,
-        "remember_me_duration": 2592000  # 30 days
+        "remember_me_duration": 2592000,  # 30 days
     }
 
 
@@ -256,11 +246,7 @@ def mock_user_profile() -> Dict[str, Any]:
             "display_name": "Test User",
             "bio": "A test user for RepairGPT",
             "location": "Test City",
-            "website": "https://test.example.com"
+            "website": "https://test.example.com",
         },
-        "preferences": {
-            "theme": "light",
-            "notifications": True,
-            "privacy_level": "public"
-        }
+        "preferences": {"theme": "light", "notifications": True, "privacy_level": "public"},
     }

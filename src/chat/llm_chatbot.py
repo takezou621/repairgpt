@@ -21,8 +21,8 @@ try:
 except ImportError:
     # Fallback for direct execution - add parent directory to path
     import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from utils.logger import (
         LoggerMixin,
         get_logger,
@@ -547,16 +547,16 @@ Your message: "{user_message[:100]}{'...' if len(user_message) > 100 else ''}"
     def _mock_response(self, user_message: str, include_context: bool) -> str:
         """Generate mock AI response for testing without API keys"""
         self.log_info("Generating mock response", include_context=include_context)
-        
+
         # Simulate processing time
         time.sleep(0.5)
-        
+
         user_lower = user_message.lower()
-        
+
         # Prepare context information
         context_info = ""
         if include_context and self.repair_context.device_type:
-            context_info = f"\n\n**Current Context:**\n"
+            context_info = "\n\n**Current Context:**\n"
             if self.repair_context.device_type:
                 context_info += f"- Device: {self.repair_context.device_type}\n"
             if self.repair_context.device_model:
@@ -565,7 +565,7 @@ Your message: "{user_message[:100]}{'...' if len(user_message) > 100 else ''}"
                 context_info += f"- Issue: {self.repair_context.issue_description}\n"
             if self.repair_context.user_skill_level:
                 context_info += f"- Skill Level: {self.repair_context.user_skill_level}\n"
-        
+
         # Mock responses based on keywords
         if "joy-con" in user_lower or "drift" in user_lower:
             return f"""🤖 **Mock AI Response** (API keys not configured)
@@ -587,7 +587,7 @@ I understand you're experiencing Joy-Con drift issues. This is a common problem 
 ⚠️ **Safety Note**: Always power off your device before attempting repairs.{context_info}
 
 *This is a mock response for testing. Configure API keys for real AI assistance.*"""
-        
+
         elif "screen" in user_lower and ("iphone" in user_lower or "cracked" in user_lower):
             return f"""🤖 **Mock AI Response** (API keys not configured)
 
@@ -614,7 +614,7 @@ I see you're dealing with an iPhone screen issue. Screen repairs require careful
 ⚠️ **Warning**: iPhone repairs can be complex and may damage Face ID or water resistance.{context_info}
 
 *This is a mock response for testing. Configure API keys for real AI assistance.*"""
-        
+
         elif "battery" in user_lower:
             return f"""🤖 **Mock AI Response** (API keys not configured)
 
@@ -639,7 +639,7 @@ Battery issues are common in electronic devices. Let me help you diagnose the pr
 - Dispose of old batteries properly{context_info}
 
 *This is a mock response for testing. Configure API keys for real AI assistance.*"""
-        
+
         else:
             # Generic repair response
             return f"""🤖 **Mock AI Response** (API keys not configured)

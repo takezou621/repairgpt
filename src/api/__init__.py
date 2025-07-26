@@ -20,9 +20,10 @@ try:
     )
 except ImportError:
     # Fallback for direct execution
-    import sys
     import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    import sys
+
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from config.settings_simple import settings, validate_api_keys
     from utils.security import (
         RateLimiter,
