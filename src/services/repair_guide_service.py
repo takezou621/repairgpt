@@ -19,6 +19,7 @@ try:
     from ..clients.ifixit_client import Guide, IFixitClient
     from ..data.offline_repair_database import OfflineRepairDatabase
     from ..utils.logger import get_logger
+    from ..utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -27,6 +28,7 @@ except ImportError:
     from clients.ifixit_client import Guide, IFixitClient
     from data.offline_repair_database import OfflineRepairDatabase
     from utils.logger import get_logger
+    from utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
 
 logger = get_logger(__name__)
 
@@ -182,17 +184,20 @@ class RepairGuideService:
         ifixit_api_key: Optional[str] = None,
         redis_url: Optional[str] = None,
         enable_offline_fallback: bool = True,
+        enable_japanese_support: bool = True,
     ):
         self.ifixit_client = IFixitClient(api_key=ifixit_api_key)
         self.cache_manager = CacheManager(redis_url)
         self.rate_limiter = RateLimiter(max_calls=100, time_window=3600)  # 100 calls/hour
         self.offline_db = OfflineRepairDatabase() if enable_offline_fallback else None
+        self.japanese_mapper = get_mapper() if enable_japanese_support else None
 
         logger.info(
             "RepairGuideService initialized",
             has_ifixit_key=bool(ifixit_api_key),
             has_cache=bool(self.cache_manager.redis_client),
             has_offline_db=bool(self.offline_db),
+            has_japanese_support=bool(self.japanese_mapper),
         )
 
     async def search_guides(
@@ -202,11 +207,15 @@ class RepairGuideService:
         limit: int = 10,
         use_cache: bool = True,
     ) -> List[RepairGuideResult]:
-        """Search for repair guides with enhanced features"""
+        """Search for repair guides with enhanced features and Japanese support"""
         if not filters:
             filters = SearchFilters()
 
-        # Create cache key
+        # Preprocess Japanese query if Japanese support is enabled
+        original_query = query
+        query = self._preprocess_japanese_query(query)
+
+        # Create cache key using preprocessed query
         cache_key = self._create_search_cache_key(query, filters, limit)
 
         # Check cache first
@@ -600,6 +609,68 @@ class RepairGuideService:
             except Exception as e:
                 logger.warning(f"Failed to get related guides: {e}")
 
+    def _preprocess_japanese_query(self, query: str) -> str:
+        """
+        Preprocess Japanese query to improve search results.
+        
+        This method analyzes the query for Japanese device names and converts them
+        to their English equivalents for better iFixit API compatibility.
+        
+        Args:
+            query: Search query that may contain Japanese text
+            
+        Returns:
+            Preprocessed query with Japanese device names converted to English
+            
+        Raises:
+            Exception: If Japanese processing fails, returns original query
+        """
+        if not self.japanese_mapper or not query:
+            return query
+            
+        logger.debug(f"Preprocessing Japanese query: {query}")
+        
+        try:
+            # Split query into words for processing
+            import re
+            words = re.split(r'[\s\u3000]+', query.strip())  # Split on spaces and full-width spaces
+            processed_words = []
+            
+            for word in words:
+                if not word:
+                    continue
+                    
+                # Try direct device mapping first
+                english_device = self.japanese_mapper.map_device_name(word)
+                if english_device:
+                    processed_words.append(english_device)
+                    logger.debug(f"Direct mapping: '{word}' -> '{english_device}'")
+                    continue
+                
+                # Try fuzzy matching for partial matches
+                fuzzy_result = self.japanese_mapper.find_best_match(word, threshold=0.7)
+                if fuzzy_result:
+                    device_name, confidence = fuzzy_result
+                    processed_words.append(device_name)
+                    logger.debug(f"Fuzzy mapping: '{word}' -> '{device_name}' (confidence: {confidence:.3f})")
+                    continue
+                
+                # If no device mapping found, keep original word
+                processed_words.append(word)
+            
+            # Join processed words back into query
+            processed_query = " ".join(processed_words)
+            
+            if processed_query != query:
+                logger.info(f"Japanese query preprocessed: '{query}' -> '{processed_query}'")
+            
+            return processed_query
+            
+        except Exception as e:
+            logger.warning(f"Japanese query preprocessing failed: {e}")
+            # Return original query if preprocessing fails
+            return query
+    
     def _create_search_cache_key(self, query: str, filters: SearchFilters, limit: int) -> str:
         """Create cache key for search results"""
         filter_str = f"{filters.device_type}_{filters.difficulty_level}_{filters.category}"
@@ -616,7 +687,9 @@ def get_repair_guide_service() -> RepairGuideService:
     global _repair_guide_service
     if _repair_guide_service is None:
         _repair_guide_service = RepairGuideService(
-            ifixit_api_key=os.getenv("IFIXIT_API_KEY"), redis_url=os.getenv("REDIS_URL")
+            ifixit_api_key=os.getenv("IFIXIT_API_KEY"), 
+            redis_url=os.getenv("REDIS_URL"),
+            enable_japanese_support=True,
         )
     return _repair_guide_service
 
