@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from models import (
+from ..models import (
     RepairGuide,
     RepairGuideSearchRequest,
     RepairGuideSearchResponse,
@@ -61,8 +61,7 @@ async def search_repair_guides(
 
     try:
         logger.info(
-            f"Searching repair guides: query='{request.query}', "
-            f"language={request.language}, limit={request.limit}"
+            f"Searching repair guides: query='{request.query}', " f"language={request.language}, limit={request.limit}"
         )
 
         # Get repair guide service
@@ -108,7 +107,7 @@ async def search_repair_guides(
                 id=str(result.guide.guideid),
                 title=result.guide.title,
                 device_type=_map_device_name_to_enum(result.guide.device),
-                device_model=getattr(result.guide, 'device_model', None),
+                device_model=getattr(result.guide, "device_model", None),
                 difficulty=_map_difficulty_to_enum(result.guide.difficulty),
                 time_estimate=result.guide.time_required or "Unknown",
                 cost_estimate=result.estimated_cost,
@@ -116,9 +115,9 @@ async def search_repair_guides(
                 summary=result.guide.summary,
                 tools_required=result.guide.tools or [],
                 parts_required=result.guide.parts or [],
-                warnings=getattr(result.guide, 'warnings', []),
+                warnings=getattr(result.guide, "warnings", []),
                 steps=[],  # Detailed steps would be populated in get_guide_details
-                tips=getattr(result.guide, 'tips', []),
+                tips=getattr(result.guide, "tips", []),
                 source=result.source,
                 confidence_score=result.confidence_score,
                 last_updated=result.last_updated.isoformat() if result.last_updated else None,
@@ -144,9 +143,7 @@ async def search_repair_guides(
             processing_time_ms=processing_time_ms,
         )
 
-        logger.info(
-            f"Search completed: found {len(search_results)} results in {processing_time_ms}ms"
-        )
+        logger.info(f"Search completed: found {len(search_results)} results in {processing_time_ms}ms")
 
         return RepairGuideSearchResponse(
             results=api_results,
@@ -270,18 +267,19 @@ async def get_repair_guide_details(
 
         # Convert to API model with detailed steps
         steps = []
-        if hasattr(result.guide, 'steps') and result.guide.steps:
-            from models import RepairGuideStep
+        if hasattr(result.guide, "steps") and result.guide.steps:
+            from ..models import RepairGuideStep
+
             for i, step in enumerate(result.guide.steps, 1):
                 api_step = RepairGuideStep(
                     step_number=i,
-                    title=getattr(step, 'title', f"Step {i}"),
-                    description=getattr(step, 'text', step) if isinstance(step, str) else str(step),
-                    image_url=getattr(step, 'image_url', None),
-                    video_url=getattr(step, 'video_url', None),
-                    tools_needed=getattr(step, 'tools', []),
-                    warnings=getattr(step, 'warnings', []),
-                    tips=getattr(step, 'tips', []),
+                    title=getattr(step, "title", f"Step {i}"),
+                    description=getattr(step, "text", step) if isinstance(step, str) else str(step),
+                    image_url=getattr(step, "image_url", None),
+                    video_url=getattr(step, "video_url", None),
+                    tools_needed=getattr(step, "tools", []),
+                    warnings=getattr(step, "warnings", []),
+                    tips=getattr(step, "tips", []),
                 )
                 steps.append(api_step)
 
@@ -289,7 +287,7 @@ async def get_repair_guide_details(
             id=str(result.guide.guideid),
             title=result.guide.title,
             device_type=_map_device_name_to_enum(result.guide.device),
-            device_model=getattr(result.guide, 'device_model', None),
+            device_model=getattr(result.guide, "device_model", None),
             difficulty=_map_difficulty_to_enum(result.guide.difficulty),
             time_estimate=result.guide.time_estimate or "Unknown",
             cost_estimate=result.estimated_cost,
@@ -297,9 +295,9 @@ async def get_repair_guide_details(
             summary=result.guide.summary,
             tools_required=result.guide.tools or [],
             parts_required=result.guide.parts or [],
-            warnings=getattr(result.guide, 'warnings', []),
+            warnings=getattr(result.guide, "warnings", []),
             steps=steps,
-            tips=getattr(result.guide, 'tips', []),
+            tips=getattr(result.guide, "tips", []),
             source=result.source,
             confidence_score=result.confidence_score,
             last_updated=result.last_updated.isoformat() if result.last_updated else None,
@@ -352,7 +350,8 @@ async def get_guides_by_device(
         logger.info(f"Fetching guides for device: {device_type}, model: {device_model}")
 
         # Build search filters
-        from models import RepairGuideSearchFilters
+        from ..models import RepairGuideSearchFilters
+
         filters = RepairGuideSearchFilters(device_type=device_type)
 
         # Build query
@@ -404,7 +403,7 @@ async def get_trending_guides(
                 id=str(result.guide.guideid),
                 title=result.guide.title,
                 device_type=_map_device_name_to_enum(result.guide.device),
-                device_model=getattr(result.guide, 'device_model', None),
+                device_model=getattr(result.guide, "device_model", None),
                 difficulty=_map_difficulty_to_enum(result.guide.difficulty),
                 time_estimate=result.guide.time_required or "Unknown",
                 cost_estimate=result.estimated_cost,
@@ -412,9 +411,9 @@ async def get_trending_guides(
                 summary=result.guide.summary,
                 tools_required=result.guide.tools or [],
                 parts_required=result.guide.parts or [],
-                warnings=getattr(result.guide, 'warnings', []),
+                warnings=getattr(result.guide, "warnings", []),
                 steps=[],
-                tips=getattr(result.guide, 'tips', []),
+                tips=getattr(result.guide, "tips", []),
                 source=result.source,
                 confidence_score=result.confidence_score,
                 last_updated=result.last_updated.isoformat() if result.last_updated else None,

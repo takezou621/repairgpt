@@ -113,11 +113,12 @@ _CATEGORY_EXACT_LOOKUP: Dict[str, str] = JAPANESE_CATEGORY_MAPPINGS
 _CATEGORY_PARTIAL_LOOKUP: Dict[str, str] = {}
 _CATEGORY_KEY_PARTS_INDEX: Dict[str, List[str]] = {}
 
+
 # Build optimized lookup structures at module load time
 def _build_category_indices():
     """Build optimized lookup indices for category mapping performance."""
     global _CATEGORY_PARTIAL_LOOKUP, _CATEGORY_KEY_PARTS_INDEX
-    
+
     for japanese_term, english_term in JAPANESE_CATEGORY_MAPPINGS.items():
         # Build key parts index for complex matching
         key_parts = []
@@ -131,11 +132,12 @@ def _build_category_indices():
             remaining = japanese_term.replace("交換", "")
             if remaining:
                 key_parts.append(remaining)
-        
+
         if key_parts:
             key_signature = "|".join(sorted(key_parts))
             _CATEGORY_KEY_PARTS_INDEX[key_signature] = key_parts
             _CATEGORY_PARTIAL_LOOKUP[key_signature] = english_term
+
 
 # Initialize indices
 _build_category_indices()
@@ -154,56 +156,56 @@ class SearchFilters:
     language: str = "en"
     include_community_guides: bool = True
     min_rating: Optional[float] = None
-    
+
     def normalize_japanese_difficulty(self, difficulty: str) -> str:
         """
         Normalize Japanese difficulty level to English equivalent.
-        
+
         Args:
             difficulty: Japanese difficulty level string
-            
+
         Returns:
             English difficulty level string or original if no mapping found
         """
         if not difficulty:
             return difficulty
-            
+
         # Normalize input for matching
         normalized = difficulty.lower().strip()
-        
+
         # Direct mapping lookup
         if normalized in JAPANESE_DIFFICULTY_MAPPINGS:
             return JAPANESE_DIFFICULTY_MAPPINGS[normalized]
-            
+
         # If no mapping found, return original
         return difficulty
-    
+
     def normalize_japanese_category(self, category: str) -> str:
         """
         Normalize Japanese category name to English equivalent.
-        
+
         Args:
             category: Japanese category name string
-            
+
         Returns:
             English category name string or original if no mapping found
         """
         if not category:
             return category
-            
+
         # Normalize input for matching
         normalized = category.lower().strip()
-        
+
         # Direct mapping lookup
         if normalized in JAPANESE_CATEGORY_MAPPINGS:
             return JAPANESE_CATEGORY_MAPPINGS[normalized]
-            
+
         # Optimized O(1) partial matching using pre-computed indices
         # First check for direct substring matches in the category mappings
         for japanese_term, english_term in _CATEGORY_EXACT_LOOKUP.items():
             if japanese_term in normalized:
                 return english_term
-        
+
         # Enhanced partial matching using pre-computed key parts index
         for key_signature, key_parts in _CATEGORY_KEY_PARTS_INDEX.items():
             # Check if all key parts are present - optimized lookup
@@ -212,7 +214,7 @@ class SearchFilters:
                 english_term = _CATEGORY_PARTIAL_LOOKUP.get(key_signature)
                 if english_term:
                     return english_term
-                
+
         # If no mapping found, return original
         return category
 
@@ -657,7 +659,7 @@ class RepairGuideService:
         # Enhanced difficulty matching with Japanese normalization
         if filters.difficulty_level:
             normalized_difficulty = filters.normalize_japanese_difficulty(filters.difficulty_level)
-            
+
             # Check for exact match first
             if guide.difficulty.lower() == normalized_difficulty.lower():
                 pass  # Match found
@@ -669,7 +671,7 @@ class RepairGuideService:
         if filters.device_type:
             device_lower = guide.device.lower()
             filter_device_lower = filters.device_type.lower()
-            
+
             # Direct match
             if filter_device_lower not in device_lower:
                 # Try Japanese device mapping if available
@@ -691,7 +693,7 @@ class RepairGuideService:
         if filters.category:
             normalized_category = filters.normalize_japanese_category(filters.category)
             guide_category_lower = guide.category.lower()
-            
+
             # Check if normalized category matches
             if normalized_category.lower() not in guide_category_lower:
                 # Also check original category in case normalization wasn't needed
@@ -704,7 +706,7 @@ class RepairGuideService:
             for required_tool in filters.required_tools:
                 # Normalize Japanese tool names if needed
                 normalized_tool = self._normalize_japanese_tool_name(required_tool)
-                
+
                 if not any(normalized_tool.lower() in tool for tool in guide_tools_lower):
                     # Also try original tool name
                     if not any(required_tool.lower() in tool for tool in guide_tools_lower):
@@ -715,7 +717,7 @@ class RepairGuideService:
             for excluded_tool in filters.exclude_tools:
                 # Normalize Japanese tool names if needed
                 normalized_tool = self._normalize_japanese_tool_name(excluded_tool)
-                
+
                 if any(normalized_tool.lower() in tool for tool in guide_tools_lower):
                     return False
                 # Also check original tool name
@@ -723,20 +725,20 @@ class RepairGuideService:
                     return False
 
         return True
-    
+
     def _normalize_japanese_tool_name(self, tool_name: str) -> str:
         """
         Normalize Japanese tool names to English equivalents.
-        
+
         Args:
             tool_name: Tool name that may be in Japanese
-            
+
         Returns:
             Normalized tool name
         """
         if not tool_name:
             return tool_name
-            
+
         # Basic Japanese tool mappings
         tool_mappings = {
             "ドライバー": "screwdriver",
@@ -758,22 +760,22 @@ class RepairGuideService:
             "はんだこて": "soldering iron",
             "ハンダゴテ": "soldering iron",
         }
-        
+
         normalized = tool_name.lower().strip()
         return tool_mappings.get(normalized, tool_name)
 
     def _calculate_confidence_score(self, guide: Guide, query: str, filters: SearchFilters) -> float:
         """Calculate confidence score for guide relevance with enhanced Japanese optimization.
-        
+
         This method provides sophisticated confidence scoring for repair guides,
         with special handling for Japanese queries including fuzzy matching quality,
         device name mapping assessment, and language-specific score adjustments.
-        
+
         Args:
             guide: The repair guide to score
             query: The original search query
             filters: Search filters applied
-            
+
         Returns:
             Confidence score between 0.0 and 1.0
         """
@@ -782,7 +784,7 @@ class RepairGuideService:
         query_lower = query.lower()
         title_lower = guide.title.lower()
         device_lower = guide.device.lower()
-        
+
         # Enhanced Japanese query detection and analysis
         is_japanese_search = self._is_japanese_query(query)
         japanese_ratio = self._calculate_japanese_ratio(query) if is_japanese_search else 0.0
@@ -812,7 +814,7 @@ class RepairGuideService:
         # Enhanced difficulty matching with Japanese normalization quality assessment
         if filters.difficulty_level:
             normalized_difficulty = filters.normalize_japanese_difficulty(filters.difficulty_level)
-            
+
             # Check for exact match
             if guide.difficulty.lower() == normalized_difficulty.lower():
                 base_boost = 0.1
@@ -822,7 +824,7 @@ class RepairGuideService:
                     score += base_boost + mapping_bonus
                 else:
                     score += base_boost
-            
+
             # Check for approximate difficulty matches
             elif self._is_similar_difficulty(guide.difficulty, normalized_difficulty):
                 base_boost = 0.05
@@ -836,7 +838,7 @@ class RepairGuideService:
         # Enhanced category matching with Japanese normalization assessment
         if filters.category:
             normalized_category = filters.normalize_japanese_category(filters.category)
-            
+
             if normalized_category.lower() in guide.category.lower():
                 base_boost = 0.15
                 if is_japanese_search and normalized_category != filters.category:
@@ -863,25 +865,23 @@ class RepairGuideService:
             try:
                 # Assess fuzzy matching quality if used in preprocessing
                 fuzzy_match_confidence = self._evaluate_fuzzy_matching_confidence(query)
-                
+
                 # Detailed device mapping analysis
                 mapping_analysis = self._analyze_device_mapping_quality(query)
-                direct_mappings = mapping_analysis.get('direct_mappings', 0)
-                fuzzy_mappings = mapping_analysis.get('fuzzy_mappings', 0)
-                total_device_terms = mapping_analysis.get('total_device_terms', 0)
-                
+                direct_mappings = mapping_analysis.get("direct_mappings", 0)
+                fuzzy_mappings = mapping_analysis.get("fuzzy_mappings", 0)
+                total_device_terms = mapping_analysis.get("total_device_terms", 0)
+
                 if total_device_terms > 0:
                     # Weight direct mappings higher than fuzzy mappings
-                    weighted_mapping_quality = (
-                        (direct_mappings * 1.0 + fuzzy_mappings * 0.7) / total_device_terms
-                    )
+                    weighted_mapping_quality = (direct_mappings * 1.0 + fuzzy_mappings * 0.7) / total_device_terms
                     # Apply fuzzy matching confidence factor
                     final_mapping_quality = weighted_mapping_quality * fuzzy_match_confidence
-                    
+
                     # Adjust score based on refined mapping quality
                     score += 0.1 * final_mapping_quality
                     japanese_mapping_quality = final_mapping_quality
-                    
+
             except Exception as e:
                 logger.debug(f"Error in advanced Japanese mapping quality assessment: {e}")
 
@@ -893,7 +893,7 @@ class RepairGuideService:
             quality_bonus += 0.05
         if guide.image_url:  # Has images
             quality_bonus += 0.05
-        
+
         # Apply quality bonus with Japanese adjustment
         if is_japanese_search:
             # Slightly reduce quality bonus for Japanese searches to account for potential mismatches
@@ -906,14 +906,14 @@ class RepairGuideService:
             base_adjustment = 0.8  # Base adjustment for Japanese searches
             mapping_adjustment = 0.15 * japanese_mapping_quality  # Mapping quality bonus
             ratio_adjustment = 0.05 * japanese_ratio  # Japanese content ratio bonus
-            
+
             final_adjustment = base_adjustment + mapping_adjustment + ratio_adjustment
             score = score * final_adjustment
-            
+
             # Enhanced minimum score calculation based on query quality
             min_score = 0.35 + (0.1 * japanese_mapping_quality)
             score = max(score, min_score)
-            
+
             # Additional boost for high-quality Japanese queries
             if japanese_mapping_quality > 0.8 and fuzzy_match_confidence > 0.8:
                 score += 0.05
@@ -924,20 +924,20 @@ class RepairGuideService:
             score *= 0.95
 
         return min(score, 1.0)  # Cap at 1.0
-    
+
     def _is_japanese_query(self, query: str) -> bool:
         """
         Check if query contains Japanese characters.
-        
+
         Args:
             query: Search query to check
-            
+
         Returns:
             True if query contains Japanese characters
         """
         if not query:
             return False
-            
+
         # Check for Japanese character ranges
         japanese_ranges = [
             (0x3040, 0x309F),  # Hiragana
@@ -945,28 +945,28 @@ class RepairGuideService:
             (0x4E00, 0x9FAF),  # CJK Unified Ideographs (Kanji)
             (0xFF66, 0xFF9D),  # Half-width Katakana
         ]
-        
+
         for char in query:
             char_code = ord(char)
             for start, end in japanese_ranges:
                 if start <= char_code <= end:
                     return True
-                    
+
         return False
-    
+
     def _calculate_japanese_ratio(self, query: str) -> float:
         """
         Calculate the ratio of Japanese characters in the query.
-        
+
         Args:
             query: Search query to analyze
-            
+
         Returns:
             Ratio of Japanese characters (0.0 to 1.0)
         """
         if not query:
             return 0.0
-            
+
         # Japanese character ranges
         japanese_ranges = [
             (0x3040, 0x309F),  # Hiragana
@@ -974,194 +974,192 @@ class RepairGuideService:
             (0x4E00, 0x9FAF),  # CJK Unified Ideographs (Kanji)
             (0xFF66, 0xFF9D),  # Half-width Katakana
         ]
-        
+
         japanese_char_count = 0
         total_char_count = 0
-        
+
         for char in query:
             if char.isspace():
                 continue  # Skip whitespace
-                
+
             total_char_count += 1
             char_code = ord(char)
-            
+
             for start, end in japanese_ranges:
                 if start <= char_code <= end:
                     japanese_char_count += 1
                     break
-        
+
         if total_char_count == 0:
             return 0.0
-            
+
         return japanese_char_count / total_char_count
-    
+
     def _assess_japanese_mapping_quality(self, query: str) -> float:
         """
         Assess the quality of Japanese device name mappings in the query.
-        
+
         Args:
             query: Search query to assess
-            
+
         Returns:
             Mapping quality score (0.0 to 1.0)
         """
         if not self.japanese_mapper or not query:
             return 1.0  # Default quality if no Japanese support
-            
+
         try:
             import re
-            words = re.split(r'[\s\u3000]+', query.strip())
-            
+
+            words = re.split(r"[\s\u3000]+", query.strip())
+
             total_japanese_device_words = 0
             successful_mappings = 0
-            
+
             for word in words:
                 if not word:
                     continue
-                    
+
                 # Check if this word contains Japanese characters and could be a device name
                 if self._is_japanese_query(word):
                     # Check if it's a potential device name
                     if self.japanese_mapper.is_device_name(word):
                         total_japanese_device_words += 1
-                        
+
                         # Check if mapping is successful
                         mapped_device = self.japanese_mapper.map_device_name(word)
                         if mapped_device:
                             successful_mappings += 1
-            
+
             if total_japanese_device_words == 0:
                 return 1.0  # No Japanese device words to map
-                
+
             return successful_mappings / total_japanese_device_words
-            
+
         except Exception as e:
             logger.debug(f"Error assessing Japanese mapping quality: {e}")
             return 0.8  # Conservative default
-    
+
     def _evaluate_fuzzy_matching_confidence(self, query: str) -> float:
         """
         Evaluate the confidence of fuzzy matching results for Japanese queries.
-        
+
         Args:
             query: Search query to evaluate
-            
+
         Returns:
             Fuzzy matching confidence score (0.0 to 1.0)
         """
         if not self.japanese_mapper or not query:
             return 1.0
-            
+
         try:
             import re
-            words = re.split(r'[\s\u3000]+', query.strip())
-            
+
+            words = re.split(r"[\s\u3000]+", query.strip())
+
             fuzzy_confidences = []
-            
+
             for word in words:
                 if not word or not self._is_japanese_query(word):
                     continue
-                    
+
                 # Try fuzzy matching and get confidence
                 fuzzy_result = self.japanese_mapper.find_best_match(word, threshold=0.5)
                 if fuzzy_result:
                     _, confidence = fuzzy_result
                     fuzzy_confidences.append(confidence)
-            
+
             if not fuzzy_confidences:
                 return 1.0  # No fuzzy matching used
-                
+
             # Return average confidence of all fuzzy matches
             return sum(fuzzy_confidences) / len(fuzzy_confidences)
-            
+
         except Exception as e:
             logger.debug(f"Error evaluating fuzzy matching confidence: {e}")
             return 0.7  # Conservative default
-    
+
     def _analyze_device_mapping_quality(self, query: str) -> Dict[str, int]:
         """
         Analyze the quality of device mappings in a Japanese query.
-        
+
         Args:
             query: Search query to analyze
-            
+
         Returns:
             Dictionary with mapping analysis results
         """
-        analysis = {
-            'direct_mappings': 0,
-            'fuzzy_mappings': 0,
-            'total_device_terms': 0,
-            'unmapped_terms': 0
-        }
-        
+        analysis = {"direct_mappings": 0, "fuzzy_mappings": 0, "total_device_terms": 0, "unmapped_terms": 0}
+
         if not self.japanese_mapper or not query:
             return analysis
-            
+
         try:
             import re
-            words = re.split(r'[\s\u3000]+', query.strip())
-            
+
+            words = re.split(r"[\s\u3000]+", query.strip())
+
             for word in words:
                 if not word or not self._is_japanese_query(word):
                     continue
-                    
+
                 # Check if it's a potential device term
                 if self.japanese_mapper.is_device_name(word):
-                    analysis['total_device_terms'] += 1
-                    
+                    analysis["total_device_terms"] += 1
+
                     # Try direct mapping first
                     direct_mapping = self.japanese_mapper.map_device_name(word)
                     if direct_mapping:
-                        analysis['direct_mappings'] += 1
+                        analysis["direct_mappings"] += 1
                         continue
-                    
+
                     # Try fuzzy mapping
                     fuzzy_result = self.japanese_mapper.find_best_match(word, threshold=0.7)
                     if fuzzy_result:
-                        analysis['fuzzy_mappings'] += 1
+                        analysis["fuzzy_mappings"] += 1
                     else:
-                        analysis['unmapped_terms'] += 1
-            
+                        analysis["unmapped_terms"] += 1
+
             return analysis
-            
+
         except Exception as e:
             logger.debug(f"Error analyzing device mapping quality: {e}")
             return analysis
-    
+
     def _is_mixed_language_query(self, query: str) -> bool:
         """
         Check if query contains both Japanese and non-Japanese characters.
-        
+
         Args:
             query: Search query to check
-            
+
         Returns:
             True if query contains mixed languages
         """
         if not query:
             return False
-            
+
         has_japanese = self._is_japanese_query(query)
         if not has_japanese:
             return False
-            
+
         # Check for non-Japanese alphanumeric characters
         has_non_japanese = False
         for char in query:
             if char.isalnum() and not self._is_japanese_character(char):
                 has_non_japanese = True
                 break
-                
+
         return has_japanese and has_non_japanese
-    
+
     def _is_japanese_character(self, char: str) -> bool:
         """
         Check if a single character is Japanese.
-        
+
         Args:
             char: Character to check
-            
+
         Returns:
             True if character is Japanese
         """
@@ -1172,21 +1170,21 @@ class RepairGuideService:
             (0x4E00, 0x9FAF),  # CJK Unified Ideographs (Kanji)
             (0xFF66, 0xFF9D),  # Half-width Katakana
         ]
-        
+
         for start, end in japanese_ranges:
             if start <= char_code <= end:
                 return True
-                
+
         return False
-    
+
     def _is_similar_difficulty(self, guide_difficulty: str, target_difficulty: str) -> bool:
         """
         Check if two difficulty levels are similar.
-        
+
         Args:
             guide_difficulty: Guide's difficulty level
             target_difficulty: Target difficulty level
-            
+
         Returns:
             True if difficulty levels are similar
         """
@@ -1196,15 +1194,15 @@ class RepairGuideService:
             ["moderate", "intermediate"],
             ["difficult", "expert", "very difficult"],
         ]
-        
+
         guide_lower = guide_difficulty.lower()
         target_lower = target_difficulty.lower()
-        
+
         # Check if both difficulties are in the same group
         for group in difficulty_groups:
             if guide_lower in group and target_lower in group:
                 return True
-                
+
         return False
 
     def _explain_difficulty(self, difficulty: str) -> str:
@@ -1276,41 +1274,42 @@ class RepairGuideService:
     def _preprocess_japanese_query(self, query: str) -> str:
         """
         Preprocess Japanese query to improve search results.
-        
+
         This method analyzes the query for Japanese device names and converts them
         to their English equivalents for better iFixit API compatibility.
-        
+
         Args:
             query: Search query that may contain Japanese text
-            
+
         Returns:
             Preprocessed query with Japanese device names converted to English
-            
+
         Raises:
             Exception: If Japanese processing fails, returns original query
         """
         if not self.japanese_mapper or not query:
             return query
-            
+
         logger.debug(f"Preprocessing Japanese query: {query}")
-        
+
         try:
             # Split query into words for processing
             import re
-            words = re.split(r'[\s\u3000]+', query.strip())  # Split on spaces and full-width spaces
+
+            words = re.split(r"[\s\u3000]+", query.strip())  # Split on spaces and full-width spaces
             processed_words = []
-            
+
             for word in words:
                 if not word:
                     continue
-                    
+
                 # Try direct device mapping first
                 english_device = self.japanese_mapper.map_device_name(word)
                 if english_device:
                     processed_words.append(english_device)
                     logger.debug(f"Direct mapping: '{word}' -> '{english_device}'")
                     continue
-                
+
                 # Try fuzzy matching for partial matches
                 fuzzy_result = self.japanese_mapper.find_best_match(word, threshold=0.7)
                 if fuzzy_result:
@@ -1318,23 +1317,23 @@ class RepairGuideService:
                     processed_words.append(device_name)
                     logger.debug(f"Fuzzy mapping: '{word}' -> '{device_name}' (confidence: {confidence:.3f})")
                     continue
-                
+
                 # If no device mapping found, keep original word
                 processed_words.append(word)
-            
+
             # Join processed words back into query
             processed_query = " ".join(processed_words)
-            
+
             if processed_query != query:
                 logger.info(f"Japanese query preprocessed: '{query}' -> '{processed_query}'")
-            
+
             return processed_query
-            
+
         except Exception as e:
             logger.warning(f"Japanese query preprocessing failed: {e}")
             # Return original query if preprocessing fails
             return query
-    
+
     def _create_search_cache_key(self, query: str, filters: SearchFilters, limit: int) -> str:
         """Create cache key for search results"""
         filter_str = f"{filters.device_type}_{filters.difficulty_level}_{filters.category}"
@@ -1351,7 +1350,7 @@ def get_repair_guide_service() -> RepairGuideService:
     global _repair_guide_service
     if _repair_guide_service is None:
         _repair_guide_service = RepairGuideService(
-            ifixit_api_key=os.getenv("IFIXIT_API_KEY"), 
+            ifixit_api_key=os.getenv("IFIXIT_API_KEY"),
             redis_url=os.getenv("REDIS_URL"),
             enable_japanese_support=True,
         )

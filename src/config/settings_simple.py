@@ -66,7 +66,7 @@ class Settings:
         self.openai_api_key = os.getenv("REPAIRGPT_OPENAI_API_KEY")
         self.claude_api_key = os.getenv("REPAIRGPT_CLAUDE_API_KEY")
         self.ifixit_api_key = os.getenv("REPAIRGPT_IFIXIT_API_KEY")
-        
+
         # AI Configuration
         self.anthropic_api_key = os.getenv("REPAIRGPT_ANTHROPIC_API_KEY", self.claude_api_key)  # Alias
         self.use_mock_ai = os.getenv("REPAIRGPT_USE_MOCK_AI", "auto").lower()  # "auto", "true", "false"
