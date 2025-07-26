@@ -892,6 +892,308 @@ class TestJapaneseIntegrationScenarios:
         assert self.service._guide_matches_filters(mock_guide, filters)
 
 
+class TestAdvancedJapaneseConfidenceScoring:
+    """Test cases for the enhanced Japanese confidence scoring system"""
+
+    def setup_method(self):
+        """Set up test environment before each test"""
+        with patch('src.services.repair_guide_service.IFixitClient'), \
+             patch('src.services.repair_guide_service.OfflineRepairDatabase'), \
+             patch('src.services.repair_guide_service.CacheManager'), \
+             patch('src.services.repair_guide_service.RateLimiter'):
+            
+            self.service = RepairGuideService(
+                ifixit_api_key="test_key",
+                enable_japanese_support=True
+            )
+
+    def test_calculate_japanese_ratio(self):
+        """Test Japanese character ratio calculation"""
+        test_cases = [
+            ("スイッチ", 1.0),  # All Japanese
+            ("Switch", 0.0),  # All English
+            ("スイッチ repair", 0.5),  # Half Japanese, half English
+            ("アイフォン15", 0.6),  # 3 Japanese chars, 2 English chars
+            ("", 0.0),  # Empty string
+            ("   ", 0.0),  # Only whitespace
+            ("123", 0.0),  # Numbers only
+        ]
+        
+        for query, expected_ratio in test_cases:
+            ratio = self.service._calculate_japanese_ratio(query)
+            assert abs(ratio - expected_ratio) < 0.1, f"Expected ratio {expected_ratio} for '{query}', got {ratio}"
+
+    def test_assess_japanese_mapping_quality(self):
+        """Test Japanese device mapping quality assessment"""
+        # Test with successful mappings
+        with patch.object(self.service.japanese_mapper, 'is_device_name', return_value=True), \
+             patch.object(self.service.japanese_mapper, 'map_device_name', return_value="Nintendo Switch"):
+            
+            quality = self.service._assess_japanese_mapping_quality("スイッチ")
+            assert quality == 1.0, "Should return 1.0 for successful mapping"
+
+        # Test with failed mappings
+        with patch.object(self.service.japanese_mapper, 'is_device_name', return_value=True), \
+             patch.object(self.service.japanese_mapper, 'map_device_name', return_value=None):
+            
+            quality = self.service._assess_japanese_mapping_quality("未知デバイス")
+            assert quality == 0.0, "Should return 0.0 for failed mapping"
+
+        # Test with no Japanese device words
+        quality = self.service._assess_japanese_mapping_quality("Hello World")
+        assert quality == 1.0, "Should return 1.0 when no Japanese device words to map"
+
+    def test_evaluate_fuzzy_matching_confidence(self):
+        """Test fuzzy matching confidence evaluation"""
+        # Test with high confidence fuzzy match
+        with patch.object(self.service.japanese_mapper, 'find_best_match', 
+                         return_value=("Nintendo Switch", 0.9)):
+            
+            confidence = self.service._evaluate_fuzzy_matching_confidence("すいち")
+            assert confidence == 0.9, "Should return the fuzzy match confidence"
+
+        # Test with no fuzzy matches
+        with patch.object(self.service.japanese_mapper, 'find_best_match', return_value=None):
+            
+            confidence = self.service._evaluate_fuzzy_matching_confidence("無関係な文字")
+            assert confidence == 1.0, "Should return 1.0 when no fuzzy matching used"
+
+        # Test with multiple fuzzy matches (average confidence)
+        def mock_find_best_match(word, threshold=0.5):
+            if word == "すいち":
+                return ("Nintendo Switch", 0.8)
+            elif word == "あいふぉん":
+                return ("iPhone", 0.9)
+            return None
+
+        with patch.object(self.service.japanese_mapper, 'find_best_match', 
+                         side_effect=mock_find_best_match):
+            
+            confidence = self.service._evaluate_fuzzy_matching_confidence("すいち あいふぉん")
+            expected_avg = (0.8 + 0.9) / 2
+            assert abs(confidence - expected_avg) < 0.01, f"Expected average {expected_avg}, got {confidence}"
+
+    def test_analyze_device_mapping_quality(self):
+        """Test device mapping quality analysis"""
+        def mock_is_device_name(word):
+            return word in ["スイッチ", "あいふぉん", "未知デバイス"]
+
+        def mock_map_device_name(word):
+            mappings = {
+                "スイッチ": "Nintendo Switch",
+                "あいふぉん": "iPhone"
+            }
+            return mappings.get(word)
+
+        def mock_find_best_match(word, threshold=0.7):
+            if word == "未知デバイス":
+                return ("Unknown Device", 0.8)
+            return None
+
+        with patch.object(self.service.japanese_mapper, 'is_device_name', side_effect=mock_is_device_name), \
+             patch.object(self.service.japanese_mapper, 'map_device_name', side_effect=mock_map_device_name), \
+             patch.object(self.service.japanese_mapper, 'find_best_match', side_effect=mock_find_best_match):
+            
+            analysis = self.service._analyze_device_mapping_quality("スイッチ あいふぉん 未知デバイス")
+            
+            assert analysis['direct_mappings'] == 2, "Should have 2 direct mappings"
+            assert analysis['fuzzy_mappings'] == 1, "Should have 1 fuzzy mapping"
+            assert analysis['total_device_terms'] == 3, "Should have 3 total device terms"
+            assert analysis['unmapped_terms'] == 0, "Should have 0 unmapped terms"
+
+    def test_is_mixed_language_query(self):
+        """Test mixed language query detection"""
+        mixed_language_queries = [
+            "スイッチ repair",
+            "iPhone 修理",
+            "アイフォン15 screen",
+            "Nintendo スイッチ",
+        ]
+        
+        single_language_queries = [
+            "スイッチ 修理",  # Japanese only
+            "iPhone repair",  # English only
+            "123 456",  # Numbers only
+            "",  # Empty
+        ]
+        
+        for query in mixed_language_queries:
+            assert self.service._is_mixed_language_query(query), f"'{query}' should be detected as mixed language"
+            
+        for query in single_language_queries:
+            assert not self.service._is_mixed_language_query(query), f"'{query}' should not be detected as mixed language"
+
+    def test_is_japanese_character(self):
+        """Test individual Japanese character detection"""
+        japanese_chars = ["あ", "ア", "漢", "ｱ"]  # Hiragana, Katakana, Kanji, Half-width Katakana
+        english_chars = ["a", "A", "1", "!", " "]
+        
+        for char in japanese_chars:
+            assert self.service._is_japanese_character(char), f"'{char}' should be detected as Japanese"
+            
+        for char in english_chars:
+            assert not self.service._is_japanese_character(char), f"'{char}' should not be detected as Japanese"
+
+    def test_enhanced_confidence_score_calculation(self):
+        """Test the enhanced confidence scoring with Japanese optimizations"""
+        mock_guide = Guide(
+            guideid=1,
+            title="Nintendo Switch Screen Repair",
+            device="Nintendo Switch",
+            category="Screen Repair",
+            subject="Screen",
+            difficulty="Moderate",
+            url="http://example.com/guide/1",
+            image_url="http://example.com/image1.jpg",
+            tools=["Phillips Screwdriver"],
+            parts=["Screen Assembly"],
+            type_="Repair"
+        )
+        
+        # Test Japanese query with high mapping quality
+        with patch.object(self.service, '_assess_japanese_mapping_quality', return_value=0.9), \
+             patch.object(self.service, '_calculate_japanese_ratio', return_value=0.8), \
+             patch.object(self.service, '_evaluate_fuzzy_matching_confidence', return_value=0.85), \
+             patch.object(self.service, '_analyze_device_mapping_quality', 
+                         return_value={'direct_mappings': 1, 'fuzzy_mappings': 0, 'total_device_terms': 1, 'unmapped_terms': 0}):
+            
+            filters = SearchFilters()
+            japanese_score = self.service._calculate_confidence_score(mock_guide, "スイッチ 画面修理", filters)
+            
+            # Should be a reasonable score with Japanese bonuses
+            assert 0.5 <= japanese_score <= 1.0, f"Japanese score {japanese_score} should be reasonable"
+            assert japanese_score >= 0.5, "Should get mapping quality bonus"
+
+        # Test English query for comparison
+        english_score = self.service._calculate_confidence_score(mock_guide, "Nintendo Switch screen repair", SearchFilters())
+        
+        # Both should be reasonable, English might be slightly higher due to exact match
+        assert 0.5 <= english_score <= 1.0, f"English score {english_score} should be reasonable"
+
+    def test_confidence_score_with_poor_japanese_mapping(self):
+        """Test confidence scoring with poor Japanese mapping quality"""
+        mock_guide = Guide(
+            guideid=2,
+            title="Generic Device Repair",
+            device="Generic Device",
+            category="Repair",
+            subject="General",
+            difficulty="Easy",
+            url="http://example.com/guide/2",
+            image_url="http://example.com/image2.jpg",
+            tools=[],
+            parts=[],
+            type_="Repair"
+        )
+        
+        # Test with poor mapping quality
+        with patch.object(self.service, '_assess_japanese_mapping_quality', return_value=0.2), \
+             patch.object(self.service, '_calculate_japanese_ratio', return_value=1.0), \
+             patch.object(self.service, '_evaluate_fuzzy_matching_confidence', return_value=0.4), \
+             patch.object(self.service, '_analyze_device_mapping_quality', 
+                         return_value={'direct_mappings': 0, 'fuzzy_mappings': 1, 'total_device_terms': 2, 'unmapped_terms': 1}):
+            
+            filters = SearchFilters()
+            score = self.service._calculate_confidence_score(mock_guide, "未知デバイス 修理", filters)
+            
+            # Should still get minimum reasonable score
+            assert score >= 0.35, f"Should get minimum score {score} even with poor mapping"
+            assert score <= 0.7, "Should be penalized for poor mapping quality"
+
+    def test_confidence_score_mixed_language_penalty(self):
+        """Test confidence scoring penalty for mixed language queries"""
+        mock_guide = Guide(
+            guideid=3,
+            title="iPhone Repair Guide",
+            device="iPhone",
+            category="Repair",
+            subject="General",
+            difficulty="Moderate",
+            url="http://example.com/guide/3",
+            image_url="http://example.com/image3.jpg",
+            tools=[],
+            parts=[],
+            type_="Repair"
+        )
+        
+        # Pure Japanese query
+        with patch.object(self.service, '_is_mixed_language_query', return_value=False):
+            pure_score = self.service._calculate_confidence_score(mock_guide, "アイフォン 修理", SearchFilters())
+        
+        # Mixed language query
+        with patch.object(self.service, '_is_mixed_language_query', return_value=True):
+            mixed_score = self.service._calculate_confidence_score(mock_guide, "アイフォン repair", SearchFilters())
+        
+        # Mixed language should have slight penalty
+        assert mixed_score <= pure_score, "Mixed language queries should have penalty"
+        assert mixed_score >= pure_score * 0.9, "Penalty should be moderate"
+
+    def test_confidence_score_with_japanese_filters(self):
+        """Test confidence scoring bonuses with Japanese filters"""
+        mock_guide = Guide(
+            guideid=4,
+            title="iPhone Battery Replacement",
+            device="iPhone",
+            category="Battery",
+            subject="Battery",
+            difficulty="Easy",
+            url="http://example.com/guide/4",
+            image_url="http://example.com/image4.jpg",
+            tools=["Phillips Screwdriver"],
+            parts=["Battery"],
+            type_="Repair"
+        )
+        
+        # Japanese filters with successful mapping
+        filters = SearchFilters(
+            difficulty_level="簡単",  # "easy"
+            category="バッテリー"  # "battery"
+        )
+        
+        with patch.object(self.service, '_assess_japanese_mapping_quality', return_value=0.9):
+            score = self.service._calculate_confidence_score(mock_guide, "アイフォン バッテリー", filters)
+            
+            # Should get bonuses for matching Japanese filters
+            assert score > 0.6, f"Should get filter matching bonus, got {score}"
+
+    def test_performance_of_enhanced_confidence_calculation(self):
+        """Test performance of the enhanced confidence calculation"""
+        import time
+        
+        mock_guide = Guide(
+            guideid=5,
+            title="Performance Test Guide",
+            device="Test Device",
+            category="Test",
+            subject="Performance",
+            difficulty="Moderate",
+            url="http://example.com/guide/5",
+            image_url="http://example.com/image5.jpg",
+            tools=["Test Tool"],
+            parts=["Test Part"],
+            type_="Test"
+        )
+        
+        # Test with complex Japanese query
+        complex_query = "複雑な日本語クエリ with mixed スイッチ アイフォン デバイス and more text"
+        filters = SearchFilters(
+            difficulty_level="中級",
+            category="テスト修理",
+            device_type="テストデバイス"
+        )
+        
+        start_time = time.time()
+        for _ in range(100):  # Run 100 times to measure performance
+            score = self.service._calculate_confidence_score(mock_guide, complex_query, filters)
+            assert 0.0 <= score <= 1.0, "Score should be in valid range"
+        
+        end_time = time.time()
+        avg_time = (end_time - start_time) / 100
+        
+        # Should complete each calculation in reasonable time (< 10ms)
+        assert avg_time < 0.01, f"Average calculation time {avg_time:.4f}s should be < 0.01s"
+
+
 if __name__ == "__main__":
     # Run the tests
     pytest.main([__file__, "-v"])
