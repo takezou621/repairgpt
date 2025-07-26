@@ -20,8 +20,8 @@ except ImportError:
     AsyncAnthropic = None
 
 try:
-    from ..utils.logger import get_logger
-    from .llm_chatbot import Message, RepairChatbot, RepairContext
+    from utils.logger import get_logger
+    from llm_chatbot import Message, RepairChatbot, RepairContext
 except ImportError:
     # Fallback for direct execution
     import os

@@ -6,7 +6,7 @@ import logging
 
 from fastapi import Request
 
-from ..config.settings_simple import settings
+from config.settings_simple import settings
 from . import create_app
 from .routes import auth_router, chat_router, devices_router, diagnose_router, health_router, repair_guides_router
 

@@ -11,7 +11,7 @@ from .health import health_router
 from .repair_guides import router as repair_guides_router
 
 # Skip image_router for now due to multipart dependency
-# from .image_analysis import image_router
+# from image_analysis import image_router
 
 __all__ = [
     "auth_router",

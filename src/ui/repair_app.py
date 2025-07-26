@@ -567,7 +567,12 @@ def check_api_health() -> bool:
 # Initialize i18n and set default language from session state
 if "language" not in st.session_state:
     st.session_state.language = "en"
-i18n.set_language(st.session_state.language)
+
+try:
+    i18n.set_language(st.session_state.language)
+except NameError:
+    # i18n not available, use fallback
+    pass
 
 # Page configuration with security settings
 st.set_page_config(
@@ -1033,7 +1038,7 @@ def main():
                                     info_col1, info_col2, info_col3 = st.columns(3)
                                     
                                     with info_col1:
-                                        st.markdown(f"**{_("guides.difficulty")}:** {guide.difficulty}")
+                                        st.markdown(f"**{_('guides.difficulty')}:** {guide.difficulty}")
                                         if hasattr(guide, 'time_estimate') and guide.time_estimate:
                                             st.markdown(f"**Time:** {guide.time_estimate}")
                                     

@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from ..models import (
+from models import (
     RepairGuide,
     RepairGuideSearchRequest,
     RepairGuideSearchResponse,
@@ -200,7 +200,7 @@ async def search_repair_guides_get(
     Supports the same Japanese functionality as the POST endpoint but via query parameters.
     """
     # Convert query parameters to request model
-    from ..models import RepairGuideSearchFilters
+    from models import RepairGuideSearchFilters
 
     filters = RepairGuideSearchFilters(
         device_type=device_type,
@@ -271,7 +271,7 @@ async def get_repair_guide_details(
         # Convert to API model with detailed steps
         steps = []
         if hasattr(result.guide, 'steps') and result.guide.steps:
-            from ..models import RepairGuideStep
+            from models import RepairGuideStep
             for i, step in enumerate(result.guide.steps, 1):
                 api_step = RepairGuideStep(
                     step_number=i,
@@ -352,7 +352,7 @@ async def get_guides_by_device(
         logger.info(f"Fetching guides for device: {device_type}, model: {device_model}")
 
         # Build search filters
-        from ..models import RepairGuideSearchFilters
+        from models import RepairGuideSearchFilters
         filters = RepairGuideSearchFilters(device_type=device_type)
 
         # Build query

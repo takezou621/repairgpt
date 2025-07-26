@@ -15,20 +15,10 @@ except ImportError:
     REDIS_AVAILABLE = False
     redis = None
 
-try:
-    from ..clients.ifixit_client import Guide, IFixitClient
-    from ..data.offline_repair_database import OfflineRepairDatabase
-    from ..utils.logger import get_logger
-    from ..utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
-except ImportError:
-    # Fallback for direct execution
-    import sys
-
-    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-    from clients.ifixit_client import Guide, IFixitClient
-    from data.offline_repair_database import OfflineRepairDatabase
-    from utils.logger import get_logger
-    from utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
+from clients.ifixit_client import Guide, IFixitClient
+from data.offline_repair_database import OfflineRepairDatabase
+from utils.logger import get_logger
+from utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
 
 logger = get_logger(__name__)
 
