@@ -74,65 +74,65 @@ class TestJapaneseSearchEndToEndIntegration:
                 title="Nintendo Switch Joy-Con Analog Stick Replacement",
                 device="Nintendo Switch",
                 category="Joy-Con Repair",
-                subject="Analog Stick",
+                summary="Analog Stick",
                 difficulty="Moderate",
                 url="https://www.ifixit.com/Guide/Nintendo+Switch+Joy-Con+Analog+Stick+Replacement/113182",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/tQoUdWAZpOQnyiuI.medium",
                 tools=["Phillips #00 Screwdriver", "Plastic Opening Tools", "Tweezers"],
                 parts=["Joy-Con Analog Stick"],
-                type_="Repair"
+                time_required="Repair"
             ),
             Guide(
                 guideid=2,
                 title="Nintendo Switch Screen Replacement",
                 device="Nintendo Switch",
                 category="Screen Repair",
-                subject="LCD Screen",
+                summary="LCD Screen",
                 difficulty="Difficult",
                 url="https://www.ifixit.com/Guide/Nintendo+Switch+Screen+Replacement/113185",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example2.medium",
                 tools=["Phillips #00 Screwdriver", "Heat Gun", "Suction Cup"],
                 parts=["LCD Screen Assembly"],
-                type_="Repair"
+                time_required="Repair"
             ),
             Guide(
                 guideid=3,
                 title="Nintendo Switch Battery Replacement",
                 device="Nintendo Switch",
                 category="Battery Replacement", 
-                subject="Battery",
+                summary="Battery",
                 difficulty="Easy",
                 url="https://www.ifixit.com/Guide/Nintendo+Switch+Battery+Replacement/113186",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example3.medium",
                 tools=["Phillips #00 Screwdriver", "Plastic Opening Tools"],
                 parts=["Switch Battery"],
-                type_="Repair"
+                time_required="Repair"
             ),
             Guide(
                 guideid=4,
                 title="iPhone 15 Screen Replacement",
                 device="iPhone 15",
                 category="Screen Repair",
-                subject="Display",
+                summary="Display",
                 difficulty="Moderate",
                 url="https://www.ifixit.com/Guide/iPhone+15+Screen+Replacement/example",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example4.medium",
                 tools=["Pentalobe Screwdriver", "Suction Cup", "Heat Gun"],
                 parts=["iPhone 15 Screen"],
-                type_="Repair"
+                time_required="Repair"
             ),
             Guide(
                 guideid=5,
                 title="PlayStation 5 Controller Drift Fix",
                 device="PlayStation 5",
                 category="Controller Repair",
-                subject="Analog Stick",
+                summary="Analog Stick",
                 difficulty="Easy",
                 url="https://www.ifixit.com/Guide/PS5+Controller+Drift+Fix/example",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example5.medium",
                 tools=["Phillips #00 Screwdriver", "Cotton Swabs"],
                 parts=["Cleaning Solution"],
-                type_="Repair"
+                time_required="Repair"
             )
         ]
 
@@ -606,9 +606,9 @@ class TestJapaneseSearchPerformanceAndLoad:
         mock_guides = [
             Guide(
                 guideid=1, title="Test Guide", device="Nintendo Switch",
-                category="Repair", subject="Test", difficulty="Easy",
+                category="Repair", summary="Test", difficulty="Easy",
                 url="http://example.com", image_url="http://example.com/img.jpg",
-                tools=[], parts=[], type_="Repair"
+                tools=[], parts=[], time_required="45-60 minutes"
             )
         ]
         
@@ -651,9 +651,9 @@ class TestJapaneseSearchPerformanceAndLoad:
         """Test performance of Japanese-enhanced confidence scoring"""
         mock_guide = Guide(
             guideid=1, title="Nintendo Switch Repair Guide", device="Nintendo Switch",
-            category="Repair", subject="General", difficulty="Moderate",
+            category="Repair", summary="General", difficulty="Moderate",
             url="http://example.com", image_url="http://example.com/img.jpg",
-            tools=["Screwdriver"], parts=["Parts"], type_="Repair"
+            tools=["Screwdriver"], parts=["Parts"], time_required="45-60 minutes"
         )
         
         # Test with complex Japanese queries
@@ -820,9 +820,9 @@ class TestJapaneseSearchDataQualityAndConsistency:
         """Test consistency of confidence scoring for Japanese queries"""
         mock_guide = Guide(
             guideid=1, title="Nintendo Switch Screen Repair", device="Nintendo Switch",
-            category="Screen Repair", subject="Screen", difficulty="Moderate",
+            category="Screen Repair", summary="Screen", difficulty="Moderate",
             url="http://example.com", image_url="http://example.com/img.jpg",
-            tools=["Screwdriver"], parts=["Screen"], type_="Repair"
+            tools=["Screwdriver"], parts=["Screen"], time_required="45-60 minutes"
         )
         
         # Test equivalent queries should get similar confidence scores
@@ -890,21 +890,21 @@ class TestJapaneseSearchDataQualityAndConsistency:
         guides = [
             Guide(
                 guideid=1, title="Nintendo Switch Screen Repair - Complete Guide",
-                device="Nintendo Switch", category="Screen Repair", subject="LCD",
+                device="Nintendo Switch", category="Screen Repair", summary="LCD",
                 difficulty="Moderate", url="http://example.com/1", image_url="http://example.com/1.jpg",
-                tools=["Screwdriver"], parts=["Screen"], type_="Repair"
+                tools=["Screwdriver"], parts=["Screen"], time_required="45-60 minutes"
             ),
             Guide(
                 guideid=2, title="Nintendo Switch Basic Maintenance",
-                device="Nintendo Switch", category="Maintenance", subject="General",
+                device="Nintendo Switch", category="Maintenance", summary="General",
                 difficulty="Easy", url="http://example.com/2", image_url="http://example.com/2.jpg",
-                tools=[], parts=[], type_="Maintenance"
+                tools=[], parts=[], time_required="Maintenance"
             ),
             Guide(
                 guideid=3, title="Nintendo Switch Joy-Con Repair",
-                device="Nintendo Switch", category="Controller Repair", subject="Joy-Con",
+                device="Nintendo Switch", category="Controller Repair", summary="Joy-Con",
                 difficulty="Difficult", url="http://example.com/3", image_url="http://example.com/3.jpg",
-                tools=["Special Tools"], parts=["Joy-Con"], type_="Repair"
+                tools=["Special Tools"], parts=["Joy-Con"], time_required="45-60 minutes"
             ),
         ]
         
@@ -988,9 +988,9 @@ class TestJapaneseSearchBackwardCompatibility:
         english_guides = [
             Guide(
                 guideid=1, title="iPhone Battery Replacement",
-                device="iPhone", category="Battery", subject="Battery",
+                device="iPhone", category="Battery", summary="Battery",
                 difficulty="Easy", url="http://example.com/1", image_url="http://example.com/1.jpg",
-                tools=["Screwdriver"], parts=["Battery"], type_="Repair"
+                tools=["Screwdriver"], parts=["Battery"], time_required="45-60 minutes"
             )
         ]
         
@@ -1026,9 +1026,9 @@ class TestJapaneseSearchBackwardCompatibility:
         
         mock_guide = Guide(
             guideid=1, title="iPhone Battery Guide", device="iPhone",
-            category="battery replacement", subject="Battery", difficulty="easy",
+            category="battery replacement", summary="Battery", difficulty="easy",
             url="http://example.com", image_url="http://example.com/img.jpg",
-            tools=["screwdriver"], parts=["battery"], type_="Repair"
+            tools=["screwdriver"], parts=["battery"], time_required="45-60 minutes"
         )
         
         # Should match with original logic
@@ -1043,9 +1043,9 @@ class TestJapaneseSearchBackwardCompatibility:
         original_result = RepairGuideResult(
             guide=Guide(
                 guideid=1, title="Test Guide", device="iPhone",
-                category="Repair", subject="Test", difficulty="Easy",
+                category="Repair", summary="Test", difficulty="Easy",
                 url="http://example.com", image_url="http://example.com/img.jpg",
-                tools=[], parts=[], type_="Repair"
+                tools=[], parts=[], time_required="45-60 minutes"
             ),
             source="ifixit",
             confidence_score=0.8,
@@ -1114,9 +1114,9 @@ class TestJapaneseSearchBackwardCompatibility:
         """Test that confidence scoring maintains reasonable behavior for English queries"""
         mock_guide = Guide(
             guideid=1, title="iPhone Screen Replacement",
-            device="iPhone", category="Screen Repair", subject="Screen",
+            device="iPhone", category="Screen Repair", summary="Screen",
             difficulty="Moderate", url="http://example.com", image_url="http://example.com/img.jpg",
-            tools=["Screwdriver"], parts=["Screen"], type_="Repair"
+            tools=["Screwdriver"], parts=["Screen"], time_required="45-60 minutes"
         )
         
         # Test with English query and filters (original behavior)
@@ -1164,62 +1164,62 @@ class TestJapaneseSearchRealWorldScenarios:
             # Nintendo Switch guides
             Guide(
                 guideid=101, title="Nintendo Switch Joy-Con Analog Stick Replacement",
-                device="Nintendo Switch", category="Joy-Con Repair", subject="Analog Stick",
+                device="Nintendo Switch", category="Joy-Con Repair", summary="Analog Stick",
                 difficulty="Moderate", url="https://www.ifixit.com/Guide/Nintendo+Switch+Joy-Con+Analog+Stick+Replacement/113182",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/tQoUdWAZpOQnyiuI.medium",
                 tools=["Phillips #00 Screwdriver", "Plastic Opening Tools", "Tweezers", "Heat Gun"],
-                parts=["Joy-Con Analog Stick", "Thermal Paste"], type_="Repair"
+                parts=["Joy-Con Analog Stick", "Thermal Paste"], time_required="60-90 minutes"
             ),
             Guide(
                 guideid=102, title="Nintendo Switch Screen Replacement",
-                device="Nintendo Switch", category="Screen Repair", subject="LCD Screen",
+                device="Nintendo Switch", category="Screen Repair", summary="LCD Screen",
                 difficulty="Very Difficult", url="https://www.ifixit.com/Guide/Nintendo+Switch+Screen+Replacement/113185",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example2.medium",
                 tools=["Phillips #00 Screwdriver", "Heat Gun", "Suction Cup", "Plastic Opening Tools"],
-                parts=["LCD Screen Assembly", "Adhesive Strips"], type_="Repair"
+                parts=["LCD Screen Assembly", "Adhesive Strips"], time_required="45-60 minutes"
             ),
             Guide(
                 guideid=103, title="Nintendo Switch Battery Replacement",
-                device="Nintendo Switch", category="Battery Replacement", subject="Battery",
+                device="Nintendo Switch", category="Battery Replacement", summary="Battery",
                 difficulty="Easy", url="https://www.ifixit.com/Guide/Nintendo+Switch+Battery+Replacement/113186",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example3.medium",
                 tools=["Phillips #00 Screwdriver", "Plastic Opening Tools", "Tweezers"],
-                parts=["Switch Battery"], type_="Repair"
+                parts=["Switch Battery"], time_required="45-60 minutes"
             ),
             # iPhone guides
             Guide(
                 guideid=201, title="iPhone 15 Screen Replacement",
-                device="iPhone 15", category="Screen Repair", subject="Display",
+                device="iPhone 15", category="Screen Repair", summary="Display",
                 difficulty="Moderate", url="https://www.ifixit.com/Guide/iPhone+15+Screen+Replacement/example",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example4.medium",
                 tools=["Pentalobe Screwdriver", "Phillips #000 Screwdriver", "Suction Cup", "Heat Gun"],
-                parts=["iPhone 15 Screen", "Adhesive"], type_="Repair"
+                parts=["iPhone 15 Screen", "Adhesive"], time_required="45-60 minutes"
             ),
             Guide(
                 guideid=202, title="iPhone 15 Battery Replacement",
-                device="iPhone 15", category="Battery Replacement", subject="Battery",
+                device="iPhone 15", category="Battery Replacement", summary="Battery",
                 difficulty="Easy", url="https://www.ifixit.com/Guide/iPhone+15+Battery+Replacement/example",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example5.medium",
                 tools=["Pentalobe Screwdriver", "Phillips #000 Screwdriver", "Plastic Opening Tools"],
-                parts=["iPhone 15 Battery", "Adhesive Strips"], type_="Repair"
+                parts=["iPhone 15 Battery", "Adhesive Strips"], time_required="45-60 minutes"
             ),
             # PlayStation guides
             Guide(
                 guideid=301, title="PlayStation 5 Controller Drift Repair",
-                device="PlayStation 5", category="Controller Repair", subject="Analog Stick",
+                device="PlayStation 5", category="Controller Repair", summary="Analog Stick",
                 difficulty="Easy", url="https://www.ifixit.com/Guide/PS5+Controller+Drift+Fix/example",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example6.medium",
                 tools=["Phillips #00 Screwdriver", "Cotton Swabs", "Compressed Air"],
-                parts=["Cleaning Solution", "Replacement Analog Stick"], type_="Repair"
+                parts=["Cleaning Solution", "Replacement Analog Stick"], time_required="45-60 minutes"
             ),
             # Laptop guides
             Guide(
                 guideid=401, title="MacBook Pro 2023 Battery Replacement",
-                device="MacBook Pro", category="Battery Replacement", subject="Battery",
+                device="MacBook Pro", category="Battery Replacement", summary="Battery",
                 difficulty="Difficult", url="https://www.ifixit.com/Guide/MacBook+Pro+2023+Battery+Replacement/example",
                 image_url="https://d3nevzfk7ii3be.cloudfront.net/igi/example7.medium",
                 tools=["Pentalobe Screwdriver", "Torx T5 Screwdriver", "Plastic Opening Tools"],
-                parts=["MacBook Pro Battery"], type_="Repair"
+                parts=["MacBook Pro Battery"], time_required="45-60 minutes"
             ),
         ]
 
@@ -1437,9 +1437,9 @@ class TestJapaneseSearchRealWorldScenarios:
         # Test confidence scoring with edge cases
         mock_guide = Guide(
             guideid=1, title="Test Guide", device="Unknown Device",
-            category="Unknown", subject="Test", difficulty="Unknown",
+            category="Unknown", summary="Test", difficulty="Unknown",
             url="http://example.com", image_url="http://example.com/img.jpg",
-            tools=[], parts=[], type_="Test"
+            tools=[], parts=[], time_required="Test"
         )
         
         # Should handle unknown difficulty levels gracefully
