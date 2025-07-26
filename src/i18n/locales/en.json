@@ -168,7 +168,36 @@
     "search_placeholder": "Search repair guides...",
     "searching": "Searching guides...",
     "no_results": "No repair guides found for your query",
-    "search_error": "Error occurred while searching guides"
+    "search_error": "Error occurred while searching guides",
+    "difficulty": "Difficulty",
+    "time_estimate": "Time Estimate",
+    "summary": "Summary",
+    "tools_required": "Tools Required"
+  },
+  "search": {
+    "title": "🔍 Smart Search",
+    "japanese_input": "Japanese-Enabled Search",
+    "input_placeholder": "Enter device and issue (supports Japanese)",
+    "input_placeholder_japanese": "e.g., Switch screen cracked",
+    "suggestions": "Search Suggestions",
+    "filters": "🔧 Advanced Filters",
+    "difficulty": "Difficulty",
+    "category": "Repair Category",
+    "device_filter": "Device Filter",
+    "searching": "Searching repair guides...",
+    "results_found": "Found {count} repair guides",
+    "no_results": "No repair guides found for your search",
+    "error": "An error occurred during search. Please try again.",
+    "mapping_quality": "Mapping Quality",
+    "confidence": "Confidence",
+    "source": "Source",
+    "last_updated": "Last Updated",
+    "processing_time": "Processing Time",
+    "history": "Search History",
+    "bookmarks": "Bookmarks",
+    "clear_history": "Clear History",
+    "save_bookmark": "Save Bookmark",
+    "remove_bookmark": "Remove Bookmark"
   },
   "api": {
     "health": {
