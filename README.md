@@ -239,6 +239,96 @@ LEFTHOOK=0 git commit -m "emergency fix"
 
 📚 **Full Documentation**: [Lefthook Setup Guide](docs/development/lefthook-guide.md)
 
+## 🚀 Claude Code エージェント活用ベストプラクティス
+
+RepairGPTの開発では、Claude Codeの専門エージェント機能を活用して効率的な開発を実現しています。
+
+### 利用可能なエージェント
+
+1. **`kiro-task-organizer`** - プロジェクトドキュメントを分析し、タスクを適切に分割
+2. **`task-executor-pr-creator`** - タスクの実装、テスト作成、PR作成を自動化
+3. **`code-quality-inspector`** - コード品質の詳細分析と改善提案
+4. **`qa-engineer-tester`** - 包括的な品質保証テストとバグ修正
+
+### カスタムコマンド
+
+効率的な開発のために以下のカスタムコマンドを用意しています：
+
+```bash
+# タスクの計画と分割
+/organize-tasks "修理ガイドのマルチモーダル対応を実装"
+
+# タスクの実装とPR作成
+/implement-task TASK-001
+
+# コード品質チェック
+/check-quality src/services/image_analysis.py
+
+# 包括的なQAテスト
+/qa-test 修理ガイド生成API
+
+# フル開発ワークフロー（全エージェント連携）
+/full-workflow "AI診断機能の精度向上"
+```
+
+### 推奨開発ワークフロー
+
+#### 1. 新機能開発
+```
+1. /organize-tasks で機能をタスクに分割
+2. /implement-task で各タスクを実装
+3. /check-quality でコード品質を確認
+4. /qa-test で統合テストを実行
+```
+
+#### 2. バグ修正
+```
+1. /qa-test でバグを特定・再現
+2. /implement-task で修正を実装
+3. /check-quality で修正コードの品質確認
+```
+
+#### 3. リファクタリング
+```
+1. /check-quality で改善点を特定
+2. /organize-tasks でリファクタリング計画
+3. /implement-task で段階的に実装
+4. /qa-test でリグレッションテスト
+```
+
+### ベストプラクティス
+
+1. **段階的実行**
+   - 大きな機能は必ず`/organize-tasks`で分割してから実装
+   - 1つのタスクは1コミットで完了できるサイズに
+
+2. **品質優先**
+   - 実装後は必ず`/check-quality`を実行
+   - 発見された問題は即座に修正
+
+3. **テスト駆動**
+   - `/implement-task`実行時は必ずテストを含める
+   - カバレッジ80%以上を維持
+
+4. **継続的検証**
+   - 定期的に`/qa-test`で全体の品質を確認
+   - パフォーマンスとセキュリティを常に監視
+
+### 実践例
+
+```bash
+# 例: iFixit API統合の強化
+/organize-tasks "iFixit API統合を強化してキャッシュ機能を追加"
+# → タスクリストが生成される
+
+/implement-task TASK-001  # Redisキャッシュ基盤の実装
+/check-quality src/clients/ifixit_client.py
+/implement-task TASK-002  # キャッシュ戦略の実装
+/qa-test iFixit API統合  # 全体の品質確認
+```
+
+詳細は[CLAUDE.md](CLAUDE.md)のエージェント活用ガイドを参照してください。
+
 ## 🤝 Contributing
 
 Interested in building the future of self-repair AI?  

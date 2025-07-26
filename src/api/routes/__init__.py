@@ -8,6 +8,7 @@ from .chat import chat_router
 from .devices import devices_router
 from .diagnose import diagnose_router
 from .health import health_router
+from .repair_guides import router as repair_guides_router
 
 # Skip image_router for now due to multipart dependency
 # from .image_analysis import image_router
@@ -18,5 +19,6 @@ __all__ = [
     "devices_router",
     "diagnose_router",
     "health_router",
+    "repair_guides_router",
     # "image_router"
 ]
