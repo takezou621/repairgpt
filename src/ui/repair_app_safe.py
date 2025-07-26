@@ -50,6 +50,11 @@ def safe_translate(key: str, fallback: str = "") -> str:
 
 # Import other necessary modules
 try:
+    from config.settings_simple import settings
+    from ui.language_selector import (
+        get_localized_device_categories,
+        get_localized_skill_levels,
+    )
     from utils.logger import (
         get_logger,
         log_api_call,
@@ -57,8 +62,6 @@ try:
         log_performance,
         log_user_action,
     )
-    from config.settings_simple import settings
-    from ui.language_selector import get_localized_device_categories, get_localized_skill_levels
 
 except Exception as e:
     st.error(f"Import error: {e}")

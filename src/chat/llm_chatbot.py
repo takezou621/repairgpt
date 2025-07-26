@@ -20,8 +20,8 @@ try:
     )
 except ImportError:
     # Fallback for direct execution - add parent directory to path
-    import sys
     import os
+    import sys
 
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from utils.logger import (

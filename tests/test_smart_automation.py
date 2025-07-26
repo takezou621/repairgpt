@@ -6,7 +6,7 @@ Tests for the weekend daytime smart automation system
 """
 
 import unittest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 

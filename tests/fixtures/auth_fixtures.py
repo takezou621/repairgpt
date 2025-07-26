@@ -1,8 +1,9 @@
 """Authentication test fixtures and data"""
 
-import pytest
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
+import pytest
 
 
 @pytest.fixture

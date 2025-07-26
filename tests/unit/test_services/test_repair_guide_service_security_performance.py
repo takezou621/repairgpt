@@ -9,24 +9,26 @@ This module tests the fixes for:
 """
 
 import hashlib
-import pytest
-import time
-from unittest.mock import MagicMock, patch
-from typing import Dict, List
+import os
 
 # Import the service and related classes
 import sys
-import os
+import time
+from typing import Dict, List
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 
 from src.services.repair_guide_service import (
+    _CATEGORY_EXACT_LOOKUP,
+    _CATEGORY_KEY_PARTS_INDEX,
+    _CATEGORY_PARTIAL_LOOKUP,
+    JAPANESE_CATEGORY_MAPPINGS,
+    CacheManager,
     RepairGuideService,
     SearchFilters,
-    CacheManager,
-    JAPANESE_CATEGORY_MAPPINGS,
-    _CATEGORY_EXACT_LOOKUP,
-    _CATEGORY_PARTIAL_LOOKUP,
-    _CATEGORY_KEY_PARTS_INDEX,
 )
 
 
@@ -179,10 +181,11 @@ class TestTypeSafetyImprovements:
     
     def test_optional_related_guides_type(self):
         """Test that related_guides field accepts Optional[List[Guide]]."""
-        from src.services.repair_guide_service import RepairGuideResult
-        from src.clients.ifixit_client import Guide
         from datetime import datetime
-        
+
+        from src.clients.ifixit_client import Guide
+        from src.services.repair_guide_service import RepairGuideResult
+
         # Test with None
         result = RepairGuideResult(
             guide=MagicMock(spec=Guide),

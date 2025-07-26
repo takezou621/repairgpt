@@ -95,7 +95,8 @@
       "Bash(chmod:*)",
       "Bash(PYTHONPATH:*)",
       "WebFetch(domain:localhost)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(isort:*)"
     ],
     "deny": []
   }

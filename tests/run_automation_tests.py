@@ -9,12 +9,13 @@ Issue #33: テスト: 夜間自動化システム動作確認
     python tests/run_automation_tests.py
 """
 
-import sys
 import os
-from pathlib import Path
-import subprocess
-import yaml
 import re
+import subprocess
+import sys
+from pathlib import Path
+
+import yaml
 
 # プロジェクトルートを sys.path に追加
 project_root = Path(__file__).parent.parent

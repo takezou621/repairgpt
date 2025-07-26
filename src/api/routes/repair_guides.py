@@ -8,6 +8,11 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from ...services.repair_guide_service import (
+    SearchFilters,
+    get_repair_guide_service,
+)
+from ...utils.logger import get_logger
 from ..models import (
     RepairGuide,
     RepairGuideSearchRequest,
@@ -15,12 +20,6 @@ from ..models import (
     SearchLanguage,
     SearchMetadata,
 )
-
-from ...services.repair_guide_service import (
-    SearchFilters,
-    get_repair_guide_service,
-)
-from ...utils.logger import get_logger
 
 logger = get_logger(__name__)
 

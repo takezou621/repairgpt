@@ -17,8 +17,8 @@ except ImportError:
 
 from clients.ifixit_client import Guide, IFixitClient
 from data.offline_repair_database import OfflineRepairDatabase
-from utils.logger import get_logger
 from utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

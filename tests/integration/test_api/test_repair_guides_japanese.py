@@ -5,20 +5,21 @@ Tests Japanese search functionality, character encoding, and API responses
 
 import asyncio
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock, patch
 
 # Import the API models and app
 from src.api.main import app
 from src.api.models import (
+    RepairGuideSearchFilters,
     RepairGuideSearchRequest,
     RepairGuideSearchResponse,
     SearchLanguage,
-    RepairGuideSearchFilters,
 )
-from src.services.repair_guide_service import RepairGuideResult, SearchFilters
 from src.clients.ifixit_client import Guide
+from src.services.repair_guide_service import RepairGuideResult, SearchFilters
 
 
 class TestJapaneseRepairGuideAPI:

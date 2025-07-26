@@ -7,8 +7,8 @@ Demonstration of the weekend daytime smart automation system
 """
 
 import json
-from datetime import datetime, timezone, timedelta
-from typing import Dict, Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
 
 
 class SmartAutomationDemo:

@@ -6,16 +6,17 @@ functionality in RepairGuideService, including device name mapping, query
 preprocessing, and integration with the JapaneseDeviceMapper.
 """
 
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
 from typing import List, Optional
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+
+from src.clients.ifixit_client import Guide
 from src.services.repair_guide_service import (
+    RepairGuideResult,
     RepairGuideService,
     SearchFilters,
-    RepairGuideResult,
 )
-from src.clients.ifixit_client import Guide
 from src.utils.japanese_device_mapper import JapaneseDeviceMapper
 
 

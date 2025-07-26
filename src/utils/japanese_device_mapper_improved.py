@@ -24,8 +24,8 @@ Features:
 
 import re
 import threading
-from typing import Dict, List, Optional, Set, Tuple
 from difflib import SequenceMatcher
+from typing import Dict, List, Optional, Set, Tuple
 
 
 class JapaneseDeviceMapper:

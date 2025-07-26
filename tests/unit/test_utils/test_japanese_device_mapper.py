@@ -6,16 +6,17 @@ covering all functionality including direct mapping, fuzzy matching, device
 detection, and edge cases.
 """
 
-import pytest
 from typing import List, Optional, Tuple
 from unittest.mock import patch
 
+import pytest
+
 from src.utils.japanese_device_mapper import (
     JapaneseDeviceMapper,
-    get_mapper,
-    map_japanese_device,
     find_device_match,
+    get_mapper,
     is_likely_device,
+    map_japanese_device,
 )
 
 

@@ -20,6 +20,18 @@ import requests
 import streamlit as st
 from PIL import Image
 
+from services.repair_guide_service import (
+    RepairGuideResult,
+    RepairGuideService,
+    SearchFilters,
+    get_repair_guide_service,
+)
+from utils.japanese_device_mapper_improved import (
+    find_device_match,
+    get_mapper,
+    is_likely_device,
+    map_japanese_device,
+)
 from utils.logger import (
     get_logger,
     log_api_call,
@@ -27,38 +39,28 @@ from utils.logger import (
     log_performance,
     log_user_action,
 )
-from services.repair_guide_service import (
-    get_repair_guide_service,
-    RepairGuideService,
-    SearchFilters,
-    RepairGuideResult,
-)
-from utils.japanese_device_mapper_improved import (
-    get_mapper,
-    map_japanese_device,
-    find_device_match,
-    is_likely_device,
-)
-
 
 try:
     pass
 
     # Import security and configuration
-    from config.settings import settings
-    from data.offline_repair_database import OfflineRepairDatabase
-    from i18n import _, i18n
-    from utils.security import mask_sensitive_data, sanitize_input
-
     from language_selector import (
         get_localized_device_categories,
         get_localized_skill_levels,
         language_selector,
     )
 
+    from config.settings import settings
+    from data.offline_repair_database import OfflineRepairDatabase
+    from i18n import _, i18n
+    from utils.security import mask_sensitive_data, sanitize_input
+
     # Import responsive design components
     try:
-        from responsive_design import enhance_ui_components, initialize_responsive_design
+        from responsive_design import (
+            enhance_ui_components,
+            initialize_responsive_design,
+        )
         from ui_enhancements import (
             add_responsive_navigation_hints,
             show_responsive_design_info,
