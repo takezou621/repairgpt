@@ -174,6 +174,73 @@ class RepairGuideSearchFilters(BaseModel):
     include_community_guides: bool = Field(default=True, description="Include community guides")
     min_rating: Optional[float] = Field(None, ge=0.0, le=5.0, description="Minimum rating")
 
+    @staticmethod
+    def normalize_japanese_difficulty(difficulty: Optional[str]) -> Optional[str]:
+        """Normalize Japanese difficulty strings to standard values."""
+        if not difficulty:
+            return None
+
+        # Japanese to English difficulty mapping
+        difficulty_map = {
+            "簡単": "easy",
+            "普通": "medium",
+            "難しい": "hard",
+            "とても難しい": "very_hard",
+            "かんたん": "easy",
+            "ふつう": "medium",
+            "むずかしい": "hard",
+            "とてもむずかしい": "very_hard",
+            "初心者": "easy",
+            "中級者": "medium",
+            "上級者": "hard",
+            "専門家": "very_hard",
+        }
+
+        # Try exact match first
+        lower_diff = difficulty.lower().strip()
+        if lower_diff in difficulty_map:
+            return difficulty_map[lower_diff]
+
+        # Try partial match
+        for jp, en in difficulty_map.items():
+            if jp in difficulty:
+                return en
+
+        # Return original if no match found
+        return difficulty
+
+    @staticmethod
+    def normalize_japanese_category(category: Optional[str]) -> Optional[str]:
+        """Normalize Japanese category strings to standard values."""
+        if not category:
+            return None
+
+        # Japanese to English category mapping
+        category_map = {
+            "画面": "display",
+            "画面修理": "display",
+            "バッテリー": "battery",
+            "ボタン": "buttons",
+            "充電": "charging",
+            "音声": "audio",
+            "カメラ": "camera",
+            "水没": "water_damage",
+            "その他": "other",
+        }
+
+        # Try exact match first
+        lower_cat = category.lower().strip()
+        if lower_cat in category_map:
+            return category_map[lower_cat]
+
+        # Try partial match
+        for jp, en in category_map.items():
+            if jp in category:
+                return en
+
+        # Return original if no match found
+        return category
+
 
 class RepairGuideSearchRequest(BaseModel):
     """Request model for repair guide search with Japanese support"""

@@ -196,7 +196,7 @@ async def search_repair_guides_get(
     Supports the same Japanese functionality as the POST endpoint but via query parameters.
     """
     # Convert query parameters to request model
-    from models import RepairGuideSearchFilters
+    from src.api.models import RepairGuideSearchFilters
 
     filters = RepairGuideSearchFilters(
         device_type=device_type,

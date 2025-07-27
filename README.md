@@ -239,6 +239,58 @@ LEFTHOOK=0 git commit -m "emergency fix"
 
 📚 **Full Documentation**: [Lefthook Setup Guide](docs/development/lefthook-guide.md)
 
+## 🔧 Test Auto-Fix System
+
+RepairGPTには、GitHub Actionsでテストが失敗した際に自動的に修復を試みるシステムが実装されています。
+
+### 機能概要
+
+- 🔍 **自動検出**: テスト失敗を自動的に検出
+- 🛠️ **パターン分析**: 一般的なエラーパターンを識別
+- 🔧 **自動修復**: 可能な場合は自動的に修正を適用
+- 🔄 **PR作成**: 修正内容を含むPRを自動作成
+
+### 修復可能なエラーパターン
+
+1. **Import エラー**
+   - モジュールのインポート漏れ
+   - 相対/絶対インポートの問題
+
+2. **Type エラー**
+   - NoneType チェックの欠落
+   - 型の不一致
+
+3. **Mock エラー**
+   - Mock オブジェクトの設定ミス
+   - MagicMock への変換
+
+4. **Fixture エラー**
+   - pytest fixture の未定義
+   - fixture のスコープ問題
+
+5. **非同期エラー**
+   - asyncio マーカーの欠落
+   - イベントループの競合
+
+### 使用方法
+
+テスト自動修復は以下のタイミングで自動的に実行されます：
+
+1. **自動トリガー**: Test Automation ワークフローが失敗した時
+2. **手動トリガー**: workflow_dispatch で任意のワークフローIDを指定
+
+```yaml
+# 手動実行例
+workflow_dispatch:
+  workflow_run_id: "1234567890"
+```
+
+### 安全性
+
+- 修正は必ずPRとして作成され、レビュー可能
+- 元のコードは保持され、変更は追跡可能
+- 複雑な修正は行わず、単純で安全な修正のみ実施
+
 ## 🚀 Claude Code エージェント活用ベストプラクティス
 
 RepairGPTの開発では、Claude Codeの専門エージェント機能を活用して効率的な開発を実現しています。

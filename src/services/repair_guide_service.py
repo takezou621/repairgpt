@@ -15,10 +15,10 @@ except ImportError:
     REDIS_AVAILABLE = False
     redis = None
 
-from src.clients.ifixit_client import Guide, IFixitClient
-from src.data.offline_repair_database import OfflineRepairDatabase
-from src.utils.japanese_device_mapper import JapaneseDeviceMapper, get_mapper
-from src.utils.logger import get_logger
+from clients.ifixit_client import Guide, IFixitClient
+from data.offline_repair_database import OfflineRepairDatabase
+from utils.japanese_device_mapper import get_mapper
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -117,7 +117,7 @@ _CATEGORY_KEY_PARTS_INDEX: Dict[str, List[str]] = {}
 # Build optimized lookup structures at module load time
 def _build_category_indices():
     """Build optimized lookup indices for category mapping performance."""
-    global _CATEGORY_PARTIAL_LOOKUP, _CATEGORY_KEY_PARTS_INDEX
+    # Using module-level variables directly
 
     for japanese_term, english_term in JAPANESE_CATEGORY_MAPPINGS.items():
         # Build key parts index for complex matching
@@ -168,7 +168,7 @@ class SearchFilters:
             English difficulty level string or original if no mapping found
         """
         if not difficulty:
-            return difficulty
+            return ""
 
         # Normalize input for matching
         normalized = difficulty.lower().strip()
@@ -191,7 +191,7 @@ class SearchFilters:
             English category name string or original if no mapping found
         """
         if not category:
-            return category
+            return ""
 
         # Normalize input for matching
         normalized = category.lower().strip()
@@ -347,12 +347,20 @@ class RepairGuideService:
         self.cache_manager = CacheManager(redis_url)
         self.rate_limiter = RateLimiter(max_calls=100, time_window=3600)  # 100 calls/hour
         self.offline_db = OfflineRepairDatabase() if enable_offline_fallback else None
-        self.japanese_mapper = get_mapper() if enable_japanese_support else None
+        # Initialize Japanese mapper with error handling
+        if enable_japanese_support:
+            try:
+                self.japanese_mapper = get_mapper()
+            except Exception as e:
+                logger.warning(f"Failed to initialize Japanese mapper: {e}")
+                self.japanese_mapper = None
+        else:
+            self.japanese_mapper = None
 
         # Safely check for redis_client existence (for testing with mocks)
         has_redis = False
         try:
-            has_redis = bool(getattr(self.cache_manager, 'redis_client', None))
+            has_redis = bool(getattr(self.cache_manager, "redis_client", None))
         except AttributeError:
             has_redis = False
 
@@ -376,7 +384,6 @@ class RepairGuideService:
             filters = SearchFilters()
 
         # Preprocess Japanese query if Japanese support is enabled
-        original_query = query
         query = self._preprocess_japanese_query(query)
 
         # Create cache key using preprocessed query
@@ -616,13 +623,13 @@ class RepairGuideService:
         # Safely check for redis_client existence
         has_redis = False
         try:
-            has_redis = bool(getattr(self.cache_manager, 'redis_client', None))
+            has_redis = bool(getattr(self.cache_manager, "redis_client", None))
         except AttributeError:
             has_redis = False
 
         stats = {
             "redis_available": has_redis,
-            "memory_cache_size": len(getattr(self.cache_manager, 'memory_cache', {})),
+            "memory_cache_size": len(getattr(self.cache_manager, "memory_cache", {})),
             "rate_limit_calls_remaining": self.rate_limiter.max_calls - len(self.rate_limiter.calls),
             "rate_limit_reset_in": self.rate_limiter.time_until_next_request(),
         }
@@ -630,7 +637,7 @@ class RepairGuideService:
         # Safely access redis_client for memory info
         if has_redis:
             try:
-                redis_client = getattr(self.cache_manager, 'redis_client', None)
+                redis_client = getattr(self.cache_manager, "redis_client", None)
                 if redis_client:
                     info = redis_client.info("memory")
                     stats["redis_memory_usage"] = info.get("used_memory_human", "unknown")
@@ -798,7 +805,7 @@ class RepairGuideService:
         """
         # Start with base score
         score = 0.5
-        
+
         # Normalize inputs for consistent processing
         query_lower = query.lower() if query else ""
         title_lower = guide.title.lower() if guide.title else ""
@@ -806,17 +813,17 @@ class RepairGuideService:
 
         # Enhanced Japanese query detection and analysis
         is_japanese_search = self._is_japanese_query(query)
-        
+
         # Calculate Japanese metrics with deterministic values
         japanese_ratio = 0.0
         japanese_mapping_quality = 1.0
         fuzzy_match_confidence = 1.0
-        
+
         if is_japanese_search:
             japanese_ratio = self._calculate_japanese_ratio(query)
             japanese_mapping_quality = self._assess_japanese_mapping_quality(query)
             fuzzy_match_confidence = self._evaluate_fuzzy_matching_confidence(query)
-        
+
         # Exact matches boost score with Japanese-specific adjustments
         if query_lower and query_lower in title_lower:
             base_boost = 0.3
@@ -919,11 +926,11 @@ class RepairGuideService:
 
         # Quality indicators with deterministic Japanese content consideration
         quality_bonus = 0.0
-        if hasattr(guide, 'tools') and guide.tools:  # Has tool list
+        if hasattr(guide, "tools") and guide.tools:  # Has tool list
             quality_bonus += 0.05
-        if hasattr(guide, 'parts') and guide.parts:  # Has parts list
+        if hasattr(guide, "parts") and guide.parts:  # Has parts list
             quality_bonus += 0.05
-        if hasattr(guide, 'image_url') and guide.image_url:  # Has images
+        if hasattr(guide, "image_url") and guide.image_url:  # Has images
             quality_bonus += 0.05
 
         # Apply quality bonus with deterministic Japanese adjustment
@@ -1243,8 +1250,13 @@ class RepairGuideService:
         explanations = {
             "easy": "Can be completed by beginners with basic tools. Low risk of damage.",
             "moderate": "Requires some technical knowledge and specialized tools. Moderate risk.",
-            "difficult": "Advanced repair requiring significant expertise and specialized equipment. High risk of damage if done incorrectly.",
-            "very difficult": "Expert-level repair. Consider professional service unless you have extensive experience.",
+            "difficult": (
+                "Advanced repair requiring significant expertise and specialized equipment. "
+                "High risk of damage if done incorrectly."
+            ),
+            "very difficult": (
+                "Expert-level repair. Consider professional service unless you have extensive experience."
+            ),
         }
 
         return explanations.get(difficulty.lower(), f"Difficulty level: {difficulty}")
