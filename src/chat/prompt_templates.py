@@ -107,7 +107,8 @@ Always consider:
 - When to recommend professional repair instead
 """,
             "diagnosis_specialist": """
-You are a diagnostic specialist for electronic device troubleshooting. Your role is to help users systematically identify the root cause of device problems through careful questioning and logical analysis.
+You are a diagnostic specialist for electronic device troubleshooting. Your role is to help users
+systematically identify the root cause of device problems through careful questioning and logical analysis.
 
 Diagnostic Approach:
 1. Gather comprehensive symptom information

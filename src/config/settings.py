@@ -7,7 +7,7 @@ import os
 from enum import Enum
 from typing import List, Optional, Set
 
-from pydantic import Field, field_validator, ConfigDict
+from pydantic import ConfigDict, Field, field_validator
 
 try:
     from pydantic_settings import BaseSettings
@@ -291,7 +291,7 @@ class Settings(BaseSettings):
                 "secret_key": "your-super-secret-key-here-min-32-chars",
                 "cors_origins": ["http://localhost:3000", "http://localhost:8501"],
             }
-        }
+        },
     )
 
 

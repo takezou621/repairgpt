@@ -15,6 +15,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+# Import RepairRecommendation from API models
+from api.models import RepairDifficulty, RepairRecommendation
+
 try:
     import cv2
     import numpy as np
@@ -386,14 +389,14 @@ class ImageAnalysisService:
     async def _analyze_with_mock(self, image: Image.Image, language: str = "en") -> AnalysisResult:
         """Generate mock analysis result for testing"""
         logger.info("Generating mock image analysis")
-        
+
         # Simulate processing time
         await asyncio.sleep(1.0)
-        
+
         # Mock damage detection based on image properties
         width, height = image.size
         damage_detected = []
-        
+
         # Mock some damage detections
         if width > 800 or height > 800:
             damage_detected.append(
@@ -401,68 +404,65 @@ class ImageAnalysisService:
                     damage_type=DamageType.SCREEN_CRACK,
                     confidence=0.85,
                     severity="medium",
-                    location="upper left corner"
+                    location="upper left corner",
                 )
             )
-        
+
         if width < 600 and height < 600:
             damage_detected.append(
                 DamageAssessment(
-                    damage_type=DamageType.SCRATCHES,
-                    confidence=0.65,
-                    severity="low",
-                    location="back panel"
+                    damage_type=DamageType.SCRATCHES, confidence=0.65, severity="low", location="back panel"
                 )
             )
-        
+
         # Always add at least one mock damage
         if not damage_detected:
             damage_detected.append(
                 DamageAssessment(
-                    damage_type=DamageType.PHYSICAL_DAMAGE,
-                    confidence=0.75,
-                    severity="low",
-                    location="general wear"
+                    damage_type=DamageType.PHYSICAL_DAMAGE, confidence=0.75, severity="low", location="general wear"
                 )
             )
-        
+
         # Mock repair recommendations
         repair_recommendations = []
         for damage in damage_detected:
             if damage.damage_type == DamageType.SCREEN_CRACK:
                 repair_recommendations.append(
                     RepairRecommendation(
-                        action="Replace display assembly",
-                        priority="high",
+                        title="Replace display assembly",
+                        description="Replace the damaged display assembly with a new one",
+                        difficulty=RepairDifficulty.MODERATE,
+                        estimated_time="60-90 minutes",
                         estimated_cost="$100-300",
-                        difficulty="moderate",
                         tools_required=["Pentalobe screwdriver", "Suction cups", "Plastic picks"],
-                        safety_notes=["Handle broken glass carefully", "Disconnect battery first"]
+                        warnings=["Handle broken glass carefully", "Disconnect battery first"],
                     )
                 )
             elif damage.damage_type == DamageType.SCRATCHES:
                 repair_recommendations.append(
                     RepairRecommendation(
-                        action="Polish or replace back cover",
-                        priority="low",
+                        title="Polish or replace back cover",
+                        description="Polish scratches or replace the back cover",
+                        difficulty=RepairDifficulty.EASY,
+                        estimated_time="15-30 minutes",
                         estimated_cost="$20-50",
-                        difficulty="easy",
                         tools_required=["Polishing compound", "Microfiber cloth"],
-                        safety_notes=["Clean surface thoroughly before polishing"]
+                        warnings=["Clean surface thoroughly before polishing"],
                     )
                 )
             else:
                 repair_recommendations.append(
                     RepairRecommendation(
-                        action="Professional inspection recommended",
-                        priority="medium",
+                        title="Professional inspection recommended",
+                        description="Have a professional technician inspect the device",
+                        difficulty=RepairDifficulty.PROFESSIONAL,
+                        estimated_time="30-60 minutes",
                         estimated_cost="$50-100",
-                        difficulty="varies",
                         tools_required=["Diagnostic tools"],
-                        safety_notes=["Backup data before repair"]
+                        warnings=["Backup data before repair"],
                     )
                 )
-        
+
         # Create mock result
         result = AnalysisResult(
             device_type=DeviceType.SMARTPHONE,
@@ -477,10 +477,10 @@ class ImageAnalysisService:
             analysis_metadata={
                 "mode": "mock",
                 "image_size": f"{width}x{height}",
-                "analysis_timestamp": datetime.now().isoformat()
-            }
+                "analysis_timestamp": datetime.now().isoformat(),
+            },
         )
-        
+
         return result
 
     async def analyze_with_openai(self, image: Image.Image, language: str = "en") -> AnalysisResult:

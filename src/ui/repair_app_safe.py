@@ -7,16 +7,18 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List
+
+# Remove unused imports
 
 # Add src directory to path for imports FIRST
 current_dir = Path(__file__).parent
 src_root = current_dir.parent
 sys.path.insert(0, str(src_root))
 
-import requests
-import streamlit as st
-from PIL import Image
+import requests  # noqa: E402
+import streamlit as st  # noqa: E402
+
+# PIL import removed as unused
 
 
 # Safe translation function with hardcoded fallbacks
@@ -24,7 +26,10 @@ def safe_translate(key: str, fallback: str = "") -> str:
     """安全な翻訳関数（フォールバック付き）"""
     # Hardcoded translations to avoid any i18n issues
     translations = {
-        "api.health_warning": "⚠️ API server is not running. Some features may be limited. Start the API server with: python3 src/api/main.py",
+        "api.health_warning": (
+            "⚠️ API server is not running. Some features may be limited. "
+            "Start the API server with: python3 src/api/main.py"
+        ),
         "app.title": "RepairGPT - AI Repair Assistant",
         "app.tagline": "AI-Powered Electronic Device Repair Assistant",
         "sidebar.device_config": "Device Configuration",
@@ -44,23 +49,18 @@ def safe_translate(key: str, fallback: str = "") -> str:
         from i18n import _
 
         return _(key)
-    except:
+    except (ImportError, Exception):
         return fallback or key
 
 
 # Import other necessary modules
 try:
-    from config.settings_simple import settings
     from ui.language_selector import (
         get_localized_device_categories,
         get_localized_skill_levels,
     )
     from utils.logger import (
         get_logger,
-        log_api_call,
-        log_api_error,
-        log_performance,
-        log_user_action,
     )
 
 except Exception as e:

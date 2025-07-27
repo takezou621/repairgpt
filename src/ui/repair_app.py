@@ -16,23 +16,19 @@ current_dir = Path(__file__).parent
 src_root = current_dir.parent
 sys.path.insert(0, str(src_root))
 
-import requests
-import streamlit as st
-from PIL import Image
+import requests  # noqa: E402
+import streamlit as st  # noqa: E402
+from PIL import Image  # noqa: E402
 
-from services.repair_guide_service import (
-    RepairGuideResult,
-    RepairGuideService,
+from services.repair_guide_service import (  # noqa: E402
     SearchFilters,
     get_repair_guide_service,
 )
-from utils.japanese_device_mapper import (
-    find_device_match,
+from utils.japanese_device_mapper import (  # noqa: E402
     get_mapper,
-    is_likely_device,
     map_japanese_device,
 )
-from utils.logger import (
+from utils.logger import (  # noqa: E402
     get_logger,
     log_api_call,
     log_api_error,
@@ -54,6 +50,7 @@ except ImportError:
         allowed_file_types = ["jpg", "jpeg", "png"]
         api_prefix = "/api/v1"
         enable_security_headers = True
+
     settings = FallbackSettings()
 
 try:
@@ -64,19 +61,25 @@ except ImportError:
 try:
     from utils.security import mask_sensitive_data, sanitize_input
 except ImportError:
+
     def mask_sensitive_data(data):
         return data
+
     def sanitize_input(text, max_length=5000):
         return str(text)[:max_length] if text else ""
+
 
 try:
     from i18n import _, i18n
 except ImportError:
+
     def _(key, **kwargs):
         return key.format(**kwargs) if kwargs else key
+
     class MockI18n:
         def set_language(self, lang):
             pass
+
     i18n = MockI18n()
 
 # Import UI components with fallbacks
@@ -97,10 +100,13 @@ except ImportError:
         # Fallback functions
         def language_selector():
             return "en"
+
         def get_localized_device_categories():
             return ["Select device", "Nintendo Switch", "iPhone", "PlayStation", "Laptop", "Desktop PC"]
+
         def get_localized_skill_levels():
             return ["Beginner", "Intermediate", "Expert"]
+
 
 # Import responsive design components with fallbacks
 try:
@@ -135,6 +141,7 @@ except ImportError:
 
         def show_responsive_design_info():
             pass
+
 
 # Get logger instance
 logger = get_logger(__name__)
@@ -278,7 +285,10 @@ def safe_translate(key: str, fallback: str = "") -> str:
     """安全な翻訳関数（フォールバック付き）"""
     # Hardcoded translations to avoid any i18n issues
     translations = {
-        "api.health_warning": "⚠️ API server is not running. Some features may be limited. Start the API server with: python3 src/api/main.py",
+        "api.health_warning": (
+            "⚠️ API server is not running. Some features may be limited. "
+            "Start the API server with: python3 src/api/main.py"
+        ),
         "app.title": "RepairGPT - AI Repair Assistant",
         "app.tagline": "AI-Powered Electronic Device Repair Assistant",
         "sidebar.device_config": "Device Configuration",
@@ -326,7 +336,7 @@ def safe_translate(key: str, fallback: str = "") -> str:
         from i18n import _
 
         return _(key)
-    except:
+    except (ImportError, Exception):
         return fallback or key
 
 

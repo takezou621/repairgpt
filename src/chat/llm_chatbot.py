@@ -556,7 +556,7 @@ Your message: "{user_message[:100]}{'...' if len(user_message) > 100 else ''}"
         # Prepare context information
         context_info = ""
         if include_context and self.repair_context.device_type:
-            context_info = f"\n\n**Current Context:**\n"
+            context_info = "\n\n**Current Context:**\n"
             if self.repair_context.device_type:
                 context_info += f"- Device: {self.repair_context.device_type}\n"
             if self.repair_context.device_model:
